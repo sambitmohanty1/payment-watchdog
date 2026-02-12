@@ -1,0 +1,36 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: payment-watchdog-monitor
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack  # This should match your Prometheus Operator release name
+    app.kubernetes.io/part-of: payment-watchdog
+    app.kubernetes.io/component: monitoring
+spec:
+  jobLabel: app.kubernetes.io/name
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: payment-watchdog
+  namespaceSelector:
+    matchNames:
+      - lexure-mvp
+  endpoints:
+  - port: http
+    interval: 15s
+    path: /metrics
+    scheme: http
+    honorLabels: true
+    relabelings:
+    - action: replace
+      targetLabel: namespace
+      replacement: lexure-mvp
+    - action: replace
+      targetLabel: service
+      replacement: $(SERVICE_NAME)
+    - sourceLabels: [__meta_kubernetes_pod_container_name]
+      action: replace
+      targetLabel: container
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      action: replace
+      targetLabel: node

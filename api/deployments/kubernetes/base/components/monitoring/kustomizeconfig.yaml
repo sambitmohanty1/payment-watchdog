@@ -1,0 +1,16 @@
+# This file contains Kustomize transformer configurations
+nameReference:
+  - kind: Service
+    fieldSpecs:
+      - kind: ServiceMonitor
+        path: spec/endpoints/targetPort
+        create: true
+      - kind: ServiceMonitor
+        path: spec/endpoints/port
+        create: true
+
+varReference:
+  - path: spec/endpoints/targetPort
+    kind: ServiceMonitor
+  - path: spec/endpoints/port
+    kind: ServiceMonitor

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lexure-postgres
+  labels:
+    app.kubernetes.io/name: lexure-postgres
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: payment-watchdog
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app.kubernetes.io/name: lexure-postgres

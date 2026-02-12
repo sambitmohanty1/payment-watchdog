@@ -1,0 +1,41 @@
+server:
+  port: "8085"
+  host: "0.0.0.0"
+  https: true
+  cert_file: "./certs/server.crt"
+  key_file: "./certs/server.key"
+
+database:
+  host: "lexure-mvp-postgres"
+  port: 5403
+  name: "lexure_intelligence_mvp"
+  user: "postgres"
+  password: "password"
+  ssl_mode: "disable"
+
+stripe:
+  secret_key: "sk_test_your_stripe_secret_key_here"
+  webhook_secret: "whsec_test_webhook_secret_for_development"
+  publishable_key: "pk_test_your_stripe_publishable_key_here"
+
+xero:
+  client_id: 0F8E50EAE9A1459F90822CF0C25EDCA8
+  client_secret: RJuOZzXkw9QNwwLLl9LsKE39dvZM78Hmfyqrui31H5Bm-DaQ
+  redirect_uri: "https://localhost:8085/api/v1/xero/auth/callback"
+
+email:
+  provider: "smtp"
+  host: "localhost"
+  port: 587
+  username: ""
+  password: ""
+  from_email: "noreply@payment-watchdog.com"
+  from_name: "Lexure Intelligence"
+
+log:
+  level: "info"
+
+# Vault configuration for secure secret management
+vault:
+  url: ""  # Set to Vault server URL (e.g., "http://localhost:8200")
+  token: "" # Set to Vault token for authentication

@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lexure-mvp-ingress
+  namespace: lexure-mvp
+  labels:
+    app: payment-watchdog-mvp
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: lexure-mvp.local  # Change this to your actual domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: payment-watchdog-mvp
+            port:
+              number: 8085
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: payment-watchdog-mvp
+            port:
+              number: 8085
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: payment-watchdog-mvp
+            port:
+              number: 8085

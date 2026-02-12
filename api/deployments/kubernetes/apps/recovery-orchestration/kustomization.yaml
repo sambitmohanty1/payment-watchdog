@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: lexure
+
+resources:
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+  - hpa.yaml
+  - pdb.yaml
+
+configMapGenerator:
+  - name: recovery-orchestration-config
+    behavior: create
+    literals:
+      - LOG_LEVEL=info
+      - ENVIRONMENT=production
+      - DB_HOST=lexure-postgres.lexure.svc.cluster.local
+      - DB_PORT=5432
+      - DB_NAME=recovery_orchestration
+      - DB_SSL_MODE=require
+      - REDIS_ADDR=lexure-redis.lexure.svc.cluster.local:6379
+      - OTEL_SERVICE_NAME=recovery-orchestration
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.observability.svc.cluster.local:4317
+      - WORKFLOW_MAX_CONCURRENT=100
+      - WORKFLOW_MAX_RETRY=3
+      - WORKFLOW_RETRY_DELAY=5m
+
+secretGenerator:
+  - name: recovery-orchestration-secrets
+    behavior: create
+    literals:
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres_password
+      - REDIS_PASSWORD=redis_password
+      - JWT_SECRET=jwt_signing_key
+      - STRIPE_API_KEY=stripe_key_placeholder
+      - XERO_CLIENT_ID=xero_id_placeholder
+      - XERO_CLIENT_SECRET=xero_secret_placeholder
+      - QUICKBOOKS_CLIENT_ID=qb_id_placeholder
+      - QUICKBOOKS_CLIENT_SECRET=qb_secret_placeholder
+
+images:
+  - name: payment-watchdog/recovery-orchestration
+    newTag: latest

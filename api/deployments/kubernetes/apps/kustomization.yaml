@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - payment-watchdog-mvp
+  - recovery-orchestration
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: payment-watchdog
+      environment: development
+    includeSelectors: true
+    includeTemplates: true

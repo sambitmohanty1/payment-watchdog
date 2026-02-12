@@ -1,0 +1,8 @@
+Checking for new versions...
+
+Getting ready...
+Ready! You are using Stripe API Version [2025-07-30.basil]. Your webhook signing secret is whsec_b764fea1193fb388a59481d204feae98d7a057fc15a03b2e4d71e704b4c17349 (^C to quit)
+2025-08-30 17:00:50   --> payment_intent.payment_failed [evt_3S1imLRAQ8Prv9Zv15v39cGC]
+2025-08-30 17:00:50  <--  [400] POST http://localhost:30085/api/v1/webhooks/stripe [evt_3S1imLRAQ8Prv9Zv15v39cGC]
+2025-08-30 17:03:03   --> payment_intent.payment_failed [evt_3S1ioURAQ8Prv9Zv0hP1aKVy]
+2025-08-30 17:03:03  <--  [400] POST http://localhost:30085/api/v1/webhooks/stripe [evt_3S1ioURAQ8Prv9Zv0hP1aKVy]

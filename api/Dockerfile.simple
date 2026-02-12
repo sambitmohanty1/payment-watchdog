@@ -1,0 +1,33 @@
+FROM alpine:latest
+
+# Install ca-certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates
+
+# Create app user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+# Set working directory
+WORKDIR /app
+
+# Copy the pre-built Linux binary
+COPY lexure-intelligence-mvp-linux ./lexure-intelligence-mvp
+
+# Make binary executable
+RUN chmod +x lexure-intelligence-mvp
+
+# Change ownership to app user
+RUN chown -R appuser:appgroup /app
+
+# Switch to app user
+USER appuser
+
+# Expose port
+EXPOSE 8085
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8085/health || exit 1
+
+# Run the application
+CMD ["./lexure-intelligence-mvp"]

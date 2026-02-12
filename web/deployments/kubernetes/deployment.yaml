@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-watchdog-web
+  namespace: lexure
+  labels:
+    app: payment-watchdog-web
+    component: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-watchdog-web
+      component: web
+  template:
+    metadata:
+      labels:
+        app: payment-watchdog-web
+        component: web
+    spec:
+      containers:
+      - name: web
+        image: payment-watchdog/web:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 4896
+          name: http
+        env:
+        - name: NEXT_PUBLIC_API_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: payment-watchdog-web-config
+              key: NEXT_PUBLIC_API_BASE_URL
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: payment-watchdog-web-config
+              key: NODE_ENV
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: payment-watchdog-web-config
+              key: PORT
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4896
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4896
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          capabilities:
+            drop:
+            - ALL

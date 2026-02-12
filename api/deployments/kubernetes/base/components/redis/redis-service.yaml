@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lexure-redis
+  labels:
+    app.kubernetes.io/name: lexure-redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: payment-watchdog
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    app.kubernetes.io/name: lexure-redis

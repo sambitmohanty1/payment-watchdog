@@ -1,0 +1,240 @@
+package services
+
+import (
+	"encoding/json"
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	"github.com/complyflow/lexure-intelligence-mvp/internal/models"
+	"github.com/complyflow/lexure-intelligence-mvp/internal/rules"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
+)
+
+// WebhookService handles incoming webhooks from payment providers
+type WebhookService struct {
+	db     *gorm.DB
+	logger *zap.Logger
+	ruleEngine  *rules.RuleEngine
+}
+
+// NewWebhookService creates a new webhook service
+func NewWebhookService(db *gorm.DB, logger *zap.Logger, ruleEngine *rules.RuleEngine) *WebhookService {
+	return &WebhookService{
+		db:     db,
+		logger: logger,
+		ruleEngine: ruleEngine,
+	}
+}
+
+// HandleStripeWebhook processes Stripe webhook events
+func (s *WebhookService) HandleStripeWebhook(c *gin.Context) {
+	// Read request body
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		s.logger.Error("Failed to read webhook body", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+
+	// Get Stripe signature header
+	signature := c.GetHeader("Stripe-Signature")
+	if signature == "" {
+		s.logger.Error("Missing Stripe signature header")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing Stripe signature"})
+		return
+	}
+
+	// Extract company ID from query params or headers
+	companyID := c.Query("company_id")
+	if companyID == "" {
+		companyID = c.GetHeader("X-Company-ID")
+	}
+	if companyID == "" {
+		s.logger.Error("Missing company ID")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing company ID"})
+		return
+	}
+
+	// Verify webhook signature (placeholder - implement actual verification)
+	if !s.verifyStripeSignature(body, signature) {
+		s.logger.Error("Invalid webhook signature")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
+		return
+	}
+
+	// Parse event
+	var event map[string]interface{}
+	if err := json.Unmarshal(body, &event); err != nil {
+		s.logger.Error("Failed to parse webhook body", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
+		return
+	}
+
+	// Check if this is a payment failure event
+	eventType, ok := event["type"].(string)
+	if !ok {
+		s.logger.Error("Missing event type")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing event type"})
+		return
+	}
+
+	// Only process payment failure events for MVP
+	if eventType != "payment_intent.payment_failed" {
+		s.logger.Info("Ignoring non-payment failure event", zap.String("event_type", eventType))
+		c.JSON(http.StatusOK, gin.H{"message": "Event ignored"})
+		return
+	}
+
+	// Process the payment failure event
+	if err := s.processPaymentFailureEvent(context.Background(), event, companyID); err != nil {
+		s.logger.Error("Failed to process payment failure event", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process event"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Event processed successfully"})
+}
+
+// processPaymentFailureEvent processes a payment failure event
+func (s *WebhookService) processPaymentFailureEvent(ctx context.Context, event map[string]interface{}, companyID string) error {
+	// Extract event data
+	data, ok := event["data"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid event data structure")
+	}
+
+	object, ok := data["object"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid object structure")
+	}
+
+	// Extract payment details
+	paymentIntentID := s.extractString(object, "id")
+	amount := s.extractAmount(object)
+	currency := s.extractString(object, "currency")
+	customerID := s.extractString(object, "customer")
+
+	// Extract customer email from receipt_email or customer object
+	customerEmail := s.extractString(object, "receipt_email")
+	if customerEmail == "" {
+		// Try to get from customer object if available
+		if customer, ok := object["customer"].(map[string]interface{}); ok {
+			customerEmail = s.extractString(customer, "email")
+		}
+	}
+
+	// Extract failure information
+	failureReason := s.extractFailureReason(object)
+	failureCode := s.extractString(object, "last_payment_error.code")
+	failureMessage := s.extractString(object, "last_payment_error.message")
+
+	// Create payment failure event
+	failureEvent := &models.PaymentFailureEvent{
+		CompanyID:         companyID,
+		ProviderID:        "stripe",
+		EventID:           s.extractString(event, "id"),
+		EventType:         s.extractString(event, "type"),
+		PaymentIntentID:   paymentIntentID,
+		Amount:            amount,
+		Currency:          currency,
+		CustomerID:        customerID,
+		CustomerEmail:     customerEmail,
+		FailureReason:     failureReason,
+		FailureCode:       failureCode,
+		FailureMessage:    failureMessage,
+		Status:            "received",
+		RawEventData:      eventJSON,
+		WebhookReceivedAt: time.Now(),
+	}
+
+	// Check for idempotency
+	var existing models.PaymentFailureEvent
+	if err := s.db.Where("event_id = ?", failureEvent.EventID).First(&existing).Error; err == nil {
+		s.logger.Info("Duplicate webhook event received", zap.String("event_id", failureEvent.EventID))
+		return nil // Already processed
+	} else if err != gorm.ErrRecordNotFound {
+		return fmt.Errorf("failed to check for existing event: %w", err)
+	}
+
+	// Store the event
+	if err := s.db.Create(failureEvent).Error; err != nil {
+		return fmt.Errorf("failed to store payment failure event: %w", err)
+	}
+
+	s.logger.Info("Payment failure event stored",
+		zap.String("event_id", failureEvent.EventID),
+		zap.String("payment_intent", failureEvent.PaymentIntentID),
+		zap.String("customer_email", failureEvent.CustomerEmail))
+
+	// Process through rule engine
+	if s.ruleEngine != nil {
+		s.logger.Info("Processing payment failure through rule engine",
+			zap.String("event_id", failureEvent.EventID))
+
+		results := s.ruleEngine.ExecuteRules(failureEvent)
+
+		s.logger.Info("Rule engine processing completed",
+			zap.String("event_id", failureEvent.EventID),
+			zap.Int("rules_executed", len(results)))
+
+		// Log rule execution results
+		for _, result := range results {
+			if result.Success {
+				s.logger.Info("Rule executed successfully",
+					zap.String("rule_name", result.RuleName),
+					zap.String("message", result.Message))
+			} else {
+				s.logger.Error("Rule execution failed",
+					zap.String("rule_name", result.RuleName),
+					zap.Error(result.Error))
+			}
+		}
+	} else {
+		s.logger.Warn("Rule engine not available - skipping rule processing")
+	}
+
+	return nil
+}
+
+// verifyStripeSignature verifies the Stripe webhook signature
+func (s *WebhookService) verifyStripeSignature(body []byte, signature string) bool {
+	// TODO: Implement actual Stripe webhook signature verification
+	// For MVP, we'll return true to allow testing
+	// In production, you should implement proper verification using your webhook secret
+
+	s.logger.Warn("Stripe signature verification not implemented - returning true for MVP")
+	return true
+}
+
+// Helper methods for data extraction
+func (s *WebhookService) extractAmount(object map[string]interface{}) float64 {
+	if amount, ok := object["amount"].(float64); ok {
+		return amount / 100 // Stripe amounts are in cents
+	}
+	return 0
+}
+
+func (s *WebhookService) extractString(object map[string]interface{}, key string) string {
+	if val, ok := object[key].(string); ok {
+		return val
+	}
+	return ""
+}
+
+func (s *WebhookService) extractFailureReason(object map[string]interface{}) string {
+	// Extract failure reason from Stripe error object
+	if lastError, ok := object["last_payment_error"].(map[string]interface{}); ok {
+		if declineCode, ok := lastError["decline_code"].(string); ok {
+			return declineCode
+		}
+		if code, ok := lastError["code"].(string); ok {
+			return code
+		}
+	}
+	return "unknown"
+}

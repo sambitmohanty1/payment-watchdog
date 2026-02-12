@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-watchdog-web-config
+  namespace: lexure
+  labels:
+    app: payment-watchdog
+    component: web
+data:
+  NEXT_PUBLIC_API_BASE_URL: "http://payment-watchdog.lexure.svc.cluster.local:8085"
+  NODE_ENV: "production"
+  PORT: "3001"
+  NEXT_PUBLIC_XERO_CLIENT_ID: "0F8E50EAE9A1459F90822CF0C25EDCA8"
+  NEXT_PUBLIC_XERO_REDIRECT_URI: "https://localhost:3050/api/auth/xero/callback"

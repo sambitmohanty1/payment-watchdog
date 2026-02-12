@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: recovery-orchestration
+  labels:
+    app.kubernetes.io/name: recovery-orchestration
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: payment-watchdog
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8086"
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8086
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: recovery-orchestration
+---
+# Internal headless service for direct pod access
+apiVersion: v1
+kind: Service
+metadata:
+  name: recovery-orchestration-internal
+  labels:
+    app.kubernetes.io/name: recovery-orchestration
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: payment-watchdog
+    visibility: internal
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: http
+    port: 8086
+    targetPort: 8086
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: recovery-orchestration

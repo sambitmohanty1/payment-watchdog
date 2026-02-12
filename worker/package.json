@@ -1,0 +1,14 @@
+{
+  "name": "payment-watchdog-worker",
+  "version": "1.0.0",
+  "description": "Payment Watchdog Background Worker",
+  "main": "cmd/main.go",
+  "scripts": {
+    "dev": "go run cmd/main.go",
+    "build": "go build -o bin/worker cmd/main.go",
+    "test": "go test ./...",
+    "docker:dev": "docker-compose up worker"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

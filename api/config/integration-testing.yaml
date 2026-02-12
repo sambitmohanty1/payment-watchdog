@@ -1,0 +1,180 @@
+# Integration Testing Configuration
+# Real API credentials for testing with sandbox environments
+
+integrations:
+  xero:
+    enabled: true
+    environment: "sandbox"  # sandbox or production
+    oauth:
+      client_id: "${XERO_CLIENT_ID}"
+      client_secret: "${XERO_CLIENT_SECRET}"
+      redirect_uri: "http://localhost:8085/auth/xero/callback"
+      scopes:
+        - "offline_access"
+        - "accounting.transactions"
+        - "accounting.contacts"
+        - "accounting.settings"
+      auth_url: "https://login.xero.com/identity/connect/authorize"
+      token_url: "https://identity.xero.com/connect/token"
+    api:
+      base_url: "https://api.xero.com/api.xro/2.0"
+      rate_limit: 1000  # requests per minute
+      timeout: 30s
+    testing:
+      company_id: "${XERO_TEST_COMPANY_ID}"
+      invoice_ids: ["${XERO_TEST_INVOICE_1}", "${XERO_TEST_INVOICE_2}"]
+      customer_ids: ["${XERO_TEST_CUSTOMER_1}", "${XERO_TEST_CUSTOMER_2}"]
+
+  quickbooks:
+    enabled: true
+    environment: "sandbox"  # sandbox or production
+    oauth:
+      client_id: "${QUICKBOOKS_CLIENT_ID}"
+      client_secret: "${QUICKBOOKS_CLIENT_SECRET}"
+      redirect_uri: "http://localhost:8085/auth/quickbooks/callback"
+      scopes:
+        - "com.intuit.quickbooks.accounting"
+        - "com.intuit.quickbooks.payment"
+        - "com.intuit.quickbooks.openid"
+      auth_url: "https://appcenter.intuit.com/connect/oauth2"
+      token_url: "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
+    api:
+      base_url: "https://sandbox-quickbooks.api.intuit.com/v3/company"
+      rate_limit: 100  # requests per minute
+      timeout: 30s
+    testing:
+      realm_id: "${QUICKBOOKS_REALM_ID}"
+      invoice_ids: ["${QB_TEST_INVOICE_1}", "${QB_TEST_INVOICE_2}"]
+      customer_ids: ["${QB_TEST_CUSTOMER_1}", "${QB_TEST_CUSTOMER_2}"]
+
+  stripe:
+    enabled: true
+    environment: "test"  # test or live
+    api:
+      secret_key: "${STRIPE_SECRET_KEY}"
+      publishable_key: "${STRIPE_PUBLISHABLE_KEY}"
+      webhook_secret: "${STRIPE_WEBHOOK_SECRET}"
+      base_url: "https://api.stripe.com/v1"
+      rate_limit: 100  # requests per second
+      timeout: 30s
+    testing:
+      customer_ids: ["cus_test_123", "cus_test_456"]
+      payment_intent_ids: ["pi_test_123", "pi_test_456"]
+      webhook_events:
+        - "payment_intent.payment_failed"
+        - "invoice.payment_failed"
+        - "customer.subscription.updated"
+
+# Test Data Configuration
+test_data:
+  companies:
+    - id: "550e8400-e29b-41d4-a716-446655440000"
+      name: "Test Company 1"
+      integrations:
+        - provider: "xero"
+          enabled: true
+        - provider: "quickbooks"
+          enabled: true
+        - provider: "stripe"
+          enabled: true
+    - id: "660e8400-e29b-41d4-a716-446655440001"
+      name: "Test Company 2"
+      integrations:
+        - provider: "stripe"
+          enabled: true
+
+# Payment Failure Scenarios for Testing
+payment_failure_scenarios:
+  - name: "High Value Payment Failure"
+    amount: 5000.00
+    currency: "AUD"
+    reason: "insufficient_funds"
+    provider: "stripe"
+    expected_alert: true
+    expected_retry: true
+    
+  - name: "Overdue Invoice"
+    amount: 2500.00
+    currency: "AUD"
+    reason: "invoice_unpaid"
+    provider: "xero"
+    expected_alert: true
+    expected_retry: false
+    
+  - name: "Card Declined"
+    amount: 750.50
+    currency: "AUD"
+    reason: "card_declined"
+    provider: "stripe"
+    expected_alert: true
+    expected_retry: true
+    
+  - name: "Expired Card"
+    amount: 1200.00
+    currency: "AUD"
+    reason: "expired_card"
+    provider: "quickbooks"
+    expected_alert: true
+    expected_retry: false
+
+# Testing Workflows
+testing_workflows:
+  - name: "End-to-End Payment Failure Detection"
+    steps:
+      - "Create test payment failure in provider"
+      - "Verify webhook/API event received"
+      - "Validate payment failure event created"
+      - "Check alert generation"
+      - "Verify retry mechanism if applicable"
+      - "Validate dashboard data update"
+      
+  - name: "Multi-Provider Data Aggregation"
+    steps:
+      - "Create failures across multiple providers"
+      - "Verify unified dashboard view"
+      - "Check company isolation"
+      - "Validate cross-provider analytics"
+      
+  - name: "Real-Time Alert Testing"
+    steps:
+      - "Trigger payment failure events"
+      - "Verify immediate alert generation"
+      - "Check notification delivery"
+      - "Validate alert status updates"
+
+# Environment Variables Template
+environment_variables:
+  xero:
+    - "XERO_CLIENT_ID=your_xero_client_id"
+    - "XERO_CLIENT_SECRET=your_xero_client_secret"
+    - "XERO_TEST_COMPANY_ID=your_test_company_id"
+    
+  quickbooks:
+    - "QUICKBOOKS_CLIENT_ID=your_quickbooks_client_id"
+    - "QUICKBOOKS_CLIENT_SECRET=your_quickbooks_client_secret"
+    - "QUICKBOOKS_REALM_ID=your_realm_id"
+    
+  stripe:
+    - "STRIPE_SECRET_KEY=sk_test_..."
+    - "STRIPE_PUBLISHABLE_KEY=pk_test_..."
+    - "STRIPE_WEBHOOK_SECRET=whsec_..."
+
+# Testing Instructions
+testing_instructions:
+  setup:
+    - "1. Register apps in Xero Developer Portal"
+    - "2. Register apps in QuickBooks Developer Portal"
+    - "3. Create Stripe test account"
+    - "4. Set environment variables"
+    - "5. Run integration tests"
+    
+  sandbox_environments:
+    xero: "https://developer.xero.com/app/manage"
+    quickbooks: "https://developer.intuit.com/app/developer/qbo"
+    stripe: "https://dashboard.stripe.com/test/apikeys"
+    
+  test_data_creation:
+    - "Use sandbox environments to create test invoices"
+    - "Trigger payment failures through test scenarios"
+    - "Monitor webhook events and API responses"
+    - "Validate data flow through entire system"

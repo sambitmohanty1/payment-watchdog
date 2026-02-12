@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-watchdog-api
+  namespace: lexure
+  labels:
+    app: payment-watchdog-api
+    component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-watchdog-api
+      component: api
+  template:
+    metadata:
+      labels:
+        app: payment-watchdog-api
+        component: api
+    spec:
+      containers:
+      - name: api
+        image: payment-watchdog/api:latest
+        imagePullPolicy: Never  # Use local image for development
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DATABASE_HOST
+          value: "payment-watchdog-postgres"
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_NAME
+          value: "payment_watchdog"
+        - name: DATABASE_USER
+          value: "postgres"
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: payment-watchdog-secrets
+              key: database_password
+        - name: REDIS_HOST
+          value: "payment-watchdog-redis"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: payment-watchdog-secrets
+              key: stripe_secret_key
+        - name: STRIPE_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: payment-watchdog-secrets
+              key: stripe_webhook_secret
+        - name: EMAIL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: payment-watchdog-secrets
+              key: email_password
+        volumeMounts:
+        - name: api-config
+          mountPath: /app/config
+        - name: api-migrations
+          mountPath: /app/migrations
+        - name: ssl-certs
+          mountPath: /app/certs
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: api-config
+        configMap:
+          name: payment-watchdog-config
+      - name: api-migrations
+        configMap:
+          name: payment-watchdog-migrations
+      - name: ssl-certs
+        secret:
+          secretName: payment-watchdog-ssl
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-watchdog-api
+  namespace: lexure
+  labels:
+    app: payment-watchdog-api
+    component: api
+spec:
+  type: NodePort  # Changed from ClusterIP to NodePort
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 30080  # Expose on host port 30080
+    protocol: TCP
+  selector:
+    app: payment-watchdog-api
+    component: api
+---
+# Additional LoadBalancer service for external access
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-watchdog-api-external
+  namespace: lexure
+  labels:
+    app: payment-watchdog-api
+    component: external
+spec:
+  type: LoadBalancer  # Use LoadBalancer for external access
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: payment-watchdog-api
+    component: api

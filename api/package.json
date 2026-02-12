@@ -1,0 +1,15 @@
+{
+  "name": "payment-watchdog-api",
+  "version": "1.0.0",
+  "description": "Payment Watchdog API Service",
+  "main": "cmd/main.go",
+  "scripts": {
+    "dev": "go run cmd/main.go",
+    "build": "go build -o bin/api cmd/main.go",
+    "test": "go test ./...",
+    "docker:dev": "docker-compose up api",
+    "docker:build": "docker build -f Dockerfile.dev ."
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

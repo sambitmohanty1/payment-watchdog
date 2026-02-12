@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lexure-mvp-postgres
+  namespace: lexure-mvp
+  labels:
+    app: payment-watchdog-mvp
+    component: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-watchdog-mvp
+      component: postgres
+  template:
+    metadata:
+      labels:
+        app: payment-watchdog-mvp
+        component: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+
+
+        ports:
+        - containerPort: 5432  # PostgreSQL listens on default port internally
+        env:
+        - name: POSTGRES_DB
+          value: "lexure_intelligence_mvp"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: lexure-mvp-secrets
+              key: database_password
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+        - name: POSTGRES_INITDB_ARGS
+          value: "--pgdata=/var/lib/postgresql/data/pgdata"
+
+
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-init
+          mountPath: /docker-entrypoint-initdb.d
+
+
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: lexure-mvp-postgres-pvc
+      - name: postgres-init
+        configMap:
+          name: lexure-mvp-postgres-init
+
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lexure-mvp-postgres
+  namespace: lexure-mvp
+  labels:
+    app: payment-watchdog-mvp
+    component: postgres
+spec:
+  selector:
+    app: payment-watchdog-mvp
+    component: postgres
+  ports:
+  - port: 5403  # External port following lexure-compliance pattern (5400-5402)
+    targetPort: 5432  # Internal port where PostgreSQL actually listens
+    protocol: TCP
+  type: ClusterIP

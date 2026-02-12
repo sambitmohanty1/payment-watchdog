@@ -1,0 +1,126 @@
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Create companies table
+CREATE TABLE companies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    domain VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'active',
+    stripe_account_id VARCHAR(255),
+    alert_settings JSONB DEFAULT '{}',
+    retry_settings JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create payment_failure_events table
+CREATE TABLE payment_failure_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id VARCHAR(255) NOT NULL,
+    provider_id VARCHAR(100) NOT NULL,
+    event_id VARCHAR(255) NOT NULL,
+    event_type VARCHAR(255) NOT NULL,
+    payment_intent_id VARCHAR(255),
+    amount DECIMAL(10,2),
+    currency VARCHAR(10) DEFAULT 'AUD',
+    customer_id VARCHAR(255),
+    customer_email VARCHAR(255),
+    customer_name VARCHAR(255),
+    failure_reason VARCHAR(255),
+    failure_code VARCHAR(100),
+    failure_message TEXT,
+    status VARCHAR(50) DEFAULT 'received',
+    processed_at TIMESTAMP WITH TIME ZONE,
+    alerted_at TIMESTAMP WITH TIME ZONE,
+    raw_event_data JSONB DEFAULT '{}',
+    normalized_data JSONB DEFAULT '{}',
+    webhook_received_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create retry_attempts table
+CREATE TABLE retry_attempts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    payment_failure_id UUID NOT NULL,
+    company_id VARCHAR(255) NOT NULL,
+    attempt_number INTEGER NOT NULL,
+    retry_amount DECIMAL(10,2),
+    retry_method VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'pending',
+    provider_retry_id VARCHAR(255),
+    provider_response JSONB DEFAULT '{}',
+    scheduled_at TIMESTAMP WITH TIME ZONE,
+    attempted_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create customer_communications table
+CREATE TABLE customer_communications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    payment_failure_id UUID NOT NULL,
+    company_id VARCHAR(255) NOT NULL,
+    channel VARCHAR(50),
+    template_id VARCHAR(255),
+    subject VARCHAR(500),
+    content TEXT,
+    status VARCHAR(50) DEFAULT 'pending',
+    provider_message_id VARCHAR(255),
+    delivery_response JSONB DEFAULT '{}',
+    sent_at TIMESTAMP WITH TIME ZONE,
+    delivered_at TIMESTAMP WITH TIME ZONE,
+    opened_at TIMESTAMP WITH TIME ZONE,
+    clicked_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes
+CREATE INDEX idx_companies_status ON companies(status);
+CREATE INDEX idx_companies_stripe_account ON companies(stripe_account_id);
+
+CREATE INDEX idx_payment_failures_company ON payment_failure_events(company_id);
+CREATE INDEX idx_payment_failures_provider ON payment_failure_events(provider_id);
+CREATE INDEX idx_payment_failures_event_id ON payment_failure_events(event_id);
+CREATE INDEX idx_payment_failures_status ON payment_failure_events(status);
+CREATE INDEX idx_payment_failures_customer ON payment_failure_events(customer_id);
+CREATE INDEX idx_payment_failures_created ON payment_failure_events(created_at);
+
+CREATE INDEX idx_retry_attempts_failure ON retry_attempts(payment_failure_id);
+CREATE INDEX idx_retry_attempts_company ON retry_attempts(company_id);
+CREATE INDEX idx_retry_attempts_status ON retry_attempts(status);
+
+CREATE INDEX idx_communications_failure ON customer_communications(payment_failure_id);
+CREATE INDEX idx_communications_company ON customer_communications(company_id);
+CREATE INDEX idx_communications_status ON customer_communications(status);
+CREATE INDEX idx_communications_channel ON customer_communications(channel);
+
+-- Create unique constraints
+CREATE UNIQUE INDEX idx_payment_failures_event_unique ON payment_failure_events(event_id);
+
+-- Create foreign key constraints
+ALTER TABLE retry_attempts 
+    ADD CONSTRAINT fk_retry_attempts_failure 
+    FOREIGN KEY (payment_failure_id) REFERENCES payment_failure_events(id) ON DELETE CASCADE;
+
+ALTER TABLE customer_communications 
+    ADD CONSTRAINT fk_communications_failure 
+    FOREIGN KEY (payment_failure_id) REFERENCES payment_failure_events(id) ON DELETE CASCADE;
+
+-- Create updated_at trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create triggers for updated_at
+CREATE TRIGGER update_companies_updated_at BEFORE UPDATE ON companies FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_payment_failures_updated_at BEFORE UPDATE ON payment_failure_events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_retry_attempts_updated_at BEFORE UPDATE ON retry_attempts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_communications_updated_at BEFORE UPDATE ON customer_communications FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

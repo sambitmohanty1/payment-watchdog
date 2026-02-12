@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: recovery-orchestration-pdb
+  labels:
+    app.kubernetes.io/name: recovery-orchestration
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: payment-watchdog
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: recovery-orchestration

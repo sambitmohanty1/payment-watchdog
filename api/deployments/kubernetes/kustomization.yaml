@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Import base components and applications
+resources:
+  - ./base/components/postgres
+  - ./base/components/redis
+  - ./base/components/ingress
+  - ./base/components/monitoring
+  - ./apps/payment-watchdog-api
+  - ./apps/payment-watchdog-web
+  - ./apps/recovery-orchestration
+
+# Common labels for all resources
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: payment-watchdog
+      environment: development
+
+# Global namespace
+namespace: lexure
+
+# Configure name prefix and suffix
+namePrefix: ""
+nameSuffix: ""
+
+# Configure image overrides
+images:
+  - name: payment-watchdog
+    newTag: latest
