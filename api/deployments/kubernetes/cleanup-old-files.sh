@@ -16,6 +16,7 @@ rm -f redis-persistent-volume.yaml
 rm -f postgres-init-configmap.yaml
 rm -f migrations-configmap.yaml
 rm -f ingress.yaml
+rm -f egress.yaml
 
 # Remove old recovery-orchestration files
 rm -rf recovery-orchestration/
