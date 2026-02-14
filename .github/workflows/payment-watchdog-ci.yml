@@ -345,7 +345,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: 
+    environment:
       name: staging
       url: https://staging.payment-watchdog.example.com  # Update with your actual staging URL
 
