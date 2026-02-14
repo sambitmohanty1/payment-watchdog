@@ -69,7 +69,9 @@ jobs:
 
     - name: Install dependencies
       run: |
-        cd web && npm ci
+        cd web && \
+        npm config set registry https://registry.npmjs.org/ && \
+        npm ci --prefer-offline --no-audit
         cd ../api && go mod download
         cd ../worker && go mod download
 
