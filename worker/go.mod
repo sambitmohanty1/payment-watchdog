@@ -19,6 +19,7 @@ require (
 	golang.org/x/time v0.12.0
 	gorm.io/datatypes v1.2.6
 	gorm.io/driver/postgres v1.5.2
+	gorm.io/driver/sqlite v1.4.3
 	gorm.io/gorm v1.30.0
 )
 
@@ -61,6 +62,7 @@ require (
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-sqlite3 v1.14.15 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

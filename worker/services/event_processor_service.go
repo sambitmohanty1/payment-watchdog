@@ -17,7 +17,7 @@ import (
 // EventProcessorService processes payment failure events and applies business intelligence
 type EventProcessorService struct {
 	db         *gorm.DB
-	ruleEngine *rules.RuleEngine
+	ruleEngine rules.RuleEngine
 	eventBus   architecture.EventBus
 	logger     *zap.Logger
 
@@ -66,7 +66,7 @@ type ProcessingError struct {
 }
 
 // NewEventProcessorService creates a new event processor service
-func NewEventProcessorService(db *gorm.DB, ruleEngine *rules.RuleEngine, eventBus architecture.EventBus, logger *zap.Logger) *EventProcessorService {
+func NewEventProcessorService(db *gorm.DB, ruleEngine rules.RuleEngine, eventBus architecture.EventBus, logger *zap.Logger) *EventProcessorService {
 	metrics := &EventProcessorMetrics{
 		EventsByProvider: make(map[string]int64),
 		EventsByStatus:   make(map[string]int64),
@@ -304,7 +304,7 @@ func (e *EventProcessorService) executeBusinessRules(ctx context.Context, failur
 	// results := e.ruleEngine.ExecuteRules(ruleContext)
 
 	// Placeholder for rule execution results
-	var results []*rules.ActionResult
+	results := make([]*rules.ActionResult, 0)
 
 	// Process rule results
 	for _, result := range results {

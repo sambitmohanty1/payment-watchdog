@@ -61,7 +61,7 @@ The Payment Watchdog platform follows a **microservices architecture** with **ev
 #### Infrastructure Components
 - **Container Platform**: Docker with Docker Compose for local development
 - **Orchestration**: Kubernetes for production deployment
-- **Database**: PostgreSQL 15 with GORM ORM
+- **Database**: Database-agnostic design supporting PostgreSQL (production) and SQLite (testing)
 - **Cache/Queue**: Redis 7 for event processing and caching
 - **API Gateway**: Kong for external API management
 - **Monitoring**: Prometheus + Grafana stack
@@ -122,7 +122,7 @@ The Payment Watchdog platform follows a **microservices architecture** with **ev
 #### Development Tools
 - **Language**: Go 1.23 for backend services
 - **Frontend**: Next.js 14 with TypeScript
-- **Database**: PostgreSQL 15 with GORM
+- **Database**: Database-agnostic with PostgreSQL (production) and SQLite (testing)
 - **Cache**: Redis 7 for caching and queuing
 - **Message Queue**: Redis pub/sub for event bus
 
@@ -240,6 +240,30 @@ The Payment Watchdog platform follows a **microservices architecture** with **ev
   - Alert and notification management
 
 ### Data Architecture
+
+#### Database-Agnostic Design
+The Payment Watchdog platform implements a **database-agnostic architecture** that automatically adapts to different database types:
+
+```go
+// Automatic database detection
+dbType := s.getDatabaseType()
+
+// PostgreSQL queries with advanced features
+if dbType == "postgres" {
+    query = `SELECT EXTRACT(HOUR FROM created_at), ...`
+} 
+// SQLite queries for testing
+else {
+    query = `SELECT CAST(strftime('%H', created_at) AS INTEGER), ...`
+}
+```
+
+**Benefits:**
+- **Production**: PostgreSQL with advanced analytics, JSONB support, and full SQL capabilities
+- **Testing**: SQLite in-memory databases for fast, ephemeral testing
+- **No Race Conditions**: Eliminated sqlmock concurrency issues with real database testing
+- **Flexibility**: Easy to add support for other databases (MySQL, etc.)
+- **CI/CD Ready**: Tests run anywhere without external dependencies
 
 #### Database Schema (PostgreSQL)
 ```sql
