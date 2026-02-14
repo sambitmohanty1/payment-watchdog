@@ -34,15 +34,22 @@ Transform how SaaS companies handle payment failures by providing:
 - **Worker Service**: Background processing with concurrency controls
 - **Recovery Orchestration**: Advanced payment recovery workflows with multi-provider integration
 - **Web Interface**: Next.js dashboard with Tailwind CSS
-- **Database**: PostgreSQL with GORM ORM
+- **Database**: Database-agnostic design supporting PostgreSQL (production) and SQLite (testing)
 - **Cache/Queue**: Redis for event processing
 - **Event Bus**: Redis-based asynchronous processing
 
 ### **Technology Stack**
-- **Backend**: Go 1.23, Gin, GORM, Redis, PostgreSQL
+- **Backend**: Go 1.23, Gin, GORM, Redis, PostgreSQL/SQLite
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS
 - **Infrastructure**: Docker, Kubernetes, Kong API Gateway
 - **CI/CD**: GitHub Actions, Docker Hub, Checkmarx Security
+- **Testing**: SQLite in-memory databases for ephemeral testing
+
+### **Database Architecture**
+- **Production**: PostgreSQL with advanced analytics and JSONB support
+- **Testing**: SQLite in-memory databases for fast, ephemeral testing
+- **Database-Agnostic Service**: Automatic detection and adaptation to database type
+- **No Race Conditions**: Eliminated sqlmock concurrency issues with real database testing
 
 ---
 
@@ -79,6 +86,29 @@ cd worker && go run cmd/main.go
 # Web Interface
 cd web && npm run dev
 ```
+
+### **Testing**
+```bash
+# Run all tests with ephemeral SQLite databases
+go test ./...
+
+# Run specific service tests
+go test ./services -v
+
+# Test recovery analytics (uses SQLite in-memory)
+go test ./services -run TestGetRecoveryMetrics
+
+# Test with PostgreSQL (requires database setup)
+./start-payment-watchdog-db.sh  # Starts PostgreSQL on port 5569
+go test ./services -run TestGetRecoveryMetrics  # Will use PostgreSQL if available
+```
+
+### **Testing Architecture**
+- **Ephemeral Testing**: Uses SQLite in-memory databases by default
+- **No External Dependencies**: Tests run anywhere without database setup
+- **Database-Agnostic**: Service automatically adapts to available database
+- **Race Condition Free**: Eliminated sqlmock concurrency issues
+- **Production-Like**: Optional PostgreSQL testing for production validation
 
 ---
 

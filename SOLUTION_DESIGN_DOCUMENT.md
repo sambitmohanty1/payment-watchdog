@@ -85,7 +85,7 @@ Payment Watchdog employs a cloud-native, microservices architecture designed for
 
 #### Existing Systems (Before Implementation)
 - **Payment Processing**: Direct integration with payment providers (Stripe, PayPal)
-- **Database**: Basic transaction logging
+- **Database**: Basic transaction logging with single database
 - **Monitoring**: Limited error tracking
 - **Recovery**: Manual processes and basic retry logic
 - **Analytics**: Spreadsheet-based reporting
@@ -154,10 +154,10 @@ Payment Watchdog employs a cloud-native, microservices architecture designed for
 
 ### Technology Stack and Tools
 
-#### Backend Technologies
+#### Core Technologies
 - **Runtime**: Go 1.24+ for performance and concurrency
 - **Framework**: Gin for HTTP services
-- **Database**: PostgreSQL with connection pooling
+- **Database**: Database-agnostic design with PostgreSQL (production) and SQLite (testing)
 - **Cache**: Redis for session management and caching
 - **Message Queue**: Redis Streams for event processing
 
@@ -175,11 +175,17 @@ Payment Watchdog employs a cloud-native, microservices architecture designed for
 - **Logging**: ELK Stack for centralized logging
 - **Security**: Checkmarx for static code analysis
 
-#### Development Tools
+#### Development and Testing
 - **Version Control**: Git with GitHub
 - **API Documentation**: OpenAPI/Swagger
-- **Testing**: Go testing framework, Jest for frontend
+- **Testing**: Go testing framework with ephemeral SQLite databases, Jest for frontend
 - **Code Quality**: SonarQube, ESLint, Go fmt
+
+#### Testing Strategy
+- **Ephemeral Testing**: SQLite in-memory databases for fast, dependency-free testing
+- **Database-Agnostic**: Tests work with both SQLite and PostgreSQL
+- **Race Condition Free**: Eliminated sqlmock concurrency issues
+- **CI/CD Ready**: Tests run anywhere without external database setup
 
 ---
 

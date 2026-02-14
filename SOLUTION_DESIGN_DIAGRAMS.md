@@ -1,5 +1,52 @@
 # Payment Watchdog - Solution Design Diagrams
 
+## Database-Agnostic Architecture
+
+### Database Detection and Adaptation Flow
+
+```mermaid
+graph TB
+    subgraph "Service Layer"
+        SVC[Recovery Analytics Service]
+        DETECT[Database Detection]
+        PGSQL[PostgreSQL Handler]
+        SQLT[SQLite Handler]
+    end
+    
+    subgraph "Database Layer"
+        PG[(PostgreSQL<br/>Production)]
+        SQLITE[(SQLite<br/>In-Memory<br/>Testing)]
+    end
+    
+    subgraph "Query Examples"
+        PGQ[EXTRACT(HOUR FROM created_at)<br/>hour::int<br/>recovered::float]
+        SQLQ[CAST(strftime('%H', created_at) AS INTEGER)<br/>hour<br/>CAST(recovered AS REAL)]
+    end
+    
+    SVC --> DETECT
+    DETECT -->|Production| PGSQL
+    DETECT -->|Testing| SQLT
+    PGSQL --> PG
+    SQLT --> SQLITE
+    PGSQL --> PGQ
+    SQLT --> SQLQ
+    
+    style PG fill:#e1f5fe
+    style SQLITE fill:#f3e5f5
+    style PGQ fill:#e8f5e8
+    style SQLQ fill:#fff3e0
+```
+
+### Benefits of Database-Agnostic Design
+
+- **Production Ready**: PostgreSQL with advanced features (JSONB, EXTRACT, etc.)
+- **Testing Friendly**: SQLite in-memory for fast, ephemeral testing
+- **No Race Conditions**: Eliminated sqlmock concurrency issues
+- **CI/CD Ready**: Tests run anywhere without external dependencies
+- **Flexible**: Easy to add support for other databases
+
+---
+
 ## Payment Provider Integration Architecture
 
 ### Overall System Integration Diagram
@@ -44,7 +91,8 @@ graph TB
         end
         
         subgraph "Data Layer"
-            PG[(PostgreSQL<br/>Primary DB)]
+            PG[(PostgreSQL<br/>Production DB)]
+            SQLITE[(SQLite<br/>Testing DB)]
             RD[(Redis<br/>Cache & Queue)]
             ES[(Elasticsearch<br/>Search & Analytics)]
             S3[(Object Storage<br/>S3/GCS)]
