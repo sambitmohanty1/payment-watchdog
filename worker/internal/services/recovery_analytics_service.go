@@ -24,14 +24,14 @@ type RecoveryAnalyticsService struct {
 
 // RecoveryMetrics represents the metrics for payment recovery
 type RecoveryMetrics struct {
-	RecoveryRate           float64   `json:"recovery_rate"`
-	AverageRecoveryTime    float64   `json:"average_recovery_time"`
-	RecoveryByMethod       []Metric  `json:"recovery_by_method"`
-	RecoveryByFailureType  []Metric  `json:"recovery_by_failure_type"`
-	RecoveryAmounts        Amounts   `json:"recovery_amounts"`
-	RecoveryTrends         []Trend   `json:"recovery_trends"`
-	RecoveryScore          int       `json:"recovery_score"`
-	LastUpdated            time.Time `json:"last_updated"`
+	RecoveryRate          float64   `json:"recovery_rate"`
+	AverageRecoveryTime   float64   `json:"average_recovery_time"`
+	RecoveryByMethod      []Metric  `json:"recovery_by_method"`
+	RecoveryByFailureType []Metric  `json:"recovery_by_failure_type"`
+	RecoveryAmounts       Amounts   `json:"recovery_amounts"`
+	RecoveryTrends        []Trend   `json:"recovery_trends"`
+	RecoveryScore         int       `json:"recovery_score"`
+	LastUpdated           time.Time `json:"last_updated"`
 }
 
 // Metric represents a key-value metric pair
@@ -42,9 +42,9 @@ type Metric struct {
 
 // Amounts represents monetary amounts for different recovery states
 type Amounts struct {
-	TotalFailed     float64 `json:"total_failed"`
-	TotalRecovered  float64 `json:"total_recovered"`
-	TotalPending    float64 `json:"total_pending"`
+	TotalFailed    float64 `json:"total_failed"`
+	TotalRecovered float64 `json:"total_recovered"`
+	TotalPending   float64 `json:"total_pending"`
 }
 
 // Trend represents a data point in a time series
@@ -63,34 +63,34 @@ type RecoveryPattern struct {
 
 // RecoveryAnalytics represents the complete analytics data
 type RecoveryAnalytics struct {
-	Metrics  RecoveryMetrics  `json:"metrics"`
+	Metrics  RecoveryMetrics `json:"metrics"`
 	Patterns RecoveryPattern `json:"patterns"`
 }
 
 // DetailedRecoveryMetrics represents detailed metrics for payment recovery
 type DetailedRecoveryMetrics struct {
-	RecoveryRate          float64          `json:"recovery_rate"`           // Percentage of failed payments that were successfully recovered
-	AverageRecoveryTime   int64            `json:"average_recovery_time"`   // Average time to recover a payment in seconds
-	RecoveryByMethod      map[string]int64 `json:"recovery_by_method"`      // Count of recoveries by method (e.g., auto-retry, manual)
+	RecoveryRate          float64          `json:"recovery_rate"`            // Percentage of failed payments that were successfully recovered
+	AverageRecoveryTime   int64            `json:"average_recovery_time"`    // Average time to recover a payment in seconds
+	RecoveryByMethod      map[string]int64 `json:"recovery_by_method"`       // Count of recoveries by method (e.g., auto-retry, manual)
 	RecoveryByFailureType map[string]int64 `json:"recovery_by_failure_type"` // Count of recoveries by failure type
-	TotalRecoveredAmount  float64          `json:"total_recovered_amount"`  // Total amount recovered in the period
-	TotalFailedAmount     float64          `json:"total_failed_amount"`     // Total amount that failed in the period
+	TotalRecoveredAmount  float64          `json:"total_recovered_amount"`   // Total amount recovered in the period
+	TotalFailedAmount     float64          `json:"total_failed_amount"`      // Total amount that failed in the period
 }
 
 // RecoveryTrend represents the trend of recovery metrics over time
 type RecoveryTrend struct {
-	TimePeriod   string  `json:"time_period"` // e.g., "2023-01", "2023-02"
-	RecoveryRate float64 `json:"recovery_rate"`
+	TimePeriod    string  `json:"time_period"` // e.g., "2023-01", "2023-02"
+	RecoveryRate  float64 `json:"recovery_rate"`
 	RecoveryCount int64   `json:"recovery_count"`
 	FailedCount   int64   `json:"failed_count"`
 }
 
 // DetailedRecoveryPattern represents detected patterns in payment recovery
 type DetailedRecoveryPattern struct {
-	PatternType  string  `json:"pattern_type"`   // e.g., "time_of_day", "day_of_week"
-	PatternValue string  `json:"pattern_value"`  // e.g., "09:00-12:00", "Monday"
-	RecoveryRate float64 `json:"recovery_rate"`  // Recovery rate for this pattern
-	SampleSize   int64   `json:"sample_size"`    // Number of samples in this pattern
+	PatternType  string  `json:"pattern_type"`  // e.g., "time_of_day", "day_of_week"
+	PatternValue string  `json:"pattern_value"` // e.g., "09:00-12:00", "Monday"
+	RecoveryRate float64 `json:"recovery_rate"` // Recovery rate for this pattern
+	SampleSize   int64   `json:"sample_size"`   // Number of samples in this pattern
 }
 
 // NewRecoveryAnalyticsService creates a new instance of RecoveryAnalyticsService
@@ -118,8 +118,8 @@ func (s *RecoveryAnalyticsService) getRecoveryRateByHour(ctx context.Context, co
 			SELECT 
 				EXTRACT(HOUR FROM created_at) as hour,
 				COUNT(*) as total,
-				SUM(CASE WHEN status = 'recovered' THEN 1 ELSE 0 END) as recovered
-			FROM payment_events
+				SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as recovered
+			FROM payment_failure_events
 			WHERE company_id = ? 
 			  AND created_at BETWEEN ? AND ?
 			GROUP BY EXTRACT(HOUR FROM created_at)
@@ -219,7 +219,7 @@ func (s *RecoveryAnalyticsService) GetRecoveryMetrics(ctx context.Context, compa
 		if err := s.db.WithContext(ctx).
 			Model(&models.PaymentFailureEvent{}).
 			Select("COUNT(*) as count, COALESCE(SUM(amount), 0) as sum").
-			Where("company_id = ? AND created_at BETWEEN ? AND ?", 
+			Where("company_id = ? AND created_at BETWEEN ? AND ?",
 				companyID, startTime, endTime).
 			Scan(&failedPayments).Error; err != nil {
 			errCh <- fmt.Errorf("failed to get failed payments: %w", err)
@@ -251,16 +251,16 @@ func (s *RecoveryAnalyticsService) GetRecoveryMetrics(ctx context.Context, compa
 
 		query := `
 			SELECT 
-				COALESCE(method, 'unknown') as method,
-				COALESCE(failure_type, 'unknown') as failure_type,
+				COALESCE(provider, 'unknown') as method,
+				COALESCE(failure_reason, 'unknown') as failure_type,
 				COUNT(*) as count,
 				COALESCE(SUM(amount), 0) as sum,
-				COALESCE(AVG(EXTRACT(EPOCH FROM (recovered_at - failed_at))), 0) as avg_time
-			FROM payment_events
+				0 as avg_time
+			FROM payment_failure_events
 			WHERE company_id = ? 
-				AND failed_at BETWEEN ? AND ?
-				AND status = 'recovered'
-			GROUP BY method, failure_type
+				AND created_at BETWEEN ? AND ?
+				AND status = 'resolved'
+			GROUP BY provider, failure_reason
 		`
 
 		if err := s.db.Raw(query, companyID, startTime, endTime).Scan(&recoveredPayments).Error; err != nil {
@@ -394,10 +394,10 @@ func (s *RecoveryAnalyticsService) GetRecoveryTrends(ctx context.Context, compan
 	// This is a simplified query - adjust based on your schema and time period grouping
 	query := `
 		SELECT 
-			TO_CHAR(DATE_TRUNC(?, failed_at), 'YYYY-MM-DD') as time_period,
+			TO_CHAR(DATE_TRUNC(?, created_at), 'YYYY-MM-DD') as time_period,
 			COUNT(*) as total_failures,
-			SUM(CASE WHEN status = 'recovered' THEN 1 ELSE 0 END) as recovered_count
-		FROM payment_events
+			SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as recovered_count
+		FROM payment_failure_events
 		WHERE company_id = ?
 		GROUP BY time_period
 		ORDER BY time_period DESC
@@ -469,15 +469,15 @@ func (s *RecoveryAnalyticsService) analyzeTimeOfDayPatterns(ctx context.Context,
 		WITH time_slots AS (
 			SELECT 
 				CASE 
-					WHEN EXTRACT(HOUR FROM failed_at) BETWEEN 0 AND 5 THEN '00:00-06:00'
-					WHEN EXTRACT(HOUR FROM failed_at) BETWEEN 6 AND 11 THEN '06:00-12:00'
-					WHEN EXTRACT(HOUR FROM failed_at) BETWEEN 12 AND 17 THEN '12:00-18:00'
+					WHEN EXTRACT(HOUR FROM created_at) BETWEEN 0 AND 5 THEN '00:00-06:00'
+					WHEN EXTRACT(HOUR FROM created_at) BETWEEN 6 AND 11 THEN '06:00-12:00'
+					WHEN EXTRACT(HOUR FROM created_at) BETWEEN 12 AND 17 THEN '12:00-18:00'
 					ELSE '18:00-00:00'
 			END as time_slot,
 			COUNT(*) as total,
-			SUM(CASE WHEN status = 'recovered' THEN 1 ELSE 0) as recovered
-		FROM payment_events
-		WHERE company_id = ? AND failed_at BETWEEN ? AND ?
+			SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0) as recovered
+		FROM payment_failure_events
+		WHERE company_id = ? AND created_at BETWEEN ? AND ?
 		GROUP BY time_slot
 		)
 		SELECT 
@@ -522,11 +522,11 @@ func (s *RecoveryAnalyticsService) analyzeDayOfWeekPatterns(ctx context.Context,
 	query := `
 		WITH day_stats AS (
 			SELECT 
-				TO_CHAR(failed_at, 'Day') as day_of_week,
+				TO_CHAR(created_at, 'Day') as day_of_week,
 				COUNT(*) as total,
-				SUM(CASE WHEN status = 'recovered' THEN 1 ELSE 0) as recovered
-			FROM payment_events
-			WHERE company_id = ? AND failed_at BETWEEN ? AND ?
+				SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0) as recovered
+			FROM payment_failure_events
+			WHERE company_id = ? AND created_at BETWEEN ? AND ?
 			GROUP BY day_of_week
 		)
 		SELECT 
@@ -577,7 +577,7 @@ func (s *RecoveryAnalyticsService) GetRecoveryPerformanceScore(ctx context.Conte
 	// Get metrics for the last 30 days
 	now := time.Now()
 	startTime := now.AddDate(0, -1, 0)
-	
+
 	metrics, err := s.GetRecoveryMetrics(ctx, companyID, startTime, now)
 	if err != nil {
 		return 0, err
