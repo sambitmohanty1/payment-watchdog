@@ -15,8 +15,9 @@ import (
 	"github.com/stripe/stripe-go/v74/webhook"
 	"gorm.io/gorm"
 
-	"payment-watchdog/api/internal/models"
-	"payment-watchdog/api/internal/rules"
+    // FIXED IMPORTS: Use full module path defined in api/go.mod
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 )
 
 type WebhookService struct {
