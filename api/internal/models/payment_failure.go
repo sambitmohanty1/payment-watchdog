@@ -16,20 +16,20 @@ type PaymentFailureEvent struct {
 	EventType  string    `json:"event_type" gorm:"not null"`           // payment_intent.payment_failed, etc.
 
 	// Payment Details
-	PaymentIntentID string     `json:"payment_intent_id"`
-	TransactionID   string     `json:"transaction_id"`
-	
+	PaymentIntentID string `json:"payment_intent_id"`
+	TransactionID   string `json:"transaction_id"`
+
 	// FINANCIAL INTEGRITY FIX: Use int64 for cents. Never use float64 for money.
-	AmountCents     int64      `json:"amount_cents"` 
-	Currency        string     `json:"currency" gorm:"default:'AUD'"`
-	
-	CustomerID      string     `json:"customer_id"`
-	CustomerEmail   string     `json:"customer_email"`
-	CustomerName    string     `json:"customer_name"`
-	CustomerPhone   string     `json:"customer_phone"`
-	Provider        string     `json:"provider"`
-	RetryCount      int        `json:"retry_count" gorm:"default:0"`
-	DueDate         *time.Time `json:"due_date,omitempty"`
+	AmountCents int64  `json:"amount_cents"`
+	Currency    string `json:"currency" gorm:"default:'AUD'"`
+
+	CustomerID    string     `json:"customer_id"`
+	CustomerEmail string     `json:"customer_email"`
+	CustomerName  string     `json:"customer_name"`
+	CustomerPhone string     `json:"customer_phone"`
+	Provider      string     `json:"provider"`
+	RetryCount    int        `json:"retry_count" gorm:"default:0"`
+	DueDate       *time.Time `json:"due_date,omitempty"`
 
 	// Failure Information
 	FailureReason  string `json:"failure_reason"` // card_declined, etc.
@@ -59,6 +59,38 @@ type DeadLetterEntry struct {
 	Error     string    `json:"error"`
 	CompanyID string    `json:"company_id"`
 	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// CustomerCommunication tracks outreach attempts
+type CustomerCommunication struct {
+	ID               uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	PaymentFailureID uuid.UUID `json:"payment_failure_id" gorm:"not null;index"`
+	CompanyID        string    `json:"company_id" gorm:"not null;index"`
+
+	// Communication Details
+	CommunicationType string `json:"communication_type"` // email, sms
+	Channel           string `json:"channel"`            // email, sms
+	Recipient         string `json:"recipient"`
+	TemplateID        string `json:"template_id"`
+	Subject           string `json:"subject"`
+	Content           string `json:"content"`
+
+	// Delivery Status
+	Status            string                 `json:"status"` // sent, delivered, opened, clicked, failed
+	ExternalID        string                 `json:"external_id"`
+	ProviderMessageID string                 `json:"provider_message_id"`
+	DeliveryResponse  map[string]interface{} `json:"delivery_response" gorm:"type:jsonb"`
+	Metadata          map[string]interface{} `json:"metadata" gorm:"type:jsonb"`
+
+	// Tracking
+	SentAt      *time.Time `json:"sent_at,omitempty"`
+	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
+	OpenedAt    *time.Time `json:"opened_at,omitempty"`
+	ClickedAt   *time.Time `json:"clicked_at,omitempty"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Company represents a company using the service
