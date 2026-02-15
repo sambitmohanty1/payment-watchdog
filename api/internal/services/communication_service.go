@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
 
-	"github.com/payment-watchdog/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 )
 
 // CommunicationService handles customer communications

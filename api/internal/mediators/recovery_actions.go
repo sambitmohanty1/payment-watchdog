@@ -9,7 +9,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/payment-watchdog/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 )
 
 // RecoveryActionInterface defines recovery actions for payment providers

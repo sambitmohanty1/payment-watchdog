@@ -16,12 +16,12 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"github.com/payment-watchdog/internal/api"
-	"github.com/payment-watchdog/internal/config"
-	"github.com/payment-watchdog/internal/database"
-	"github.com/payment-watchdog/internal/mediators"
-	"github.com/payment-watchdog/internal/rules"
-	"github.com/payment-watchdog/internal/services"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/api"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/database"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/mediators"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 )
 
 func main() {
