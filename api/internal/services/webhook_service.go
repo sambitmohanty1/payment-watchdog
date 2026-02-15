@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,8 +14,8 @@ import (
 	"github.com/stripe/stripe-go/v74/webhook"
 	"gorm.io/gorm"
 
-    "github.com/sambitmohanty1/payment-watchdog/api/internal/models"
-    "github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
+	"payment-watchdog/api/internal/models"
+	"payment-watchdog/api/internal/rules"
 )
 
 type WebhookService struct {
@@ -94,14 +93,14 @@ func (s *WebhookService) processEvent(ctx context.Context, event *stripe.Event, 
 		// Use db transaction for atomicity
 		return s.db.Transaction(func(tx *gorm.DB) error {
 			failure := models.PaymentFailureEvent{
-				EventID:        event.ID,
-				ProviderID:     "stripe",
-				EventType:      event.Type,
-				PaymentIntentID: pi.ID,
-				AmountCents:    pi.Amount, // Correct Int64 handling
-				Currency:       string(pi.Currency),
-				Status:         "received",
-				RawEventData:   string(rawBody),
+				EventID:           event.ID,
+				ProviderID:        "stripe",
+				EventType:         event.Type,
+				PaymentIntentID:   pi.ID,
+				AmountCents:       pi.Amount, // Correct Int64 handling
+				Currency:          string(pi.Currency),
+				Status:            "received",
+				RawEventData:      string(rawBody),
 				WebhookReceivedAt: time.Now(),
 			}
 			return tx.Create(&failure).Error
