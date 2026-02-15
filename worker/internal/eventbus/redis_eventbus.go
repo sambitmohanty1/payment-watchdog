@@ -13,21 +13,21 @@ import (
 )
 
 type RedisEventBus struct {
-	client      *redis.Client
-	logger      *zap.Logger
-	subscribers map[string][]*RedisSubscription
-	mutex       sync.RWMutex
-	ctx         context.Context
-	cancel      context.CancelFunc
+    client      *redis.Client
+    logger      *zap.Logger
+    subscribers map[string][]*RedisSubscription
+    mutex       sync.RWMutex
+    ctx         context.Context
+    cancel      context.CancelFunc
 }
 
 type RedisSubscription struct {
-	id       string
-	topic    string
-	handler  EventHandler
-	eventBus *RedisEventBus
-	ctx      context.Context
-	cancel   context.CancelFunc
+    id       string
+    topic    string
+    handler  EventHandler
+    eventBus *RedisEventBus
+    ctx      context.Context
+    cancel   context.CancelFunc
 }
 
 func NewRedisEventBus(redisAddr, redisPassword string, db int, logger *zap.Logger) (*RedisEventBus, error) {
