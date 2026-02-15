@@ -1,6 +1,3 @@
-//go:build !build
-// +build !build
-
 package models
 
 import (
