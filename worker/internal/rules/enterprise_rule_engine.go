@@ -8,7 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/lexure-intelligence/payment-watchdog/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/internal/architecture"
 )
 
 // EnterpriseRuleEngine represents the core business rules engine

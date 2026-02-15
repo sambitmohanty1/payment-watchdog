@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lexure-intelligence/payment-watchdog/internal/analytics"
-	"github.com/lexure-intelligence/payment-watchdog/internal/architecture"
-	"github.com/lexure-intelligence/payment-watchdog/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/internal/analytics"
+	"github.com/sambitmohanty1/payment-watchdog/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/internal/models"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )

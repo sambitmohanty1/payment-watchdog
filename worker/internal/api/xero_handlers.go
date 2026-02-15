@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/lexure-intelligence/payment-watchdog/internal/mediators"
+	"github.com/sambitmohanty1/payment-watchdog/internal/mediators"
 )
 
 // XeroHandlers handles Xero-specific API endpoints using the mediator pattern

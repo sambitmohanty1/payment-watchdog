@@ -3,7 +3,7 @@ package rules
 import (
 	"time"
 
-	"github.com/lexure-intelligence/payment-watchdog/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/internal/models"
 )
 
 // RuleEngine represents the interface for a business rules engine

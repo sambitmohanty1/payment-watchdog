@@ -1,4 +1,4 @@
-module github.com/lexure-intelligence/payment-watchdog
+module github.com/sambitmohanty1/payment-watchdog
 
 go 1.23.0
 

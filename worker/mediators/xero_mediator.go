@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
-	"github.com/lexure-intelligence/payment-watchdog/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/internal/architecture"
 )
 
 // OAuthTokens represents OAuth 2.0 tokens

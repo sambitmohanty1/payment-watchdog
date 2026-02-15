@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/lexure-intelligence/payment-watchdog/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/internal/architecture"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

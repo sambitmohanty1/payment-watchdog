@@ -9,7 +9,7 @@ import (
 
 	"encoding/json"
 
-	"github.com/lexure-intelligence/payment-watchdog/internal/rules"
+	"github.com/sambitmohanty1/payment-watchdog/internal/rules"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stripe/stripe-go/v74"

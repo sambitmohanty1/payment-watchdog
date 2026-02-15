@@ -1,8 +1,8 @@
 /*
- * IMPORTANT: This file should be created in github.com/lexure-intelligence/payment-watchdog/internal/services/
+ * IMPORTANT: This file should be created in github.com/sambitmohanty1/payment-watchdog/internal/services/
  * NOT in the parent ComplyFlow/internal/ directory
  *
- * File Location: github.com/lexure-intelligence/payment-watchdog/internal/services/payment_failure_service.go
+ * File Location: github.com/sambitmohanty1/payment-watchdog/internal/services/payment_failure_service.go
  *
  * This service manages payment failure events and provides comprehensive querying capabilities
  * for the Payment Failure Intelligence Service.
@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lexure-intelligence/payment-watchdog/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/internal/models"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"gorm.io/gorm"

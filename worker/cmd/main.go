@@ -15,10 +15,10 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"github.com/lexure-intelligence/payment-watchdog/internal/config"
-	"github.com/lexure-intelligence/payment-watchdog/internal/eventbus"
-	"github.com/lexure-intelligence/payment-watchdog/internal/rules"
-	"github.com/lexure-intelligence/payment-watchdog/internal/services"
+	"github.com/sambitmohanty1/payment-watchdog/internal/config"
+	"github.com/sambitmohanty1/payment-watchdog/internal/eventbus"
+	"github.com/sambitmohanty1/payment-watchdog/internal/rules"
+	"github.com/sambitmohanty1/payment-watchdog/internal/services"
 )
 
 func main() {
