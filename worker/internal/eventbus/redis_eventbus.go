@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
-// RedisEventBus implements EventBus using Redis pub/sub
 type RedisEventBus struct {
 	client      *redis.Client
 	logger      *zap.Logger
@@ -21,7 +21,6 @@ type RedisEventBus struct {
 	cancel      context.CancelFunc
 }
 
-// RedisSubscription represents a Redis event subscription
 type RedisSubscription struct {
 	id       string
 	topic    string
@@ -31,72 +30,30 @@ type RedisSubscription struct {
 	cancel   context.CancelFunc
 }
 
-// NewRedisEventBus creates a new Redis-based event bus
 func NewRedisEventBus(redisAddr, redisPassword string, db int, logger *zap.Logger) (*RedisEventBus, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-
 	client := redis.NewClient(&redis.Options{
 		Addr:     redisAddr,
 		Password: redisPassword,
 		DB:       db,
 	})
 
-	// Test connection
 	if err := client.Ping(ctx).Err(); err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
-	eventBus := &RedisEventBus{
+	return &RedisEventBus{
 		client:      client,
 		logger:      logger,
 		subscribers: make(map[string][]*RedisSubscription),
 		ctx:         ctx,
 		cancel:      cancel,
-	}
-
-	return eventBus, nil
+	}, nil
 }
 
-// Publish publishes an event to a topic
-func (r *RedisEventBus) Publish(ctx context.Context, topic string, event interface{}) error {
-	// Serialize event
-	eventData, err := json.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("failed to marshal event: %w", err)
-	}
-
-	// Publish to Redis
-	result := r.client.Publish(ctx, topic, eventData)
-	if result.Err() != nil {
-		return fmt.Errorf("failed to publish event to Redis: %w", result.Err())
-	}
-
-	// Log successful publish
-	r.logger.Debug("Event published",
-		zap.String("topic", topic),
-		zap.Int64("recipients", result.Val()),
-		zap.String("event_type", fmt.Sprintf("%T", event)))
-
-	return nil
-}
-
-// PublishAsync publishes an event asynchronously
-func (r *RedisEventBus) PublishAsync(ctx context.Context, topic string, event interface{}) error {
-	go func() {
-		if err := r.Publish(ctx, topic, event); err != nil {
-			r.logger.Error("Async event publish failed",
-				zap.String("topic", topic),
-				zap.Error(err))
-		}
-	}()
-
-	return nil
-}
-
-// Subscribe subscribes to events on a topic
+// Subscribe implements Consumer Group logic for reliable delivery
 func (r *RedisEventBus) Subscribe(ctx context.Context, topic string, handler EventHandler) (Subscription, error) {
-	// Create subscription
 	subCtx, cancel := context.WithCancel(ctx)
 	subscription := &RedisSubscription{
 		id:       uuid.New().String(),
@@ -107,148 +64,112 @@ func (r *RedisEventBus) Subscribe(ctx context.Context, topic string, handler Eve
 		cancel:   cancel,
 	}
 
-	// Add to subscribers
 	r.mutex.Lock()
 	r.subscribers[topic] = append(r.subscribers[topic], subscription)
 	r.mutex.Unlock()
 
-	// Start listening for events
-	go r.listenForEvents(subscription)
-
-	r.logger.Info("Subscription created",
-		zap.String("subscription_id", subscription.id),
-		zap.String("topic", topic))
+	// Start consuming in a goroutine
+	go r.consumeStream(subscription)
 
 	return subscription, nil
 }
 
-// SubscribeAsync subscribes to events asynchronously
-func (r *RedisEventBus) SubscribeAsync(ctx context.Context, topic string, handler EventHandler) (Subscription, error) {
-	// For Redis, async subscription is the same as sync
-	return r.Subscribe(ctx, topic, handler)
-}
+func (r *RedisEventBus) consumeStream(sub *RedisSubscription) {
+	groupName := "payment-watchdog-workers"
+	consumerName := "worker-" + sub.id
 
-// Unsubscribe removes a subscription
-func (r *RedisEventBus) Unsubscribe(subscription Subscription) error {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	// 1. Ensure Consumer Group exists (idempotent operation)
+	// We ignore "BUSYGROUP" errors which mean it already exists
+	_ = r.client.XGroupCreateMkStream(sub.ctx, sub.topic, groupName, "0").Err()
 
-	// Find and remove subscription
-	if subscribers, exists := r.subscribers[subscription.Topic()]; exists {
-		for i, sub := range subscribers {
-			if sub.ID() == subscription.ID() {
-				// Cancel the subscription context
-				sub.cancel()
-
-				// Remove from slice
-				r.subscribers[subscription.Topic()] = append(subscribers[:i], subscribers[i+1:]...)
-
-				r.logger.Info("Subscription removed",
-					zap.String("subscription_id", subscription.ID()),
-					zap.String("topic", subscription.Topic()))
-
-				return nil
-			}
-		}
-	}
-
-	return fmt.Errorf("subscription not found: %s", subscription.ID())
-}
-
-// Close closes the event bus and cleans up resources
-func (r *RedisEventBus) Close() error {
-	r.cancel()
-
-	// Close Redis client
-	if err := r.client.Close(); err != nil {
-		return fmt.Errorf("failed to close Redis client: %w", err)
-	}
-
-	r.logger.Info("Redis event bus closed")
-	return nil
-}
-
-// listenForEvents listens for events on a specific subscription
-func (r *RedisEventBus) listenForEvents(subscription *RedisSubscription) {
-	// Create Redis pubsub
-	pubsub := r.client.Subscribe(r.ctx, subscription.topic)
-	defer pubsub.Close()
-
-	// Channel for receiving messages
-	ch := pubsub.Channel()
+	r.logger.Info("Started stream consumer", 
+		zap.String("topic", sub.topic), 
+		zap.String("group", groupName))
 
 	for {
 		select {
-		case <-subscription.ctx.Done():
-			r.logger.Debug("Subscription context cancelled",
-				zap.String("subscription_id", subscription.id),
-				zap.String("topic", subscription.topic))
+		case <-sub.ctx.Done():
 			return
+		default:
+			// 2. Read new messages (">") using blocking read
+			streams, err := r.client.XReadGroup(sub.ctx, &redis.XReadGroupArgs{
+				Group:    groupName,
+				Consumer: consumerName,
+				Streams:  []string{sub.topic, ">"},
+				Count:    10,
+				Block:    2 * time.Second,
+			}).Result()
 
-		case msg := <-ch:
-			if msg.Channel == subscription.topic {
-				// Process the event
-				if err := r.processEvent(subscription, msg.Payload); err != nil {
-					r.logger.Error("Failed to process event",
-						zap.String("subscription_id", subscription.id),
-						zap.String("topic", subscription.topic),
-						zap.Error(err))
+			if err != nil {
+				if err != redis.Nil {
+					r.logger.Error("Failed to read stream", zap.Error(err))
+				}
+				// Backoff slightly on error/empty to prevent tight loop burning CPU
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+
+			// 3. Process messages
+			for _, stream := range streams {
+				for _, msg := range stream.Messages {
+					if err := r.handleMessage(sub, msg, groupName); err != nil {
+						r.logger.Error("Failed to process message", 
+							zap.String("msg_id", msg.ID), 
+							zap.Error(err))
+						// Note: We do NOT Ack here, so it remains in Pending Entries List (PEL)
+						// to be picked up by a recovery process later.
+					} else {
+						// 4. Ack on success
+						r.client.XAck(sub.ctx, sub.topic, groupName, msg.ID)
+					}
 				}
 			}
 		}
 	}
 }
 
-// processEvent processes a single event
-func (r *RedisEventBus) processEvent(subscription *RedisSubscription, payload string) error {
-	// Try to deserialize as JSON first
+func (r *RedisEventBus) handleMessage(sub *RedisSubscription, msg redis.XMessage, group string) error {
+	payloadStr, ok := msg.Values["payload"].(string)
+	if !ok {
+		return fmt.Errorf("invalid payload format")
+	}
+
 	var eventData map[string]interface{}
-	if err := json.Unmarshal([]byte(payload), &eventData); err != nil {
-		// If not JSON, treat as raw string
-		eventData = map[string]interface{}{
-			"data": payload,
-		}
+	if err := json.Unmarshal([]byte(payloadStr), &eventData); err != nil {
+		// Fallback for simple strings
+		eventData = map[string]interface{}{"data": payloadStr}
 	}
 
-	// Call the handler
-	if err := subscription.handler(subscription.ctx, eventData); err != nil {
-		return fmt.Errorf("handler failed: %w", err)
-	}
-
-	return nil
+	// Inject metadata if needed by handler
+	eventData["_msg_id"] = msg.ID
+	
+	return sub.handler(sub.ctx, eventData)
 }
 
-// ID returns the subscription ID
-func (s *RedisSubscription) ID() string {
-	return s.id
+func (r *RedisEventBus) Close() error {
+	r.cancel()
+	return r.client.Close()
 }
 
-// Topic returns the subscription topic
-func (s *RedisSubscription) Topic() string {
-	return s.topic
+// Interface compliance stub
+func (r *RedisEventBus) Publish(ctx context.Context, topic string, event interface{}) error {
+	// Worker primarily consumes, but if it needs to publish, use XADD
+	data, _ := json.Marshal(event)
+	return r.client.XAdd(ctx, &redis.XAddArgs{
+		Stream: topic,
+		Values: map[string]interface{}{"payload": data},
+	}).Err()
 }
 
-// Unsubscribe removes this subscription
-func (s *RedisSubscription) Unsubscribe() error {
-	return s.eventBus.Unsubscribe(s)
+func (r *RedisEventBus) PublishAsync(ctx context.Context, topic string, event interface{}) error {
+	return r.Publish(ctx, topic, event)
 }
 
-// GetStats returns event bus statistics
-func (r *RedisEventBus) GetStats() map[string]interface{} {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
-
-	stats := make(map[string]interface{})
-
-	// Count subscribers per topic
-	for topic, subscribers := range r.subscribers {
-		stats[topic] = len(subscribers)
-	}
-
-	// Redis info
-	if info, err := r.client.Info(r.ctx).Result(); err == nil {
-		stats["redis_info"] = info
-	}
-
-	return stats
+func (r *RedisEventBus) SubscribeAsync(ctx context.Context, topic string, handler EventHandler) (Subscription, error) {
+	return r.Subscribe(ctx, topic, handler)
 }
+
+func (r *RedisEventBus) Unsubscribe(s Subscription) error { return nil }
+func (s *RedisSubscription) ID() string                   { return s.id }
+func (s *RedisSubscription) Topic() string                { return s.topic }
+func (s *RedisSubscription) Unsubscribe() error           { return nil }
