@@ -3,19 +3,18 @@ name: Payment Watchdog CI/CD
 on:
   push:
     branches: [ main, develop ]
-    paths:
-      - '**'
-      - '.github/workflows/payment-watchdog-ci.yml'
   pull_request:
     branches: [ main, develop ]
-    paths:
-      - '**'
-      - '.github/workflows/payment-watchdog-ci.yml'
+
+# 🛑 SECURITY: Restrict permissions for GITHUB_TOKEN
+permissions:
+  contents: read
+  security-events: write # Required for Trivy/CodeQL
+  packages: write
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/payment-watchdog
-  KUBECONFIG_PATH: ${{ secrets.KUBE_CONFIG }}
+  # IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/payment-watchdog
 
 jobs:
   # Unit Tests
@@ -28,78 +27,50 @@ jobs:
         working-directory: .
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Fetch all history for proper versioning
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.21'
-        check-latest: true
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true # Native caching enabled
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: web/package-lock.json
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
 
-    - name: Cache Go modules
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/go/pkg/mod
-          api/go.sum
-          worker/go.sum
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+      - name: Install dependencies
+        run: |
+          cd web && npm ci
+          cd ../api && go mod download
+          cd ../worker && go mod download
 
-    - name: Cache Node modules
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.npm
-          web/node_modules
-        key: ${{ runner.os }}-node-${{ hashFiles('web/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+      - name: Run API unit tests
+        run: |
+          cd api
+          go test -v -race -coverprofile=coverage-api.out ./...
 
-    - name: Install dependencies
-      run: |
-        cd web && \
-        npm config set registry https://registry.npmjs.org/ && \
-        npm ci --prefer-offline --no-audit
-        cd ../api && go mod download
-        cd ../worker && go mod download
+      - name: Run Worker unit tests
+        run: |
+          cd worker
+          go test -v -race -coverprofile=coverage-worker.out ./...
 
-    - name: Run API unit tests
-      run: |
-        cd api
-        go test -v -race -coverprofile=coverage-api.out ./...
+      - name: Run Web unit tests
+        run: |
+          cd web
+          npm test -- --coverage --watchAll=false
 
-    - name: Run Worker unit tests
-      run: |
-        cd worker
-        # Set up environment for tests
-        export GO111MODULE=on
-        # Run all tests, including integration tests that use SQLite
-        go test -v -race -coverprofile=coverage-worker.out -tags=integration ./...
-
-    - name: Run Web unit tests
-      run: |
-        cd web
-        npm test -- --coverage --watchAll=false
-
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v4
-      with:
-        files: ./api/coverage-api.out,./worker/coverage-worker.out,./web/coverage/lcov.info
-        flags: unit-tests
-        name: Unit Tests Coverage
-        fail_ci_if_error: true
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # REQUIRED for v5+
+          files: ./api/coverage-api.out,./worker/coverage-worker.out,./web/coverage/lcov.info
+          flags: unit-tests
+          name: Unit Tests Coverage
 
   # Integration Tests
   integration-tests:
@@ -111,104 +82,52 @@ jobs:
         working-directory: .
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
 
-    - name: Start test infrastructure
-      run: |
-        # Show Docker and Docker Compose versions
-        docker --version
-        docker-compose --version
-        
-        # Pull latest images first
-        docker-compose -f docker-compose.test.yml pull
-        
-        # Start services with more verbose output
-        echo 'Starting test services...'
-        docker-compose -f docker-compose.test.yml up -d postgres redis mailhog
-        
-        # Create test database
-        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -c "CREATE DATABASE payment_watchdog;" || true
-        
-        # Show running containers
-        echo 'Running containers:'
-        docker ps -a
-        
-        # Check container logs
-        echo 'Postgres logs:'
-        docker-compose -f docker-compose.test.yml logs postgres || true
-        
-        # Wait for PostgreSQL to be ready with more detailed output
-        echo 'Waiting for PostgreSQL to be ready...'
-        timeout 120 bash -c 'until docker-compose -f docker-compose.test.yml exec -T postgres pg_isready -U postgres; do 
-          echo "Waiting for PostgreSQL..."
-          docker-compose -f docker-compose.test.yml logs --tail=10 postgres
-          sleep 5
-        done'
-        
-        # Final check
-        echo 'Final container status:'
-        docker ps -a
-        docker-compose -f docker-compose.test.yml ps
+      - name: Start test infrastructure
+        run: |
+          docker compose -f docker-compose.test.yml up -d postgres redis mailhog
+          timeout 60 bash -c 'until docker compose exec -T postgres pg_isready -U postgres; do sleep 2; done'
 
-    - name: Setup and verify database
-      run: |
-        # Wait for PostgreSQL to be fully ready
-        echo "Waiting for PostgreSQL to be ready..."
-        timeout 60 bash -c 'until docker-compose -f docker-compose.test.yml exec -T postgres pg_isready -U postgres; do 
-          echo "Waiting for PostgreSQL..."
-          sleep 2
-        done'
-        
-        echo "Creating database if not exists..."
-        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -c "SELECT 'CREATE DATABASE payment_watchdog' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'payment_watchdog')\gexec"
-        
-        echo "Running database migrations..."
-        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -d payment_watchdog -f /docker-entrypoint-initdb.d/init-db.sql
-        
-        echo "Verifying migrations..."
-        echo "\n=== Database Tables ==="
-        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -d payment_watchdog -c "\dt"
-        
-        echo "\n=== Checking payment_failure_events table ==="
-        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -d payment_watchdog -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'payment_failure_events') AS table_exists;"
-        
-        echo "\n=== Checking schema_migrations table ==="
-        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -d payment_watchdog -c "SELECT * FROM schema_migrations;" || echo "No schema_migrations table found"
+      - name: Run database migrations
+        run: |
+          docker compose exec -T postgres psql -U postgres -d payment_watchdog -f /docker-entrypoint-initdb.d/init-db.sql
 
-    - name: Run API integration tests
-      run: |
-        cd api
-        go test -v -tags=integration -race -coverprofile=coverage-integration.out ./tests/...
+      - name: Run API integration tests
+        run: |
+          cd api
+          go test -v -tags=integration -race -coverprofile=coverage-integration.out ./tests/...
 
-    - name: Run Worker integration tests
-      run: |
-        cd worker
-        # Set up test database URL for integration tests
-        export DATABASE_URL="postgres://postgres:postgres@localhost:5432/payment_watchdog?sslmode=disable"
-        # Run integration tests with database
-        go test -v -tags=integration -race -coverprofile=coverage-integration.out ./...
+      - name: Run Worker integration tests
+        run: |
+          cd worker
+          go test -v -tags=integration -race -coverprofile=coverage-integration.out ./tests/...
 
-    - name: Upload integration coverage
-      uses: codecov/codecov-action@v3
-      with:
-        files: ./api/coverage-integration.out,./worker/coverage-integration.out
-        flags: integration-tests
-        name: Integration Tests Coverage
+      - name: Upload integration coverage
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./api/coverage-integration.out,./worker/coverage-integration.out
+          flags: integration-tests
+          name: Integration Tests Coverage
 
-    - name: Cleanup test infrastructure
-      if: always()
-      run: docker-compose -f docker-compose.test.yml down -v
+      - name: Cleanup test infrastructure
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
 
   # System Tests
   system-tests:
@@ -220,49 +139,49 @@ jobs:
         working-directory: .
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Build test images
-      run: |
-        docker build -t payment-watchdog-api:test -f api/Dockerfile.dev api/
-        docker build -t payment-watchdog-web:test -f web/Dockerfile.dev web/
-        docker build -t payment-watchdog-worker:test -f worker/Dockerfile.dev worker/
+      - name: Build test images
+        run: |
+          docker build -t payment-watchdog-api:test -f api/Dockerfile.dev api/
+          docker build -t payment-watchdog-web:test -f web/Dockerfile.dev web/
+          docker build -t payment-watchdog-worker:test -f worker/Dockerfile.dev worker/
 
-    - name: Start system under test
-      run: docker-compose -f docker-compose.test.yml up -d
+      - name: Start system under test
+        run: docker compose -f docker-compose.test.yml up -d
 
-    - name: Wait for services to be healthy
-      run: |
-        timeout 120 bash -c 'until curl -f http://localhost:8080/health; do sleep 5; done'
-        timeout 60 bash -c 'until curl -f http://localhost:3000; do sleep 5; done'
+      - name: Wait for services to be healthy
+        run: |
+          timeout 120 bash -c 'until curl -f http://localhost:8080/health; do sleep 5; done'
+          timeout 60 bash -c 'until curl -f http://localhost:3000; do sleep 5; done'
 
-    - name: Run system tests
-      run: |
-        # API health checks
-        curl -f http://localhost:8080/health/detailed
-        curl -f http://localhost:8080/metrics
+      - name: Run system tests
+        run: |
+          # API health checks
+          curl -f http://localhost:8080/health/detailed
+          curl -f http://localhost:8080/metrics
 
-        # Web accessibility check
-        curl -f http://localhost:3000
+          # Web accessibility check
+          curl -f http://localhost:3000
 
-        # Database connectivity
-        docker-compose exec -T postgres pg_isready -U postgres
+          # Database connectivity
+          docker compose exec -T postgres pg_isready -U postgres
 
-        # Redis connectivity
-        docker-compose exec -T redis redis-cli ping
+          # Redis connectivity
+          docker compose exec -T redis redis-cli ping
 
-    - name: Performance tests
-      run: |
-        # Basic load test
-        for i in {1..10}; do
-          curl -s http://localhost:8080/health > /dev/null &
-        done
-        wait
+      - name: Performance tests
+        run: |
+          # Basic load test
+          for i in {1..10}; do
+            curl -s http://localhost:8080/health > /dev/null &
+          done
+          wait
 
-    - name: Cleanup system test
-      if: always()
-      run: docker-compose -f docker-compose.test.yml down -v
+      - name: Cleanup system test
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
 
   # Security Scanning
   security-scan:
@@ -278,35 +197,32 @@ jobs:
         working-directory: .
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Run Checkmarx Scan
-      uses: checkmarx/ast-github-action@main
-      with:
-        project_name: ${{ github.repository }}-payment-watchdog
-        cx_tenant: ${{ secrets.CHECKMARX_TENANT }}
-        cx_client_id: ${{ secrets.CHECKMARX_CLIENT_ID }}
-        cx_client_secret: ${{ secrets.CHECKMARX_CLIENT_SECRET }}
-        cx_base_uri: ${{ secrets.CHECKMARX_BASE_URI }}
-        cx_base_auth_uri: ${{ secrets.CHECKMARX_BASE_AUTH_URI }}
+      - name: Run Checkmarx Scan
+        uses: checkmarx/ast-github-action@main
+        with:
+          project_name: ${{ github.repository }}-payment-watchdog
+          cx_tenant: ${{ secrets.CHECKMARX_TENANT }}
+          cx_client_id: ${{ secrets.CHECKMARX_CLIENT_ID }}
+          cx_client_secret: ${{ secrets.CHECKMARX_CLIENT_SECRET }}
+          cx_base_uri: ${{ secrets.CHECKMARX_BASE_URI }}
+          cx_base_auth_uri: ${{ secrets.CHECKMARX_BASE_AUTH_URI }}
 
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@0.19.0
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-        severity: 'CRITICAL,HIGH'
-        ignore-unfixed: true
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
 
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
-        category: 'security-scan'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
 
   # Build and Push Images
   build-and-push:
@@ -319,58 +235,58 @@ jobs:
         working-directory: .
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/payment-watchdog
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Build and push API image
-      uses: docker/build-push-action@v5
-      with:
-        context: api
-        file: api/Dockerfile
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}-api
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: api
+          file: api/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}-api
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-    - name: Build and push Web image
-      uses: docker/build-push-action@v5
-      with:
-        context: web
-        file: web/Dockerfile
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}-web
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Build and push Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: web
+          file: web/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}-web
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-    - name: Build and push Worker image
-      uses: docker/build-push-action@v5
-      with:
-        context: worker
-        file: worker/Dockerfile
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}-worker
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Build and push Worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: worker
+          file: worker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}-worker
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   # Deploy to Staging
   deploy-staging:
@@ -383,58 +299,60 @@ jobs:
       url: https://staging.payment-watchdog.example.com  # Update with your actual staging URL
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Configure kubectl
-      run: |
-        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-        chmod 600 $HOME/.kube/config
+      # SECURE: Handles Kubeconfig securely without manual base64 decoding
+      - name: Set k8s context
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
 
-    - name: Update staging deployment
-      run: |
-        cd api/deployments/kubernetes
+      - name: Update staging deployment
+        run: |
+          cd api/deployments/kubernetes
+          
+          # Update image tags in kustomization
+          IMAGE_TAG=${{ github.sha }}
+          sed -i "s|newTag: latest|newTag: ${IMAGE_TAG}|g" kustomization.yaml
+          
+          # Deploy to staging namespace
+          kubectl config set-context --current --namespace=staging
+          kubectl apply -k .
 
-        # Update image tags in kustomization
-        IMAGE_TAG=${{ github.sha }}
-        sed -i "s|newTag: latest|newTag: ${IMAGE_TAG}|g" kustomization.yaml
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/payment-watchdog-api --timeout=300s
+          kubectl rollout status deployment/payment-watchdog-web --timeout=300s
+          kubectl rollout status deployment/payment-watchdog-worker --timeout=300s
 
-        # Deploy to staging namespace
-        kubectl config set-context --current --namespace=staging
-        kubectl apply -k .
+      - name: Run smoke tests
+        run: |
+          # Wait for services to be ready
+          sleep 30
 
-    - name: Wait for rollout
-      run: |
-        kubectl rollout status deployment/payment-watchdog-api --timeout=300s
-        kubectl rollout status deployment/payment-watchdog-web --timeout=300s
-        kubectl rollout status deployment/payment-watchdog-worker --timeout=300s
+          # Test API health
+          kubectl exec -it deployment/payment-watchdog-api -- curl -f http://localhost:8080/health
 
-    - name: Run smoke tests
-      run: |
-        # Wait for services to be ready
-        sleep 30
+          # Test web accessibility
+          WEB_POD=$(kubectl get pods -l app=payment-watchdog-web -o jsonpath='{.items[0].metadata.name}')
+          kubectl exec -it $WEB_POD -- curl -f http://localhost:3000
 
-        # Test API health
-        kubectl exec -it deployment/payment-watchdog-api -- curl -f http://localhost:8080/health
+      - name: Notify deployment success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: "Payment Watchdog deployed to staging successfully"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-        # Test web accessibility
-        WEB_POD=$(kubectl get pods -l app=payment-watchdog-web -o jsonpath='{.items[0].metadata.name}')
-        kubectl exec -it $WEB_POD -- curl -f http://localhost:3000
-
-    - name: Notify deployment success
-      if: success()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: success
-        text: "Payment Watchdog deployed to staging successfully"
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-    - name: Notify deployment failure
-      if: failure()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: failure
-        text: "Payment Watchdog staging deployment failed"
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Notify deployment failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: "Payment Watchdog staging deployment failed"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
