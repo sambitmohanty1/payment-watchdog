@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"github.com/payment-watchdog/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 )
 
 // TestEnterpriseRuleEngineCreation tests the creation of a new enterprise rule engine

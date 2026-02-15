@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/payment-watchdog/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"

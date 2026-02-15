@@ -1,23 +1,27 @@
 package main
 
 import (
-    "context"
-    "fmt"
-    "net/http"
-    "os"
-    "os/signal"
-    "syscall"
-    "time"
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-    "github.com/gin-gonic/gin"
-    "github.com/prometheus/client_golang/prometheus/promhttp"
-    "go.uber.org/zap"
-    "gorm.io/driver/postgres"
-    "gorm.io/gorm"
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 
-    "github.com/sambitmohanty1/payment-watchdog/api/internal/api"
-    "github.com/sambitmohanty1/payment-watchdog/api/internal/config"
-    "github.com/sambitmohanty1/payment-watchdog/api/internal/database"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/api"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/database"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/mediators"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 )
 
 func main() {

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/payment-watchdog/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 )
 
 // TestQuickBooksAPIIntegration tests the complete QuickBooks API integration

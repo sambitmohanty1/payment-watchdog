@@ -1,142 +1,53 @@
 package rules
 
 import (
-	"time"
-
-	"github.com/sambitmohanty1/payment-watchdog/internal/models"
-	"go.uber.org/zap"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/models"
 )
 
-// PaymentFailureRules contains all business rules for payment failure processing
-type PaymentFailureRules struct {
-	logger *zap.Logger
+// PaymentFailureRule defines a rule for evaluating payment failures
+type PaymentFailureRule interface {
+	Name() string
+	Evaluate(event *models.PaymentFailureEvent) (bool, error)
+	Priority() int
 }
 
-// NewPaymentFailureRules creates a new instance of payment failure rules
-func NewPaymentFailureRules(logger *zap.Logger) *PaymentFailureRules {
-	return &PaymentFailureRules{
-		logger: logger,
-	}
+// HighValueTransactionRule checks if the failure amount is significant
+type HighValueTransactionRule struct {
+	ThresholdCents int64
 }
 
-// GetDefaultRules returns the default set of business rules
-func (pfr *PaymentFailureRules) GetDefaultRules() []*BasicRule {
-	return []*BasicRule{
-		pfr.createHighValueAlertRule(),
-		pfr.createInsufficientFundsRetryRule(),
-		pfr.createRiskScoringRule(),
+func NewHighValueTransactionRule(thresholdCents int64) *HighValueTransactionRule {
+	return &HighValueTransactionRule{
+		ThresholdCents: thresholdCents,
 	}
 }
 
-// High Value Alert Rule
-func (pfr *PaymentFailureRules) createHighValueAlertRule() *BasicRule {
-	return &BasicRule{
-		Name:        "high_value_alert",
-		Description: "Send immediate alert for high-value payment failures",
-		Priority:    100,
-		Enabled:     true,
-		Condition: func(event *models.PaymentFailureEvent) bool {
-			return event.Amount >= 1000.0
-		},
-		Action: func(event *models.PaymentFailureEvent) (*BasicActionResult, error) {
-			pfr.logger.Info("High value payment failure detected",
-				zap.String("event_id", event.ID.String()),
-				zap.Float64("amount", event.Amount))
-
-			return &BasicActionResult{
-				RuleName:   "high_value_alert",
-				Success:    true,
-				ExecutedAt: time.Now(),
-				Message:    "High-value alert created",
-				Data: map[string]interface{}{
-					"alert_type": "high_value",
-					"urgency":    "immediate",
-				},
-			}, nil
-		},
-	}
+func (r *HighValueTransactionRule) Name() string {
+	return "HighValueTransaction"
 }
 
-// Insufficient Funds Retry Rule
-func (pfr *PaymentFailureRules) createInsufficientFundsRetryRule() *BasicRule {
-	return &BasicRule{
-		Name:        "insufficient_funds_retry",
-		Description: "Schedule retry for insufficient funds after payday",
-		Priority:    70,
-		Enabled:     true,
-		Condition: func(event *models.PaymentFailureEvent) bool {
-			return event.FailureReason == "insufficient_funds"
-		},
-		Action: func(event *models.PaymentFailureEvent) (*BasicActionResult, error) {
-			pfr.logger.Info("Insufficient funds detected, scheduling retry",
-				zap.String("event_id", event.ID.String()))
-
-			retryTime := time.Now().AddDate(0, 0, 7)
-
-			return &BasicActionResult{
-				RuleName:   "insufficient_funds_retry",
-				Success:    true,
-				ExecutedAt: time.Now(),
-				Message:    "Retry scheduled for after payday",
-				Data: map[string]interface{}{
-					"retry_time": retryTime,
-					"delay":      "7_days",
-				},
-			}, nil
-		},
-	}
+func (r *HighValueTransactionRule) Evaluate(event *models.PaymentFailureEvent) (bool, error) {
+	// LOGIC FIX: Compare cents to cents
+	return event.AmountCents >= r.ThresholdCents, nil
 }
 
-// Risk Scoring Rule
-func (pfr *PaymentFailureRules) createRiskScoringRule() *BasicRule {
-	return &BasicRule{
-		Name:        "risk_scoring",
-		Description: "Calculate risk score for customer",
-		Priority:    10,
-		Enabled:     true,
-		Condition: func(event *models.PaymentFailureEvent) bool {
-			return true
-		},
-		Action: func(event *models.PaymentFailureEvent) (*BasicActionResult, error) {
-			riskScore := calculateRiskScore(event)
-
-			return &BasicActionResult{
-				RuleName:   "risk_scoring",
-				Success:    true,
-				ExecutedAt: time.Now(),
-				Message:    "Risk score calculated",
-				Data: map[string]interface{}{
-					"risk_score": riskScore,
-				},
-			}, nil
-		},
-	}
+func (r *HighValueTransactionRule) Priority() int {
+	return 100
 }
 
-// Helper function for risk scoring
-func calculateRiskScore(event *models.PaymentFailureEvent) int {
-	baseScore := 0
+// RecurringFailureRule checks if this customer has failed recently
+type RecurringFailureRule struct {
+	MaxRetries int
+}
 
-	if event.Amount >= 1000 {
-		baseScore += 30
-	} else if event.Amount >= 500 {
-		baseScore += 20
-	} else if event.Amount >= 100 {
-		baseScore += 10
-	}
+func (r *RecurringFailureRule) Name() string {
+	return "RecurringFailure"
+}
 
-	switch event.FailureReason {
-	case "insufficient_funds":
-		baseScore += 20
-	case "expired_card":
-		baseScore += 40
-	case "network_error":
-		baseScore += 5
-	}
+func (r *RecurringFailureRule) Evaluate(event *models.PaymentFailureEvent) (bool, error) {
+	return event.RetryCount >= r.MaxRetries, nil
+}
 
-	if baseScore > 100 {
-		baseScore = 100
-	}
-
-	return baseScore
+func (r *RecurringFailureRule) Priority() int {
+	return 50
 }

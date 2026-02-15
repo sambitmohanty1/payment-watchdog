@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/payment-watchdog/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 	"go.uber.org/zap"
 )
 
