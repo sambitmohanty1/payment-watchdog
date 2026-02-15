@@ -235,7 +235,7 @@ func TestXeroAPIIntegration(t *testing.T) {
 					CurrencyCode: "AUD",
 				},
 				expectedReason: "invoice_unpaid",
-				expectedAmount: 1650.00,
+				expectedAmountCents: 165000,
 			},
 			{
 				name: "Partially Paid Invoice",
@@ -256,7 +256,7 @@ func TestXeroAPIIntegration(t *testing.T) {
 					CurrencyCode: "AUD",
 				},
 				expectedReason: "invoice_partially_paid",
-				expectedAmount: 600.00,
+				expectedAmountCents: 60000,
 			},
 		}
 

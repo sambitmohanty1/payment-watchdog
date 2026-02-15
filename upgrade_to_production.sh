@@ -401,7 +401,10 @@ cd ..
 # Fixes: Converts old float based amounts in tests to int64 cents
 # ==============================================================================
 echo "🧪 Patching Unit Tests (Float -> Int64)..."
-grep -r "Amount:" . | cut -d: -f1 | sort | uniq | xargs sed -i 's/Amount: \([0-9]*\)\.00,/AmountCents: \100,/g'
-grep -r "Amount:" . | cut -d: -f1 | sort | uniq | xargs sed -i 's/Amount: \([0-9]*\)\.\([0-9][0-9]\),/AmountCents: \1\2,/g'
+find . -name "*.go" -type f -exec grep -l "Amount:" {} \; | while read file; do
+    sed -i.bak 's/Amount: \([0-9]*\)\.00,/AmountCents: \100,/g' "$file"
+    sed -i.bak 's/Amount: \([0-9]*\)\.\([0-9][0-9]\),/AmountCents: \1\2,/g' "$file"
+    rm -f "$file.bak"
+done
 
 echo "✅ Upgrade Complete. Please run 'docker-compose up --build' to deploy."

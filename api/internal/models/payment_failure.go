@@ -1,6 +1,3 @@
-//go:build !build
-// +build !build
-
 package models
 
 import (
@@ -84,7 +81,7 @@ type CustomerCommunication struct {
 
 	// Communication Details
 	CommunicationType string `json:"communication_type"` // email, sms
-	Channel           string `json:"channel"` // email, sms
+	Channel           string `json:"channel"`            // email, sms
 	Recipient         string `json:"recipient"`
 	TemplateID        string `json:"template_id"`
 	Subject           string `json:"subject"`

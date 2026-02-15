@@ -15,9 +15,9 @@ import (
     "gorm.io/driver/postgres"
     "gorm.io/gorm"
 
-    "github.com/sambitmohanty1/payment-watchdog/api/internal/api"
-    "github.com/sambitmohanty1/payment-watchdog/api/internal/config"
-    "github.com/sambitmohanty1/payment-watchdog/api/internal/database"
+    "github.com/sambitmohanty1/payment-watchdog/internal/api"
+    "github.com/sambitmohanty1/payment-watchdog/internal/config"
+    "github.com/sambitmohanty1/payment-watchdog/internal/database"
 )
 
 func main() {
