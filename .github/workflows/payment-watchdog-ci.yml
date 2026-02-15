@@ -83,7 +83,10 @@ jobs:
     - name: Run Worker unit tests
       run: |
         cd worker
-        go test -v -race -coverprofile=coverage-worker.out ./...
+        # Set up environment for tests
+        export GO111MODULE=on
+        # Run all tests, including integration tests that use SQLite
+        go test -v -race -coverprofile=coverage-worker.out -tags=integration ./...
 
     - name: Run Web unit tests
       run: |
@@ -127,9 +130,15 @@ jobs:
         docker --version
         docker-compose --version
         
+        # Pull latest images first
+        docker-compose -f docker-compose.test.yml pull
+        
         # Start services with more verbose output
         echo 'Starting test services...'
         docker-compose -f docker-compose.test.yml up -d postgres redis mailhog
+        
+        # Create test database
+        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -c "CREATE DATABASE payment_watchdog;" || true
         
         # Show running containers
         echo 'Running containers:'
@@ -152,9 +161,30 @@ jobs:
         docker ps -a
         docker-compose -f docker-compose.test.yml ps
 
-    - name: Run database migrations
+    - name: Setup and verify database
       run: |
-        docker-compose exec -T postgres psql -U postgres -d payment_watchdog -f /docker-entrypoint-initdb.d/init-db.sql
+        # Wait for PostgreSQL to be fully ready
+        echo "Waiting for PostgreSQL to be ready..."
+        timeout 60 bash -c 'until docker-compose -f docker-compose.test.yml exec -T postgres pg_isready -U postgres; do 
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done'
+        
+        echo "Creating database if not exists..."
+        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -c "SELECT 'CREATE DATABASE payment_watchdog' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'payment_watchdog')\gexec"
+        
+        echo "Running database migrations..."
+        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -d payment_watchdog -f /docker-entrypoint-initdb.d/init-db.sql
+        
+        echo "Verifying migrations..."
+        echo "\n=== Database Tables ==="
+        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -d payment_watchdog -c "\dt"
+        
+        echo "\n=== Checking payment_failure_events table ==="
+        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -d payment_watchdog -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'payment_failure_events') AS table_exists;"
+        
+        echo "\n=== Checking schema_migrations table ==="
+        docker-compose -f docker-compose.test.yml exec -T postgres psql -U postgres -d payment_watchdog -c "SELECT * FROM schema_migrations;" || echo "No schema_migrations table found"
 
     - name: Run API integration tests
       run: |
@@ -164,7 +194,10 @@ jobs:
     - name: Run Worker integration tests
       run: |
         cd worker
-        go test -v -tags=integration -race -coverprofile=coverage-integration.out ./tests/...
+        # Set up test database URL for integration tests
+        export DATABASE_URL="postgres://postgres:postgres@localhost:5432/payment_watchdog?sslmode=disable"
+        # Run integration tests with database
+        go test -v -tags=integration -race -coverprofile=coverage-integration.out ./...
 
     - name: Upload integration coverage
       uses: codecov/codecov-action@v3
