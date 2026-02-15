@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/lexure-intelligence/payment-watchdog/internal/models"
-	"github.com/lexure-intelligence/payment-watchdog/internal/services"
+	"github.com/sambitmohanty1/payment-watchdog/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/internal/services"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/lexure-intelligence/payment-watchdog/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/internal/models"
 )
 
 // PaymentRetryExecutor handles payment retry steps
