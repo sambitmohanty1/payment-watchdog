@@ -10,8 +10,8 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
-	"github.com/sambitmohanty1/payment-watchdog/internal/architecture"
-	"github.com/sambitmohanty1/payment-watchdog/internal/rules"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/rules"
 )
 
 // EventProcessorService processes payment failure events and applies business intelligence

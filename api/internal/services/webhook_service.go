@@ -14,8 +14,8 @@ import (
 	"github.com/stripe/stripe-go/v74/webhook"
 	"gorm.io/gorm"
 
-	"payment-watchdog/api/internal/models"
-	"payment-watchdog/api/internal/rules"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 )
 
 type WebhookService struct {
