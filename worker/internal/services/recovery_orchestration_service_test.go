@@ -14,8 +14,8 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	svc "github.com/sambitmohanty1/payment-watchdog/internal/services"
-	"github.com/sambitmohanty1/payment-watchdog/internal/models"
+	svc "github.com/sambitmohanty1/payment-watchdog/worker/internal/services"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/models"
 )
 
 // MockRecoveryOrchestrationService creates a test instance of RecoveryOrchestrationService with a mock DB

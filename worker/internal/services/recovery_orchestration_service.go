@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
-	"github.com/sambitmohanty1/payment-watchdog/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/models"
 )
 
 // RecoveryOrchestrationService manages automated recovery workflows

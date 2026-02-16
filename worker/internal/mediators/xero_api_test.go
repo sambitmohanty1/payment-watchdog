@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/sambitmohanty1/payment-watchdog/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/architecture"
 )
 
 // TestXeroAPIIntegration tests the complete Xero API integration

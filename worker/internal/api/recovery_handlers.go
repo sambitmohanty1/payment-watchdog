@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/sambitmohanty1/payment-watchdog/internal/models"
-	"github.com/sambitmohanty1/payment-watchdog/internal/services"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/services"
 )
 
 // RecoveryHandlers contains handlers for recovery workflow endpoints

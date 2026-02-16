@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sambitmohanty1/payment-watchdog/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/models"
 	"go.uber.org/zap"
 )
 
