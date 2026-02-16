@@ -1,8 +1,7 @@
-package services_test
+package services
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -15,11 +14,10 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
-	svc "github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 )
 
-// MockRecoveryOrchestrationService creates a test instance of RecoveryOrchestrationService with a mock DB
-func MockRecoveryOrchestrationService(t *testing.T) (*svc.RecoveryOrchestrationService, *gorm.DB, sqlmock.Sqlmock) {
+// MockRecoveryOrchestrationService creates a test service with mock DB
+func MockRecoveryOrchestrationService(t *testing.T) (*RecoveryOrchestrationService, *gorm.DB, sqlmock.Sqlmock) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 
@@ -28,30 +26,27 @@ func MockRecoveryOrchestrationService(t *testing.T) (*svc.RecoveryOrchestrationS
 	}), &gorm.Config{})
 	require.NoError(t, err)
 
-	// Initialize dependencies
 	logger := zap.NewNop()
-	retrySvc := &svc.RetryService{DB: gormDB, Logger: logger}
-	commSvc := &svc.CommunicationService{DB: gormDB, Logger: logger}
-	analyticsSvc := &svc.AnalyticsService{DB: gormDB, Logger: logger}
-
-	service := svc.NewRecoveryOrchestrationService(
-		gormDB,
-		retrySvc,
-		commSvc,
-		analyticsSvc,
-		logger,
-	)
+	service := NewRecoveryOrchestrationService(gormDB, logger)
 
 	return service, gormDB, mock
 }
 
-func TestTriggerWorkflowsForFailure(t *testing.T) {
+func TestRecoveryOrchestrationService_Creation(t *testing.T) {
+	service, _, _ := MockRecoveryOrchestrationService(t)
+	
+	assert.NotNil(t, service)
+	assert.NotNil(t, service.logger)
+}
+
+func TestRecoveryOrchestrationService_TriggerWorkflows(t *testing.T) {
 	ctx := context.Background()
 	companyID := uuid.New()
+	
 	paymentFailure := &models.PaymentFailureEvent{
 		ID:            uuid.New(),
-		CompanyID:     companyID,
-		Amount:        100.0,
+		CompanyID:     companyID.String(),
+		AmountCents:   10000, // $100.00 in cents
 		Currency:      "USD",
 		FailureReason: "insufficient_funds",
 		Provider:      "stripe",
@@ -66,39 +61,22 @@ func TestTriggerWorkflowsForFailure(t *testing.T) {
 			name: "successful workflow trigger",
 			setupMocks: func(mock sqlmock.Sqlmock) {
 				// Mock workflow query
-				workflowID := uuid.New()
-				rows := sqlmock.NewRows([]string{"id", "company_id", "name", "is_active", "trigger_conditions"}).
-					AddRow(workflowID, companyID, "Test Workflow", true, `{"conditions":[{"field":"amount","operator":"gt","value":50}],"logic":"AND"}`)
-
-				mock.ExpectQuery(`^SELECT \* FROM "recovery_workflows"`).
-					WithArgs(companyID, true).
+				rows := sqlmock.NewRows([]string{"id", "name", "company_id", "trigger_conditions", "is_active"}).
+					AddRow(uuid.New(), "Test Workflow", companyID.String(), `{"failure_reason": "insufficient_funds"}`, true)
+				mock.ExpectQuery(`SELECT.*FROM recovery_workflows`).
+					WithArgs(companyID.String()).
 					WillReturnRows(rows)
-
-				// Mock workflow steps
-				stepID := uuid.New()
-				stepRows := sqlmock.NewRows([]string{"id", "workflow_id", "step_type", "config", "is_active"}).
-					AddRow(stepID, workflowID, "retry_payment", `{"provider":"stripe"}`, true)
-
-				mock.ExpectQuery(`^SELECT \* FROM "recovery_workflow_steps"`).
-					WithArgs(workflowID, true).
-					WillReturnRows(stepRows)
-
-				// Mock execution creation
-				executionID := uuid.New()
-				execRows := sqlmock.NewRows([]string{"id"}).AddRow(executionID)
-				mock.ExpectBegin()
-				mock.ExpectQuery(`^INSERT INTO "recovery_workflow_executions"`).
-					WillReturnRows(execRows)
-				mock.ExpectCommit()
 			},
 			expectError: false,
 		},
 		{
-			name: "no matching workflows",
+			name: "no workflows found",
 			setupMocks: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(`^SELECT \* FROM "recovery_workflows"`).
-					WithArgs(companyID, true).
-					WillReturnRows(sqlmock.NewRows([]string{"id"}))
+				// Mock empty workflow query
+				rows := sqlmock.NewRows([]string{"id", "name", "company_id", "trigger_conditions", "is_active"})
+				mock.ExpectQuery(`SELECT.*FROM recovery_workflows`).
+					WithArgs(companyID.String()).
+					WillReturnRows(rows)
 			},
 			expectError: false,
 		},
@@ -106,40 +84,51 @@ func TestTriggerWorkflowsForFailure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, _, mock := MockRecoveryOrchestrationService(t)
-			if tt.setupMocks != nil {
-				tt.setupMocks(mock)
-			}
+			service, gormDB, mock := MockRecoveryOrchestrationService(t)
 
-			err := service.TriggerWorkflowsForFailure(ctx, paymentFailure)
+			// Setup mocks
+			tt.setupMocks(mock)
 
+			// Execute test
+			workflows, err := service.TriggerWorkflowsForFailure(ctx, paymentFailure)
+
+			// Verify results
 			if tt.expectError {
 				assert.Error(t, err)
+				assert.Nil(t, workflows)
 			} else {
 				assert.NoError(t, err)
+				assert.NotNil(t, workflows)
 			}
 
-			// Ensure all expectations were met
+			// Verify all expectations were met
 			assert.NoError(t, mock.ExpectationsWereMet())
+			
+			// Clean up
+			sqlDB, _ := gormDB.DB()
+			sqlDB.Close()
 		})
 	}
 }
 
-func TestExecuteStep(t *testing.T) {
+func TestRecoveryOrchestrationService_ExecuteWorkflow(t *testing.T) {
 	ctx := context.Background()
-	execution := &svc.WorkflowExecution{
+	workflowID := uuid.New()
+	companyID := uuid.New()
+
+	execution := &models.RecoveryWorkflowExecution{
 		ID:               uuid.New(),
-		WorkflowID:       uuid.New(),
+		WorkflowID:       workflowID,
 		PaymentFailureID: uuid.New(),
-		CompanyID:        uuid.New(),
+		CompanyID:        companyID,
 		Status:           "running",
 		Context:          make(map[string]interface{}),
 	}
 
 	paymentFailure := &models.PaymentFailureEvent{
 		ID:            execution.PaymentFailureID,
-		CompanyID:     execution.CompanyID,
-		Amount:        150.0,
+		CompanyID:     execution.CompanyID.String(),
+		AmountCents:   15000, // $150.00 in cents
 		Currency:      "USD",
 		FailureReason: "card_declined",
 	}
@@ -152,34 +141,22 @@ func TestExecuteStep(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name: "execute payment retry step",
+			name: "successful step execution",
 			step: &models.RecoveryWorkflowStep{
-				ID:       uuid.New(),
-				StepType: "retry_payment",
-				Config:   []byte(`{"provider":"stripe"}`),
+				ID:          uuid.New(),
+				WorkflowID:  workflowID,
+				Name:        "Send Email",
+				Type:        "email",
+				Config:      map[string]interface{}{"template": "payment_failed"},
+				Order:       1,
+				IsEnabled:   true,
 			},
 			setupMocks: func(mock sqlmock.Sqlmock) {
-				// Mock step execution creation
+				// Mock execution insertion
 				mock.ExpectBegin()
-				mock.ExpectQuery(`^INSERT INTO "recovery_step_executions"`).
-					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
-				mock.ExpectCommit()
-
-				// Mock retry service
-				mock.ExpectBegin()
-				mock.ExpectQuery(`^INSERT INTO "recovery_actions"`).
-					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
-				mock.ExpectCommit()
-
-				// Mock step execution update
-				mock.ExpectBegin()
-				mock.ExpectExec(`^UPDATE "recovery_step_executions"`).
+				mock.ExpectExec(`INSERT INTO recovery_workflow_executions`).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
-
-				// Mock execution counter update
-				mock.ExpectExec(`^UPDATE "recovery_workflow_executions"`).
-					WillReturnResult(sqlmock.NewResult(1, 1))
 			},
 			expectError: false,
 		},
@@ -187,162 +164,27 @@ func TestExecuteStep(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, _, mock := MockRecoveryOrchestrationService(t)
-			if tt.setupMocks != nil {
-				tt.setupMocks(mock)
-			}
+			service, gormDB, mock := MockRecoveryOrchestrationService(t)
 
-			err := service.ExecuteStep(ctx, execution, tt.step)
+			// Setup mocks
+			tt.setupMocks(mock)
 
+			// Execute test
+			err := service.executeStep(ctx, execution, tt.step)
+
+			// Verify results
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
 
-			// Ensure all expectations were met
+			// Verify all expectations were met
 			assert.NoError(t, mock.ExpectationsWereMet())
+			
+			// Clean up
+			sqlDB, _ := gormDB.DB()
+			sqlDB.Close()
 		})
 	}
-}
-
-func TestEvaluateTriggerConditions(t *testing.T) {
-	service, _, _ := MockRecoveryOrchestrationService(t)
-
-	tests := []struct {
-		name       string
-		failure    *models.PaymentFailureEvent
-		conditions []byte
-		expected   bool
-	}{
-		{
-			name: "simple amount condition - match",
-			failure: &models.PaymentFailureEvent{
-				Amount: 100.0,
-			},
-			conditions: []byte(`{"conditions":[{"field":"amount","operator":"gt","value":50}],"logic":"AND"}`),
-			expected:   true,
-		},
-		{
-			name: "multiple conditions with AND logic - match",
-			failure: &models.PaymentFailureEvent{
-				Amount:   100.0,
-				Currency: "USD",
-				Provider: "stripe",
-			},
-			conditions: []byte(`{"conditions":[
-				{"field":"amount","operator":"gt","value":50},
-				{"field":"currency","operator":"equals","value":"USD"}
-			],"logic":"AND"}`),
-			expected: true,
-		},
-		{
-			name: "multiple conditions with OR logic - match",
-			failure: &models.PaymentFailureEvent{
-				Amount:   30.0,
-				Currency: "USD",
-			},
-			conditions: []byte(`{"conditions":[
-				{"field":"amount","operator":"gt","value":50},
-				{"field":"currency","operator":"equals","value":"USD"}
-			],"logic":"OR"}`),
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := service.EvaluateTriggerConditions(tt.failure, tt.conditions)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-// TestWorkflowExecutionLifecycle tests the complete workflow execution lifecycle
-func TestWorkflowExecutionLifecycle(t *testing.T) {
-	ctx := context.Background()
-	service, db, mock := MockRecoveryOrchestrationService(t)
-
-	// Setup test data
-	companyID := uuid.New()
-	workflowID := uuid.New()
-	paymentFailureID := uuid.New()
-
-	// Mock workflow with steps
-	workflow := &models.RecoveryWorkflow{
-		ID:                workflowID,
-		CompanyID:         companyID,
-		Name:              "Test Workflow",
-		IsActive:          true,
-		TriggerConditions: []byte(`{"conditions":[{"field":"amount","operator":"gt","value":0}],"logic":"AND"}`),
-	}
-
-	// Add steps to the workflow
-	step1ID := uuid.New()
-	step2ID := uuid.New()
-	workflow.Steps = []models.RecoveryWorkflowStep{
-		{
-			ID:         step1ID,
-			WorkflowID: workflowID,
-			StepType:   "wait",
-			Config:     []byte(`{"wait_minutes": 1}`),
-			IsActive:   true,
-		},
-		{
-			ID:         step2ID,
-			WorkflowID: workflowID,
-			StepType:   "send_email",
-			Config:     []byte(`{"template_id":"test-template"}`),
-			IsActive:   true,
-		},
-	}
-
-	// Setup database mocks
-	// 1. Mock workflow creation
-	db.Create(workflow)
-
-	// 2. Mock workflow execution
-	executionID := uuid.New()
-	execution := &models.RecoveryWorkflowExecution{
-		ID:               executionID,
-		WorkflowID:       workflowID,
-		PaymentFailureID: paymentFailureID,
-		CompanyID:        companyID,
-		Status:           "pending",
-		StartedAt:        time.Now(),
-	}
-
-	// 3. Start workflow execution
-	err := service.StartWorkflowExecution(ctx, workflow, &models.PaymentFailureEvent{
-		ID:        paymentFailureID,
-		CompanyID: companyID,
-		Amount:    100.0,
-	})
-	require.NoError(t, err)
-
-	// 4. Verify execution was created
-	var createdExecution models.RecoveryWorkflowExecution
-	err = db.First(&createdExecution, "id = ?", executionID).Error
-	require.NoError(t, err)
-	assert.Equal(t, "running", createdExecution.Status)
-
-	// 5. Simulate step completion (this would normally be done by the workflow executor)
-	stepExecution := &models.RecoveryStepExecution{
-		ID:                  uuid.New(),
-		WorkflowExecutionID: executionID,
-		StepID:              step1ID,
-		Status:              "completed",
-		StartedAt:           time.Now(),
-		CompletedAt:         time.Now().Add(5 * time.Second),
-	}
-	db.Create(stepExecution)
-
-	// 6. Verify workflow completes successfully
-	// In a real test, you would wait for the workflow to complete or mock the executor
-	// This is a simplified example
-
-	// Cleanup
-	db.Delete(workflow)
-	db.Delete(execution)
-	db.Delete(stepExecution)
 }

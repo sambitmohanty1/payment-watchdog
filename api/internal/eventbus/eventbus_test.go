@@ -2,6 +2,7 @@ package eventbus
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -154,7 +155,18 @@ func TestRedisEventBus_Integration(t *testing.T) {
 	// Wait for the event to be received
 	select {
 	case receivedEvent := <-receivedEvents:
-		assert.Equal(t, testEvent, receivedEvent)
+		// Redis serialization converts map[string]string to map[string]interface{}
+		// So we need to handle the type conversion
+		receivedMap, ok := receivedEvent.(map[string]interface{})
+		require.True(t, ok, "Received event should be a map")
+
+		// Convert back to map[string]string for comparison
+		convertedEvent := make(map[string]string)
+		for k, v := range receivedMap {
+			convertedEvent[k] = fmt.Sprintf("%v", v)
+		}
+
+		assert.Equal(t, testEvent, convertedEvent)
 	case <-time.After(2 * time.Second):
 		t.Skip("Redis not available or event not received, skipping integration test")
 	}
