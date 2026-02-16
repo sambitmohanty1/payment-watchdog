@@ -14,8 +14,8 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	svc "github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
+	svc "github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 )
 
 // MockRecoveryOrchestrationService creates a test instance of RecoveryOrchestrationService with a mock DB
@@ -128,12 +128,12 @@ func TestTriggerWorkflowsForFailure(t *testing.T) {
 func TestExecuteStep(t *testing.T) {
 	ctx := context.Background()
 	execution := &svc.WorkflowExecution{
-		ID:              uuid.New(),
-		WorkflowID:      uuid.New(),
+		ID:               uuid.New(),
+		WorkflowID:       uuid.New(),
 		PaymentFailureID: uuid.New(),
-		CompanyID:       uuid.New(),
-		Status:          "running",
-		Context:         make(map[string]interface{}),
+		CompanyID:        uuid.New(),
+		Status:           "running",
+		Context:          make(map[string]interface{}),
 	}
 
 	paymentFailure := &models.PaymentFailureEvent{
@@ -226,27 +226,27 @@ func TestEvaluateTriggerConditions(t *testing.T) {
 		{
 			name: "multiple conditions with AND logic - match",
 			failure: &models.PaymentFailureEvent{
-				Amount:    100.0,
-				Currency:  "USD",
-				Provider:  "stripe",
+				Amount:   100.0,
+				Currency: "USD",
+				Provider: "stripe",
 			},
 			conditions: []byte(`{"conditions":[
 				{"field":"amount","operator":"gt","value":50},
 				{"field":"currency","operator":"equals","value":"USD"}
 			],"logic":"AND"}`),
-			expected:   true,
+			expected: true,
 		},
 		{
 			name: "multiple conditions with OR logic - match",
 			failure: &models.PaymentFailureEvent{
-				Amount:    30.0,
-				Currency:  "USD",
+				Amount:   30.0,
+				Currency: "USD",
 			},
 			conditions: []byte(`{"conditions":[
 				{"field":"amount","operator":"gt","value":50},
 				{"field":"currency","operator":"equals","value":"USD"}
 			],"logic":"OR"}`),
-			expected:   true,
+			expected: true,
 		},
 	}
 
@@ -270,10 +270,10 @@ func TestWorkflowExecutionLifecycle(t *testing.T) {
 
 	// Mock workflow with steps
 	workflow := &models.RecoveryWorkflow{
-		ID:          workflowID,
-		CompanyID:   companyID,
-		Name:        "Test Workflow",
-		IsActive:    true,
+		ID:                workflowID,
+		CompanyID:         companyID,
+		Name:              "Test Workflow",
+		IsActive:          true,
 		TriggerConditions: []byte(`{"conditions":[{"field":"amount","operator":"gt","value":0}],"logic":"AND"}`),
 	}
 

@@ -272,7 +272,7 @@ func (s *AnalyticsService) convertToPaymentFailures(events []models.PaymentFailu
 			ProviderID:        event.ProviderID,
 			ProviderEventID:   event.EventID,
 			ProviderEventType: event.EventType,
-			Amount:            event.Amount,
+			Amount:            float64(event.AmountCents) / 100,
 			Currency:          event.Currency,
 			PaymentMethod:     "", // Not available in model
 			CustomerID:        event.CustomerID,

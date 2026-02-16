@@ -9,6 +9,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// WebhookMetrics tracks webhook-related metrics
+type WebhookMetrics struct {
+	TotalReceived         int64
+	TotalProcessed        int64
+	TotalFailed           int64
+	LastReceived          time.Time
+	LastError             time.Time
+	AverageLatency        time.Duration
+	SuccessfullyProcessed int64
+	FailedProcessing      int64
+	AverageProcessingTime time.Duration
+	LastWebhookReceived   time.Time
+	CompanyWebhookCounts  map[string]int64
+	ProcessingErrors      int64
+}
+
 // MonitoringService provides monitoring and observability for the application
 type MonitoringService struct {
 	webhookMetrics *WebhookMetrics
@@ -18,11 +34,11 @@ type MonitoringService struct {
 
 // HealthStatus represents the overall health of the system
 type HealthStatus struct {
-	Status      string                 `json:"status"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Uptime      time.Duration          `json:"uptime"`
-	Components  map[string]ComponentStatus `json:"components"`
-	LastCheck   time.Time              `json:"last_check"`
+	Status     string                     `json:"status"`
+	Timestamp  time.Time                  `json:"timestamp"`
+	Uptime     time.Duration              `json:"uptime"`
+	Components map[string]ComponentStatus `json:"components"`
+	LastCheck  time.Time                  `json:"last_check"`
 }
 
 // ComponentStatus represents the status of a system component
@@ -51,10 +67,10 @@ func NewMonitoringService(webhookMetrics *WebhookMetrics) *MonitoringService {
 func (m *MonitoringService) GetHealthStatus() *HealthStatus {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// Update uptime
 	m.healthStatus.Uptime = time.Since(m.healthStatus.Timestamp)
-	
+
 	return m.healthStatus
 }
 
@@ -62,14 +78,14 @@ func (m *MonitoringService) GetHealthStatus() *HealthStatus {
 func (m *MonitoringService) UpdateComponentStatus(component string, status, message string, details map[string]interface{}) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.healthStatus.Components[component] = ComponentStatus{
 		Status:    status,
 		Message:   message,
 		Details:   details,
 		LastCheck: time.Now(),
 	}
-	
+
 	// Update overall health status
 	m.updateOverallHealth()
 }
@@ -77,7 +93,7 @@ func (m *MonitoringService) UpdateComponentStatus(component string, status, mess
 // updateOverallHealth determines the overall health status based on component statuses
 func (m *MonitoringService) updateOverallHealth() {
 	overallStatus := "healthy"
-	
+
 	for _, component := range m.healthStatus.Components {
 		if component.Status == "critical" {
 			overallStatus = "critical"
@@ -86,7 +102,7 @@ func (m *MonitoringService) updateOverallHealth() {
 			overallStatus = "degraded"
 		}
 	}
-	
+
 	m.healthStatus.Status = overallStatus
 	m.healthStatus.LastCheck = time.Now()
 }
@@ -99,7 +115,7 @@ func (m *MonitoringService) GetWebhookMetrics() *WebhookMetrics {
 // HandleHealthCheck handles the health check endpoint
 func (m *MonitoringService) HandleHealthCheck(c *gin.Context) {
 	health := m.GetHealthStatus()
-	
+
 	// Set appropriate HTTP status code
 	statusCode := http.StatusOK
 	if health.Status == "critical" {
@@ -107,29 +123,29 @@ func (m *MonitoringService) HandleHealthCheck(c *gin.Context) {
 	} else if health.Status == "degraded" {
 		statusCode = http.StatusOK // Still responding but with warning
 	}
-	
+
 	c.JSON(statusCode, health)
 }
 
 // HandleMetrics handles the metrics endpoint
 func (m *MonitoringService) HandleMetrics(c *gin.Context) {
 	metrics := m.GetWebhookMetrics()
-	
+
 	// Format metrics for monitoring systems
 	response := map[string]interface{}{
 		"webhook_metrics": map[string]interface{}{
-			"total_received":         metrics.TotalReceived,
-			"successfully_processed": metrics.SuccessfullyProcessed,
-			"failed_processing":      metrics.FailedProcessing,
-			"success_rate":           m.calculateSuccessRate(metrics),
+			"total_received":             metrics.TotalReceived,
+			"successfully_processed":     metrics.SuccessfullyProcessed,
+			"failed_processing":          metrics.FailedProcessing,
+			"success_rate":               m.calculateSuccessRate(metrics),
 			"average_processing_time_ms": metrics.AverageProcessingTime.Milliseconds(),
-			"last_webhook_received":  metrics.LastWebhookReceived,
-			"company_counts":         metrics.CompanyWebhookCounts,
+			"last_webhook_received":      metrics.LastWebhookReceived,
+			"company_counts":             metrics.CompanyWebhookCounts,
 		},
 		"health_status": m.GetHealthStatus(),
 		"timestamp":     time.Now(),
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -138,7 +154,7 @@ func (m *MonitoringService) calculateSuccessRate(metrics *WebhookMetrics) float6
 	if metrics.TotalReceived == 0 {
 		return 100.0
 	}
-	
+
 	return float64(metrics.SuccessfullyProcessed) / float64(metrics.TotalReceived) * 100.0
 }
 
@@ -147,7 +163,7 @@ func (m *MonitoringService) StartHealthMonitoring() {
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
-		
+
 		for range ticker.C {
 			m.performHealthCheck()
 		}
@@ -158,24 +174,24 @@ func (m *MonitoringService) StartHealthMonitoring() {
 func (m *MonitoringService) performHealthCheck() {
 	// Check webhook processing health
 	metrics := m.GetWebhookMetrics()
-	
+
 	// Calculate success rate
 	successRate := m.calculateSuccessRate(metrics)
-	
+
 	// Determine webhook health status
 	webhookStatus := "healthy"
 	webhookMessage := "Webhook processing is healthy"
-	
+
 	if successRate < 95.0 {
 		webhookStatus = "degraded"
 		webhookMessage = fmt.Sprintf("Webhook success rate is low: %.2f%%", successRate)
 	}
-	
+
 	if successRate < 80.0 {
 		webhookStatus = "critical"
 		webhookMessage = fmt.Sprintf("Webhook success rate is critically low: %.2f%%", successRate)
 	}
-	
+
 	// Check for recent webhook activity
 	if time.Since(metrics.LastWebhookReceived) > 5*time.Minute {
 		if webhookStatus == "healthy" {
@@ -183,15 +199,15 @@ func (m *MonitoringService) performHealthCheck() {
 			webhookMessage = "No recent webhook activity detected"
 		}
 	}
-	
+
 	// Update component status
 	m.UpdateComponentStatus("webhook_processing", webhookStatus, webhookMessage, map[string]interface{}{
-		"success_rate":           successRate,
-		"total_received":         metrics.TotalReceived,
-		"last_webhook_received":  metrics.LastWebhookReceived,
-		"processing_errors":      len(metrics.ProcessingErrors),
+		"success_rate":          successRate,
+		"total_received":        metrics.TotalReceived,
+		"last_webhook_received": metrics.LastWebhookReceived,
+		"processing_errors":     metrics.ProcessingErrors,
 	})
-	
+
 	// Check system resources (placeholder for future implementation)
 	m.UpdateComponentStatus("system_resources", "healthy", "System resources are normal", map[string]interface{}{
 		"memory_usage": "normal",

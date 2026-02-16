@@ -22,25 +22,25 @@ type RecoveryActionInterface interface {
 
 // PaymentRetryConfig represents configuration for payment retry
 type PaymentRetryConfig struct {
-	NewAmount    *float64 `json:"new_amount,omitempty"`
-	PaymentMethod string  `json:"payment_method,omitempty"`
-	RetryReason  string   `json:"retry_reason,omitempty"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	NewAmount     *float64               `json:"new_amount,omitempty"`
+	PaymentMethod string                 `json:"payment_method,omitempty"`
+	RetryReason   string                 `json:"retry_reason,omitempty"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // UpdatePaymentMethodConfig represents configuration for updating payment method
 type UpdatePaymentMethodConfig struct {
-	NewPaymentMethodID string `json:"new_payment_method_id"`
-	CustomerID         string `json:"customer_id"`
+	NewPaymentMethodID string                 `json:"new_payment_method_id"`
+	CustomerID         string                 `json:"customer_id"`
 	Metadata           map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // PaymentLinkConfig represents configuration for sending payment links
 type PaymentLinkConfig struct {
-	Amount      float64 `json:"amount"`
-	Currency    string  `json:"currency"`
-	Description string  `json:"description"`
-	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	Amount      float64                `json:"amount"`
+	Currency    string                 `json:"currency"`
+	Description string                 `json:"description"`
+	ExpiresAt   *time.Time             `json:"expires_at,omitempty"`
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
@@ -90,17 +90,17 @@ func (s *StripeRecoveryActions) RetryPayment(ctx context.Context, paymentFailure
 	span.SetAttributes(
 		attribute.String("payment_failure_id", paymentFailure.ID.String()),
 		attribute.String("transaction_id", paymentFailure.TransactionID),
-		attribute.Float64("original_amount", paymentFailure.Amount),
+		attribute.Int64("original_amount_cents", paymentFailure.AmountCents),
 	)
 
 	// For now, simulate Stripe API call
 	// In production, this would use the actual Stripe SDK
-	
+
 	// Determine retry amount
-	retryAmount := paymentFailure.Amount
+	retryAmount := paymentFailure.AmountCents
 	if config.NewAmount != nil {
-		retryAmount = *config.NewAmount
-		span.SetAttributes(attribute.Float64("retry_amount", retryAmount))
+		retryAmount = int64(*config.NewAmount * 100)
+		span.SetAttributes(attribute.Float64("retry_amount", float64(retryAmount)/100))
 	}
 
 	// Simulate API call delay
@@ -158,7 +158,7 @@ func (s *StripeRecoveryActions) UpdatePaymentMethod(ctx context.Context, payment
 		Data: map[string]interface{}{
 			"customer_id":           config.CustomerID,
 			"new_payment_method_id": config.NewPaymentMethodID,
-			"updated_at":           time.Now(),
+			"updated_at":            time.Now(),
 		},
 	}, nil
 }
@@ -189,10 +189,10 @@ func (s *StripeRecoveryActions) SendPaymentLink(ctx context.Context, paymentFail
 		Data: map[string]interface{}{
 			"payment_link_id":  paymentLinkID,
 			"payment_link_url": paymentLinkURL,
-			"amount":          config.Amount,
-			"currency":        config.Currency,
-			"description":     config.Description,
-			"expires_at":      config.ExpiresAt,
+			"amount":           config.Amount,
+			"currency":         config.Currency,
+			"description":      config.Description,
+			"expires_at":       config.ExpiresAt,
 		},
 	}, nil
 }
@@ -233,7 +233,7 @@ func (x *XeroRecoveryActions) RetryPayment(ctx context.Context, paymentFailure *
 
 	// For Xero, "retry payment" typically means sending invoice reminders
 	// or updating invoice terms
-	
+
 	// Simulate API call
 	time.Sleep(120 * time.Millisecond)
 
@@ -244,10 +244,10 @@ func (x *XeroRecoveryActions) RetryPayment(ctx context.Context, paymentFailure *
 		Status:     "sent",
 		Message:    "Invoice reminder sent successfully",
 		Data: map[string]interface{}{
-			"invoice_id":     paymentFailure.TransactionID,
-			"reminder_type":  "overdue",
+			"invoice_id":    paymentFailure.TransactionID,
+			"reminder_type": "overdue",
 			"sent_at":       time.Now(),
-			"retry_reason":   config.RetryReason,
+			"retry_reason":  config.RetryReason,
 		},
 	}, nil
 }
@@ -295,8 +295,8 @@ func (x *XeroRecoveryActions) SendPaymentLink(ctx context.Context, paymentFailur
 			"payment_link_id":  paymentLinkID,
 			"payment_link_url": paymentLinkURL,
 			"invoice_id":       paymentFailure.TransactionID,
-			"amount":          config.Amount,
-			"currency":        config.Currency,
+			"amount":           config.Amount,
+			"currency":         config.Currency,
 		},
 	}, nil
 }
@@ -395,7 +395,7 @@ func timePtr(t time.Time) *time.Time {
 func mapToStruct(input map[string]interface{}, output interface{}) error {
 	// Simple implementation - in production, use a proper mapping library
 	// like mapstructure or similar
-	
+
 	// For now, we'll just return nil to indicate successful mapping
 	// The actual implementation would convert the map to the struct
 	return nil

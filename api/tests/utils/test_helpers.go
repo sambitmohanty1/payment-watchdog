@@ -40,9 +40,9 @@ func (t *TestEventBus) PublishAsync(ctx context.Context, topic string, event int
 func (t *TestEventBus) Subscribe(ctx context.Context, topic string, handler func(context.Context, interface{}) error) (interface{}, error) {
 	// For testing, we'll create a simple subscription
 	subscription := &TestSubscription{
-		id:      generateTestID(),
-		topic:   topic,
-		handler: handler,
+		id:       generateTestID(),
+		topic:    topic,
+		handler:  handler,
 		eventBus: t,
 	}
 	return subscription, nil
@@ -217,12 +217,12 @@ func (t *TestLogger) ClearEntries() {
 
 // TestConfig provides test configuration
 type TestConfig struct {
-	ProviderID   string
-	CompanyID    string
-	APIKey       string
+	ProviderID    string
+	CompanyID     string
+	APIKey        string
 	WebhookSecret string
-	EventBus     *TestEventBus
-	Logger       *TestLogger
+	EventBus      *TestEventBus
+	Logger        *TestLogger
 }
 
 // NewTestConfig creates a new test configuration

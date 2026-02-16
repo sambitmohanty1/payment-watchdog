@@ -24,14 +24,14 @@ type RecoveryAnalyticsService struct {
 
 // RecoveryMetrics represents the metrics for payment recovery
 type RecoveryMetrics struct {
-	RecoveryRate           float64   `json:"recovery_rate"`
-	AverageRecoveryTime    float64   `json:"average_recovery_time"`
-	RecoveryByMethod       []Metric  `json:"recovery_by_method"`
-	RecoveryByFailureType  []Metric  `json:"recovery_by_failure_type"`
-	RecoveryAmounts        Amounts   `json:"recovery_amounts"`
-	RecoveryTrends         []Trend   `json:"recovery_trends"`
-	RecoveryScore          int       `json:"recovery_score"`
-	LastUpdated            time.Time `json:"last_updated"`
+	RecoveryRate          float64   `json:"recovery_rate"`
+	AverageRecoveryTime   float64   `json:"average_recovery_time"`
+	RecoveryByMethod      []Metric  `json:"recovery_by_method"`
+	RecoveryByFailureType []Metric  `json:"recovery_by_failure_type"`
+	RecoveryAmounts       Amounts   `json:"recovery_amounts"`
+	RecoveryTrends        []Trend   `json:"recovery_trends"`
+	RecoveryScore         int       `json:"recovery_score"`
+	LastUpdated           time.Time `json:"last_updated"`
 }
 
 // Metric represents a key-value metric pair
@@ -42,9 +42,9 @@ type Metric struct {
 
 // Amounts represents monetary amounts for different recovery states
 type Amounts struct {
-	TotalFailed     float64 `json:"total_failed"`
-	TotalRecovered  float64 `json:"total_recovered"`
-	TotalPending    float64 `json:"total_pending"`
+	TotalFailed    float64 `json:"total_failed"`
+	TotalRecovered float64 `json:"total_recovered"`
+	TotalPending   float64 `json:"total_pending"`
 }
 
 // Trend represents a data point in a time series
@@ -63,34 +63,34 @@ type RecoveryPattern struct {
 
 // RecoveryAnalytics represents the complete analytics data
 type RecoveryAnalytics struct {
-	Metrics  RecoveryMetrics  `json:"metrics"`
+	Metrics  RecoveryMetrics `json:"metrics"`
 	Patterns RecoveryPattern `json:"patterns"`
 }
 
 // DetailedRecoveryMetrics represents detailed metrics for payment recovery
 type DetailedRecoveryMetrics struct {
-	RecoveryRate          float64          `json:"recovery_rate"`           // Percentage of failed payments that were successfully recovered
-	AverageRecoveryTime   int64            `json:"average_recovery_time"`   // Average time to recover a payment in seconds
-	RecoveryByMethod      map[string]int64 `json:"recovery_by_method"`      // Count of recoveries by method (e.g., auto-retry, manual)
+	RecoveryRate          float64          `json:"recovery_rate"`            // Percentage of failed payments that were successfully recovered
+	AverageRecoveryTime   int64            `json:"average_recovery_time"`    // Average time to recover a payment in seconds
+	RecoveryByMethod      map[string]int64 `json:"recovery_by_method"`       // Count of recoveries by method (e.g., auto-retry, manual)
 	RecoveryByFailureType map[string]int64 `json:"recovery_by_failure_type"` // Count of recoveries by failure type
-	TotalRecoveredAmount  float64          `json:"total_recovered_amount"`  // Total amount recovered in the period
-	TotalFailedAmount     float64          `json:"total_failed_amount"`     // Total amount that failed in the period
+	TotalRecoveredAmount  float64          `json:"total_recovered_amount"`   // Total amount recovered in the period
+	TotalFailedAmount     float64          `json:"total_failed_amount"`      // Total amount that failed in the period
 }
 
 // RecoveryTrend represents the trend of recovery metrics over time
 type RecoveryTrend struct {
-	TimePeriod   string  `json:"time_period"` // e.g., "2023-01", "2023-02"
-	RecoveryRate float64 `json:"recovery_rate"`
+	TimePeriod    string  `json:"time_period"` // e.g., "2023-01", "2023-02"
+	RecoveryRate  float64 `json:"recovery_rate"`
 	RecoveryCount int64   `json:"recovery_count"`
 	FailedCount   int64   `json:"failed_count"`
 }
 
 // DetailedRecoveryPattern represents detected patterns in payment recovery
 type DetailedRecoveryPattern struct {
-	PatternType  string  `json:"pattern_type"`   // e.g., "time_of_day", "day_of_week"
-	PatternValue string  `json:"pattern_value"`  // e.g., "09:00-12:00", "Monday"
-	RecoveryRate float64 `json:"recovery_rate"`  // Recovery rate for this pattern
-	SampleSize   int64   `json:"sample_size"`    // Number of samples in this pattern
+	PatternType  string  `json:"pattern_type"`  // e.g., "time_of_day", "day_of_week"
+	PatternValue string  `json:"pattern_value"` // e.g., "09:00-12:00", "Monday"
+	RecoveryRate float64 `json:"recovery_rate"` // Recovery rate for this pattern
+	SampleSize   int64   `json:"sample_size"`   // Number of samples in this pattern
 }
 
 // NewRecoveryAnalyticsService creates a new instance of RecoveryAnalyticsService
@@ -219,7 +219,7 @@ func (s *RecoveryAnalyticsService) GetRecoveryMetrics(ctx context.Context, compa
 		if err := s.db.WithContext(ctx).
 			Model(&models.PaymentFailureEvent{}).
 			Select("COUNT(*) as count, COALESCE(SUM(amount), 0) as sum").
-			Where("company_id = ? AND created_at BETWEEN ? AND ?", 
+			Where("company_id = ? AND created_at BETWEEN ? AND ?",
 				companyID, startTime, endTime).
 			Scan(&failedPayments).Error; err != nil {
 			errCh <- fmt.Errorf("failed to get failed payments: %w", err)
@@ -577,7 +577,7 @@ func (s *RecoveryAnalyticsService) GetRecoveryPerformanceScore(ctx context.Conte
 	// Get metrics for the last 30 days
 	now := time.Now()
 	startTime := now.AddDate(0, -1, 0)
-	
+
 	metrics, err := s.GetRecoveryMetrics(ctx, companyID, startTime, now)
 	if err != nil {
 		return 0, err
