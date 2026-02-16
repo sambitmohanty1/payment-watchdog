@@ -116,7 +116,7 @@ Please review your payment method and update if necessary.
 This is an automated alert from your payment intelligence system.
 	`,
 		failure.Currency,
-		fmt.Sprintf("%.2f", failure.AmountCents),
+		fmt.Sprintf("%.2f", float64(failure.AmountCents)/100),
 		failure.CustomerEmail,
 		failure.FailureReason,
 		failure.WebhookReceivedAt.Format("2006-01-02 15:04:05"))
