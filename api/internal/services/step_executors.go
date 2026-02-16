@@ -27,16 +27,16 @@ func (e *PaymentRetryExecutor) Execute(ctx context.Context, execution *WorkflowE
 	if e.tracer == nil {
 		e.tracer = otel.Tracer("payment-retry-executor")
 	}
-	
+
 	ctx, span := e.tracer.Start(ctx, "execute_payment_retry")
 	defer span.End()
 
 	// Parse step configuration
 	var config struct {
-		Provider     string `json:"provider"`
-		MaxRetries   int    `json:"max_retries"`
-		RetryDelay   int    `json:"retry_delay_minutes"`
-		UpdateAmount bool   `json:"update_amount"`
+		Provider     string   `json:"provider"`
+		MaxRetries   int      `json:"max_retries"`
+		RetryDelay   int      `json:"retry_delay_minutes"`
+		UpdateAmount bool     `json:"update_amount"`
 		NewAmount    *float64 `json:"new_amount,omitempty"`
 	}
 
@@ -56,17 +56,17 @@ func (e *PaymentRetryExecutor) Execute(ctx context.Context, execution *WorkflowE
 	span.SetAttributes(
 		attribute.String("provider", config.Provider),
 		attribute.String("payment_failure_id", paymentFailure.ID.String()),
-		attribute.Float64("original_amount", paymentFailure.Amount),
+		attribute.Int64("original_amount_cents", paymentFailure.AmountCents),
 	)
 
 	// Submit retry job to retry service
 	retryData := map[string]interface{}{
-		"payment_failure_id": paymentFailure.ID.String(),
-		"provider":          config.Provider,
-		"original_amount":   paymentFailure.Amount,
-		"retry_reason":      "workflow_retry",
+		"payment_failure_id":    paymentFailure.ID.String(),
+		"provider":              config.Provider,
+		"original_amount":       paymentFailure.AmountCents,
+		"retry_reason":          "workflow_retry",
 		"workflow_execution_id": execution.ID.String(),
-		"step_id":          step.ID.String(),
+		"step_id":               step.ID.String(),
 	}
 
 	if config.UpdateAmount && config.NewAmount != nil {
@@ -108,9 +108,9 @@ func (e *PaymentRetryExecutor) Execute(ctx context.Context, execution *WorkflowE
 		Success:    true,
 		ExternalID: retryJob.ID,
 		Data: map[string]interface{}{
-			"retry_job_id":     retryJob.ID,
-			"provider":         config.Provider,
-			"scheduled_at":     time.Now(),
+			"retry_job_id":       retryJob.ID,
+			"provider":           config.Provider,
+			"scheduled_at":       time.Now(),
 			"recovery_action_id": recoveryAction.ID.String(),
 		},
 	}, nil
@@ -130,7 +130,7 @@ func (e *EmailExecutor) Execute(ctx context.Context, execution *WorkflowExecutio
 	if e.tracer == nil {
 		e.tracer = otel.Tracer("email-executor")
 	}
-	
+
 	ctx, span := e.tracer.Start(ctx, "execute_send_email")
 	defer span.End()
 
@@ -177,7 +177,7 @@ func (e *EmailExecutor) Execute(ctx context.Context, execution *WorkflowExecutio
 	// Add default variables from payment failure
 	templateVars["customer_name"] = paymentFailure.CustomerName
 	templateVars["customer_email"] = paymentFailure.CustomerEmail
-	templateVars["amount"] = paymentFailure.Amount
+	templateVars["amount"] = paymentFailure.AmountCents
 	templateVars["currency"] = paymentFailure.Currency
 	templateVars["failure_reason"] = paymentFailure.FailureReason
 	templateVars["transaction_id"] = paymentFailure.TransactionID
@@ -193,7 +193,7 @@ func (e *EmailExecutor) Execute(ctx context.Context, execution *WorkflowExecutio
 		Context: map[string]interface{}{
 			"payment_failure_id":    paymentFailure.ID.String(),
 			"workflow_execution_id": execution.ID.String(),
-			"step_id":              step.ID.String(),
+			"step_id":               step.ID.String(),
 		},
 	})
 
@@ -234,7 +234,7 @@ func (e *EmailExecutor) Execute(ctx context.Context, execution *WorkflowExecutio
 			"message_id":         emailResult.MessageID,
 			"recipient":          recipientEmail,
 			"template_used":      emailResult.TemplateUsed,
-			"sent_at":           now,
+			"sent_at":            now,
 			"recovery_action_id": recoveryAction.ID.String(),
 		},
 	}, nil
@@ -254,7 +254,7 @@ func (e *SMSExecutor) Execute(ctx context.Context, execution *WorkflowExecution,
 	if e.tracer == nil {
 		e.tracer = otel.Tracer("sms-executor")
 	}
-	
+
 	ctx, span := e.tracer.Start(ctx, "execute_send_sms")
 	defer span.End()
 
@@ -308,7 +308,7 @@ func (e *SMSExecutor) Execute(ctx context.Context, execution *WorkflowExecution,
 
 	// Add default variables from payment failure
 	templateVars["customer_name"] = paymentFailure.CustomerName
-	templateVars["amount"] = paymentFailure.Amount
+	templateVars["amount"] = paymentFailure.AmountCents
 	templateVars["currency"] = paymentFailure.Currency
 
 	// Send SMS through communication service
@@ -322,7 +322,7 @@ func (e *SMSExecutor) Execute(ctx context.Context, execution *WorkflowExecution,
 		Context: map[string]interface{}{
 			"payment_failure_id":    paymentFailure.ID.String(),
 			"workflow_execution_id": execution.ID.String(),
-			"step_id":              step.ID.String(),
+			"step_id":               step.ID.String(),
 		},
 	})
 
@@ -363,7 +363,7 @@ func (e *SMSExecutor) Execute(ctx context.Context, execution *WorkflowExecution,
 			"message_id":         smsResult.MessageID,
 			"recipient":          recipientPhone,
 			"template_used":      smsResult.TemplateUsed,
-			"sent_at":           now,
+			"sent_at":            now,
 			"recovery_action_id": recoveryAction.ID.String(),
 		},
 	}, nil
@@ -383,7 +383,7 @@ func (e *WaitExecutor) Execute(ctx context.Context, execution *WorkflowExecution
 	if e.tracer == nil {
 		e.tracer = otel.Tracer("wait-executor")
 	}
-	
+
 	ctx, span := e.tracer.Start(ctx, "execute_wait")
 	defer span.End()
 
@@ -421,8 +421,8 @@ func (e *WaitExecutor) Execute(ctx context.Context, execution *WorkflowExecution
 			Success: true,
 			Data: map[string]interface{}{
 				"wait_duration_minutes": totalMinutes,
-				"reason":               config.Reason,
-				"completed_at":         time.Now(),
+				"reason":                config.Reason,
+				"completed_at":          time.Now(),
 			},
 		}, nil
 	case <-ctx.Done():
@@ -449,7 +449,7 @@ func (e *ConditionalExecutor) Execute(ctx context.Context, execution *WorkflowEx
 	if e.tracer == nil {
 		e.tracer = otel.Tracer("conditional-executor")
 	}
-	
+
 	ctx, span := e.tracer.Start(ctx, "execute_conditional")
 	defer span.End()
 
@@ -460,10 +460,10 @@ func (e *ConditionalExecutor) Execute(ctx context.Context, execution *WorkflowEx
 			Operator string      `json:"operator"`
 			Value    interface{} `json:"value"`
 		} `json:"conditions"`
-		Logic      string `json:"logic"` // "AND" or "OR"
-		OnTrue     string `json:"on_true"`   // Action if condition is true
-		OnFalse    string `json:"on_false"`  // Action if condition is false
-		SkipSteps  int    `json:"skip_steps"` // Number of steps to skip
+		Logic     string `json:"logic"`      // "AND" or "OR"
+		OnTrue    string `json:"on_true"`    // Action if condition is true
+		OnFalse   string `json:"on_false"`   // Action if condition is false
+		SkipSteps int    `json:"skip_steps"` // Number of steps to skip
 	}
 
 	if err := json.Unmarshal(step.Config, &config); err != nil {
@@ -520,10 +520,10 @@ func (e *ConditionalExecutor) Execute(ctx context.Context, execution *WorkflowEx
 	}
 
 	resultData := map[string]interface{}{
-		"condition_result":    finalResult,
-		"action_taken":       action,
+		"condition_result":     finalResult,
+		"action_taken":         action,
 		"conditions_evaluated": len(config.Conditions),
-		"logic_used":         config.Logic,
+		"logic_used":           config.Logic,
 	}
 
 	// Handle specific actions
@@ -563,7 +563,7 @@ func (e *ConditionalExecutor) evaluateCondition(paymentFailure *models.PaymentFa
 	// Extract field value from payment failure
 	switch field {
 	case "amount":
-		fieldValue = paymentFailure.Amount
+		fieldValue = paymentFailure.AmountCents
 	case "currency":
 		fieldValue = paymentFailure.Currency
 	case "failure_reason":

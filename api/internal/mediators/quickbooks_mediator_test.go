@@ -106,7 +106,7 @@ func TestQuickBooksMediator_ConnectionState(t *testing.T) {
 
 	// Test initial connection state
 	assert.False(t, mediator.IsConnected())
-	
+
 	// Test provider identification
 	assert.Equal(t, "quickbooks_test", mediator.GetProviderID())
 	assert.Equal(t, "QuickBooks", mediator.GetProviderName())

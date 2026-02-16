@@ -29,7 +29,6 @@ func MockRecoveryAnalyticsService(t *testing.T) (*svc.RecoveryAnalyticsService, 
 	return service, gormDB, mock
 }
 
-
 func TestGetRecoveryMetrics(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC()
@@ -71,17 +70,17 @@ func TestGetRecoveryMetrics(t *testing.T) {
 			},
 			expectedMetric: func() *svc.RecoveryMetrics {
 				return &svc.RecoveryMetrics{
-					RecoveryRate:           50.0, // (30+20)/100 * 100
-					AverageRecoveryTime:    5040,  // (30*3600 + 20*7200)/50
-					TotalRecoveredAmount:   3000.00,
-					TotalFailedAmount:      5000.50,
+					RecoveryRate:         50.0, // (30+20)/100 * 100
+					AverageRecoveryTime:  5040, // (30*3600 + 20*7200)/50
+					TotalRecoveredAmount: 3000.00,
+					TotalFailedAmount:    5000.50,
 					RecoveryByMethod: map[string]int64{
-						"credit_card":  30,
+						"credit_card":   30,
 						"bank_transfer": 20,
 					},
 					RecoveryByFailureType: map[string]int64{
 						"insufficient_funds": 30,
-						"expired_card":      20,
+						"expired_card":       20,
 					},
 				}
 			},
@@ -141,12 +140,12 @@ func TestGetRecoveryMetrics(t *testing.T) {
 			},
 			expectedMetric: func() *svc.RecoveryMetrics {
 				return &svc.RecoveryMetrics{
-					RecoveryRate:           0,
-					AverageRecoveryTime:    0,
-					TotalRecoveredAmount:   0,
-					TotalFailedAmount:      2500.00,
-					RecoveryByMethod:       make(map[string]int64),
-					RecoveryByFailureType:  make(map[string]int64),
+					RecoveryRate:          0,
+					AverageRecoveryTime:   0,
+					TotalRecoveredAmount:  0,
+					TotalFailedAmount:     2500.00,
+					RecoveryByMethod:      make(map[string]int64),
+					RecoveryByFailureType: make(map[string]int64),
 				}
 			},
 			expectError: false,
@@ -195,10 +194,10 @@ func TestCalculateRecoveryScore(t *testing.T) {
 		{
 			name: "high score",
 			metrics: &svc.RecoveryMetrics{
-				RecoveryRate:          90.0,
-				AverageRecoveryTime:   3600, // 1 hour
+				RecoveryRate:         90.0,
+				AverageRecoveryTime:  3600, // 1 hour
 				TotalRecoveredAmount: 9000,
-				TotalFailedAmount:   10000,
+				TotalFailedAmount:    10000,
 			},
 			expected: 95, // 45 (from rate) + 30 (from time) + 18 (from amount ratio)
 		},

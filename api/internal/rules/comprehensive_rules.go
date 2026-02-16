@@ -60,7 +60,7 @@ func (cpr *ComprehensivePaymentFailureRules) createFraudDetectionRule() *BasicRu
 			cpr.logger.Warn("Suspicious payment pattern detected",
 				zap.String("event_id", event.ID.String()),
 				zap.String("customer_id", event.CustomerID),
-				zap.Float64("amount", event.Amount))
+				zap.Float64("amount", float64(event.AmountCents)/100))
 
 			return &BasicActionResult{
 				RuleName:   "fraud_detection",
@@ -157,12 +157,12 @@ func (cpr *ComprehensivePaymentFailureRules) createHighValueImmediateAlertRule()
 		Priority:    150,
 		Enabled:     true,
 		Condition: func(event *models.PaymentFailureEvent) bool {
-			return event.Amount >= 1000.0
+			return event.AmountCents >= 1000.0
 		},
 		Action: func(event *models.PaymentFailureEvent) (*BasicActionResult, error) {
 			cpr.logger.Info("High value payment failure detected",
 				zap.String("event_id", event.ID.String()),
-				zap.Float64("amount", event.Amount))
+				zap.Float64("amount", float64(event.AmountCents)/100))
 
 			return &BasicActionResult{
 				RuleName:   "high_value_immediate_alert",
@@ -423,7 +423,7 @@ func (cpr *ComprehensivePaymentFailureRules) createAnalyticsRule() *BasicRule {
 func (cpr *ComprehensivePaymentFailureRules) isSuspiciousPattern(event *models.PaymentFailureEvent) bool {
 	// Basic fraud detection logic
 	// TODO: Implement more sophisticated fraud detection
-	return event.Amount > 5000.0 && event.FailureReason == "card_declined"
+	return event.AmountCents > 5000.0 && event.FailureReason == "card_declined"
 }
 
 func (cpr *ComprehensivePaymentFailureRules) isRecurringPayment(event *models.PaymentFailureEvent) bool {
@@ -438,9 +438,9 @@ func (cpr *ComprehensivePaymentFailureRules) isVIPCustomer(customerID string) bo
 
 func (cpr *ComprehensivePaymentFailureRules) calculateRetryDelay(event *models.PaymentFailureEvent) time.Duration {
 	// Smart retry timing based on amount
-	if event.Amount >= 1000.0 {
+	if event.AmountCents >= 1000.0 {
 		return 7 * 24 * time.Hour // 7 days for high amounts
-	} else if event.Amount >= 500.0 {
+	} else if event.AmountCents >= 500.0 {
 		return 5 * 24 * time.Hour // 5 days for medium amounts
 	}
 	return 3 * 24 * time.Hour // 3 days for low amounts
@@ -462,13 +462,13 @@ func (cpr *ComprehensivePaymentFailureRules) calculateComprehensiveRiskScore(eve
 	baseScore := 0
 
 	// Amount-based risk
-	if event.Amount >= 10000 {
+	if event.AmountCents >= 10000 {
 		baseScore += 40
-	} else if event.Amount >= 5000 {
+	} else if event.AmountCents >= 5000 {
 		baseScore += 30
-	} else if event.Amount >= 1000 {
+	} else if event.AmountCents >= 1000 {
 		baseScore += 20
-	} else if event.Amount >= 100 {
+	} else if event.AmountCents >= 100 {
 		baseScore += 10
 	}
 
@@ -497,7 +497,7 @@ func (cpr *ComprehensivePaymentFailureRules) calculateComprehensiveRiskScore(eve
 func (cpr *ComprehensivePaymentFailureRules) getRiskFactors(event *models.PaymentFailureEvent) []string {
 	factors := []string{}
 
-	if event.Amount >= 1000 {
+	if event.AmountCents >= 1000 {
 		factors = append(factors, "high_amount")
 	}
 

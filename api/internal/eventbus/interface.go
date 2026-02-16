@@ -7,11 +7,11 @@ type EventBus interface {
 	// Publish events
 	Publish(ctx context.Context, topic string, event interface{}) error
 	PublishAsync(ctx context.Context, topic string, event interface{}) error
-	
+
 	// Subscribe to events
 	Subscribe(ctx context.Context, topic string, handler EventHandler) (Subscription, error)
 	SubscribeAsync(ctx context.Context, topic string, handler EventHandler) (Subscription, error)
-	
+
 	// Event management
 	Unsubscribe(subscription Subscription) error
 	Close() error

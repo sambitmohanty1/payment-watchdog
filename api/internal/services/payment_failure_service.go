@@ -15,8 +15,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 	"github.com/google/uuid"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )

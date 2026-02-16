@@ -157,17 +157,17 @@ func (c *CommunicationService) SendEmail(ctx context.Context, req *Communication
 
 	// Create customer communication record
 	communication := &models.CustomerCommunication{
-		ID:               uuid.New(),
-		CompanyID:        req.CompanyID.String(),
+		ID:                uuid.New(),
+		CompanyID:         req.CompanyID.String(),
 		CommunicationType: "email",
-		Recipient:        req.Recipient,
-		Subject:          subject,
-		Content:          body,
-		Status:           "sent",
-		SentAt:           &time.Time{},
-		TemplateID:       template.ID.String(),
-		ExternalID:       emailResult.MessageID,
-		Metadata:         req.Context,
+		Recipient:         req.Recipient,
+		Subject:           subject,
+		Content:           body,
+		Status:            "sent",
+		SentAt:            &time.Time{},
+		TemplateID:        template.ID.String(),
+		ExternalID:        emailResult.MessageID,
+		Metadata:          req.Context,
 	}
 	*communication.SentAt = time.Now()
 
@@ -227,16 +227,16 @@ func (c *CommunicationService) SendSMS(ctx context.Context, req *CommunicationRe
 
 	// Create customer communication record
 	communication := &models.CustomerCommunication{
-		ID:               uuid.New(),
-		CompanyID:        req.CompanyID.String(),
+		ID:                uuid.New(),
+		CompanyID:         req.CompanyID.String(),
 		CommunicationType: "sms",
-		Recipient:        req.Recipient,
-		Content:          message,
-		Status:           "sent",
-		SentAt:           &time.Time{},
-		TemplateID:       template.ID.String(),
-		ExternalID:       smsResult.MessageID,
-		Metadata:         req.Context,
+		Recipient:         req.Recipient,
+		Content:           message,
+		Status:            "sent",
+		SentAt:            &time.Time{},
+		TemplateID:        template.ID.String(),
+		ExternalID:        smsResult.MessageID,
+		Metadata:          req.Context,
 	}
 	*communication.SentAt = time.Now()
 
@@ -262,7 +262,7 @@ func (c *CommunicationService) getEmailTemplate(ctx context.Context, req *Commun
 	if req.TemplateID != "" {
 		if id, err := uuid.Parse(req.TemplateID); err == nil {
 			if err := c.db.WithContext(ctx).
-				Where("id = ? AND company_id = ? AND template_type = ? AND is_active = ?", 
+				Where("id = ? AND company_id = ? AND template_type = ? AND is_active = ?",
 					id, req.CompanyID, "email", true).
 				First(&template).Error; err == nil {
 				return &template, nil
@@ -273,7 +273,7 @@ func (c *CommunicationService) getEmailTemplate(ctx context.Context, req *Commun
 	// Try to find by name
 	if req.TemplateName != "" {
 		if err := c.db.WithContext(ctx).
-			Where("name = ? AND company_id = ? AND template_type = ? AND is_active = ?", 
+			Where("name = ? AND company_id = ? AND template_type = ? AND is_active = ?",
 				req.TemplateName, req.CompanyID, "email", true).
 			First(&template).Error; err == nil {
 			return &template, nil
@@ -282,7 +282,7 @@ func (c *CommunicationService) getEmailTemplate(ctx context.Context, req *Commun
 
 	// Try to find default template
 	if err := c.db.WithContext(ctx).
-		Where("company_id = ? AND template_type = ? AND is_default = ? AND is_active = ?", 
+		Where("company_id = ? AND template_type = ? AND is_default = ? AND is_active = ?",
 			req.CompanyID, "email", true, true).
 		First(&template).Error; err == nil {
 		return &template, nil
@@ -325,7 +325,7 @@ func (c *CommunicationService) getSMSTemplate(ctx context.Context, req *Communic
 	if req.TemplateID != "" {
 		if id, err := uuid.Parse(req.TemplateID); err == nil {
 			if err := c.db.WithContext(ctx).
-				Where("id = ? AND company_id = ? AND template_type = ? AND is_active = ?", 
+				Where("id = ? AND company_id = ? AND template_type = ? AND is_active = ?",
 					id, req.CompanyID, "sms", true).
 				First(&template).Error; err == nil {
 				return &template, nil
@@ -336,7 +336,7 @@ func (c *CommunicationService) getSMSTemplate(ctx context.Context, req *Communic
 	// Try to find by name
 	if req.TemplateName != "" {
 		if err := c.db.WithContext(ctx).
-			Where("name = ? AND company_id = ? AND template_type = ? AND is_active = ?", 
+			Where("name = ? AND company_id = ? AND template_type = ? AND is_active = ?",
 				req.TemplateName, req.CompanyID, "sms", true).
 			First(&template).Error; err == nil {
 			return &template, nil
@@ -345,7 +345,7 @@ func (c *CommunicationService) getSMSTemplate(ctx context.Context, req *Communic
 
 	// Try to find default template
 	if err := c.db.WithContext(ctx).
-		Where("company_id = ? AND template_type = ? AND is_default = ? AND is_active = ?", 
+		Where("company_id = ? AND template_type = ? AND is_default = ? AND is_active = ?",
 			req.CompanyID, "sms", true, true).
 		First(&template).Error; err == nil {
 		return &template, nil

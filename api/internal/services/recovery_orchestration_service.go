@@ -20,31 +20,31 @@ import (
 
 // RecoveryOrchestrationService manages automated recovery workflows
 type RecoveryOrchestrationService struct {
-	db                    *gorm.DB
-	retryService          *RetryService
-	communicationService  *CommunicationService
-	analyticsService      *AnalyticsService
-	stepExecutors         map[string]StepExecutor
-	tracer                trace.Tracer
-	logger                *zap.Logger
-	mu                    sync.RWMutex
-	activeExecutions      map[uuid.UUID]*WorkflowExecution
-	executionWorkers      int
-	workerPool            chan struct{}
+	db                   *gorm.DB
+	retryService         *RetryService
+	communicationService *CommunicationService
+	analyticsService     *AnalyticsService
+	stepExecutors        map[string]StepExecutor
+	tracer               trace.Tracer
+	logger               *zap.Logger
+	mu                   sync.RWMutex
+	activeExecutions     map[uuid.UUID]*WorkflowExecution
+	executionWorkers     int
+	workerPool           chan struct{}
 }
 
 // WorkflowExecution represents an active workflow execution
 type WorkflowExecution struct {
-	ID                uuid.UUID
-	WorkflowID        uuid.UUID
-	PaymentFailureID  uuid.UUID
-	CompanyID         uuid.UUID
-	Status            string
-	CurrentStepIndex  int
-	Context           map[string]interface{}
-	StartedAt         time.Time
-	CancelFunc        context.CancelFunc
-	mu                sync.RWMutex
+	ID               uuid.UUID
+	WorkflowID       uuid.UUID
+	PaymentFailureID uuid.UUID
+	CompanyID        uuid.UUID
+	Status           string
+	CurrentStepIndex int
+	Context          map[string]interface{}
+	StartedAt        time.Time
+	CancelFunc       context.CancelFunc
+	mu               sync.RWMutex
 }
 
 // StepExecutor interface for different types of workflow steps
@@ -240,8 +240,8 @@ func (r *RecoveryOrchestrationService) executeWorkflow(ctx context.Context, exec
 		}
 
 		if err := r.updateExecutionStatus(ctx, execution.ID, status); err != nil {
-			logger.Error("Failed to update execution status", 
-				zap.String("status", status), 
+			logger.Error("Failed to update execution status",
+				zap.String("status", status),
 				zap.Error(err))
 		}
 
@@ -253,11 +253,11 @@ func (r *RecoveryOrchestrationService) executeWorkflow(ctx context.Context, exec
 		// Log workflow completion
 		duration := time.Since(execution.StartedAt)
 		if execution.Status == "completed" {
-			logger.Info("Workflow execution completed successfully", 
+			logger.Info("Workflow execution completed successfully",
 				zap.Duration("duration", duration),
 				zap.Int("steps_completed", execution.CurrentStepIndex))
 		} else if execution.Status == "failed" {
-			logger.Error("Workflow execution failed", 
+			logger.Error("Workflow execution failed",
 				zap.Duration("duration", duration),
 				zap.Int("steps_completed", execution.CurrentStepIndex))
 		}
@@ -266,11 +266,11 @@ func (r *RecoveryOrchestrationService) executeWorkflow(ctx context.Context, exec
 	// Execute each step in sequence
 	for i := execution.CurrentStepIndex; i < len(workflow.Steps); i++ {
 		step := workflow.Steps[i]
-		
+
 		// Update current step
 		execution.CurrentStepIndex = i
 		if err := r.updateCurrentStep(ctx, execution.ID, &step.ID); err != nil {
-			logger.Error("Failed to update current step", 
+			logger.Error("Failed to update current step",
 				zap.String("step_id", step.ID.String()),
 				zap.Error(err))
 			execution.Status = "failed"
@@ -279,7 +279,7 @@ func (r *RecoveryOrchestrationService) executeWorkflow(ctx context.Context, exec
 
 		// Execute the step
 		if err := r.executeStep(ctx, execution, &step); err != nil {
-			logger.Error("Step execution failed", 
+			logger.Error("Step execution failed",
 				zap.String("step_id", step.ID.String()),
 				zap.String("step_type", step.StepType),
 				zap.Error(err))
@@ -493,7 +493,7 @@ func (r *RecoveryOrchestrationService) evaluateCondition(paymentFailure *models.
 	// Extract field value from payment failure
 	switch condition.Field {
 	case "amount":
-		fieldValue = paymentFailure.Amount
+		fieldValue = paymentFailure.AmountCents
 	case "currency":
 		fieldValue = paymentFailure.Currency
 	case "failure_reason":
@@ -573,7 +573,7 @@ func toFloat64(v interface{}) float64 {
 }
 
 func contains(str, substr string) bool {
-	return len(str) >= len(substr) && (str == substr || len(substr) == 0 || 
+	return len(str) >= len(substr) && (str == substr || len(substr) == 0 ||
 		(len(substr) > 0 && findSubstring(str, substr)))
 }
 
@@ -729,19 +729,19 @@ func (r *RecoveryOrchestrationService) TriggerWorkflowManually(ctx context.Conte
 // GetRecoveryMetrics retrieves recovery performance metrics
 func (r *RecoveryOrchestrationService) GetRecoveryMetrics(ctx context.Context, companyID uuid.UUID, timeRange time.Duration) (*models.RecoveryMetrics, error) {
 	startTime := time.Now().Add(-timeRange)
-	
+
 	var metrics models.RecoveryMetrics
-	
+
 	// Get workflow execution metrics
 	var totalExecutions, successfulExecutions, failedExecutions int64
 	r.db.WithContext(ctx).Model(&models.RecoveryWorkflowExecution{}).
 		Where("company_id = ? AND created_at >= ?", companyID, startTime).
 		Count(&totalExecutions)
-	
+
 	r.db.WithContext(ctx).Model(&models.RecoveryWorkflowExecution{}).
 		Where("company_id = ? AND created_at >= ? AND status = ?", companyID, startTime, "completed").
 		Count(&successfulExecutions)
-	
+
 	r.db.WithContext(ctx).Model(&models.RecoveryWorkflowExecution{}).
 		Where("company_id = ? AND created_at >= ? AND status = ?", companyID, startTime, "failed").
 		Count(&failedExecutions)
@@ -751,7 +751,7 @@ func (r *RecoveryOrchestrationService) GetRecoveryMetrics(ctx context.Context, c
 	r.db.WithContext(ctx).Model(&models.RecoveryAction{}).
 		Where("company_id = ? AND created_at >= ?", companyID, startTime).
 		Count(&totalActions)
-	
+
 	r.db.WithContext(ctx).Model(&models.RecoveryAction{}).
 		Where("company_id = ? AND created_at >= ? AND status = ?", companyID, startTime, "completed").
 		Count(&successfulActions)
@@ -766,7 +766,7 @@ func (r *RecoveryOrchestrationService) GetRecoveryMetrics(ctx context.Context, c
 	metrics.FailedWorkflowExecutions = int(failedExecutions)
 	metrics.TotalRecoveryActions = int(totalActions)
 	metrics.SuccessfulRecoveryActions = int(successfulActions)
-	
+
 	if totalActions > 0 {
 		metrics.RecoverySuccessRate = float64(successfulActions) / float64(totalActions) * 100
 	}

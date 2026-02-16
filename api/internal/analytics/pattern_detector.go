@@ -5,8 +5,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 	"github.com/google/uuid"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 	"go.uber.org/zap"
 )
 
@@ -25,7 +25,7 @@ func NewDefaultPatternDetector(logger *zap.Logger) *DefaultPatternDetector {
 // DetectPatterns detects various patterns in payment failure events
 func (pd *DefaultPatternDetector) DetectPatterns(events []*architecture.PaymentFailure) []Pattern {
 	patterns := make([]Pattern, 0)
-	
+
 	if len(events) == 0 {
 		return patterns
 	}
@@ -57,7 +57,7 @@ func (pd *DefaultPatternDetector) DetectCustomerPatterns(customerID string, even
 	}
 
 	patterns := make([]CustomerPattern, 0)
-	
+
 	// Detect customer-specific recurring patterns
 	recurringPatterns := pd.detectRecurringPatterns(customerEvents)
 	for _, pattern := range recurringPatterns {
@@ -77,7 +77,7 @@ func (pd *DefaultPatternDetector) DetectCustomerPatterns(customerID string, even
 // DetectTemporalPatterns detects time-based patterns in the data
 func (pd *DefaultPatternDetector) DetectTemporalPatterns(events []*architecture.PaymentFailure, timeRange time.Duration) []TemporalPattern {
 	temporalPatterns := make([]TemporalPattern, 0)
-	
+
 	if len(events) == 0 {
 		return temporalPatterns
 	}
@@ -114,14 +114,14 @@ func (pd *DefaultPatternDetector) DetectTemporalPatterns(events []*architecture.
 // DetectBusinessPatterns detects business-related patterns in payment failures
 func (pd *DefaultPatternDetector) DetectBusinessPatterns(events []*architecture.PaymentFailure) []Pattern {
 	patterns := make([]Pattern, 0)
-	
+
 	if len(events) == 0 {
 		return patterns
 	}
 
 	// Group events by business category
 	categoryGroups := pd.groupEventsByBusinessCategory(events)
-	
+
 	for category, categoryEvents := range categoryGroups {
 		if len(categoryEvents) >= 2 { // Minimum events for category pattern
 			pattern := Pattern{
@@ -140,17 +140,17 @@ func (pd *DefaultPatternDetector) DetectBusinessPatterns(events []*architecture.
 			patterns = append(patterns, pattern)
 		}
 	}
-	
+
 	return patterns
 }
 
 // detectRecurringPatterns detects recurring patterns in payment failures
 func (pd *DefaultPatternDetector) detectRecurringPatterns(events []*architecture.PaymentFailure) []Pattern {
 	patterns := make([]Pattern, 0)
-	
+
 	// Group events by customer and detect recurring patterns
 	customerGroups := pd.groupEventsByCustomer(events)
-	
+
 	for customerID, customerEvents := range customerGroups {
 		if len(customerEvents) >= 3 { // Minimum events for pattern detection
 			pattern := Pattern{
@@ -169,14 +169,14 @@ func (pd *DefaultPatternDetector) detectRecurringPatterns(events []*architecture
 			patterns = append(patterns, pattern)
 		}
 	}
-	
+
 	return patterns
 }
 
 // detectAmountPatterns detects patterns based on payment amounts
 func (pd *DefaultPatternDetector) detectAmountPatterns(events []*architecture.PaymentFailure) []Pattern {
 	patterns := make([]Pattern, 0)
-	
+
 	if len(events) == 0 {
 		return patterns
 	}
@@ -184,11 +184,11 @@ func (pd *DefaultPatternDetector) detectAmountPatterns(events []*architecture.Pa
 	// Calculate amount statistics
 	amounts := pd.extractAmounts(events)
 	sort.Float64s(amounts)
-	
+
 	// Detect high-value patterns
 	highValueThreshold := pd.calculateHighValueThreshold(amounts)
 	highValueEvents := pd.filterHighValueEvents(events, highValueThreshold)
-	
+
 	if len(highValueEvents) > 0 {
 		pattern := Pattern{
 			ID:          uuid.New().String(),
@@ -198,21 +198,21 @@ func (pd *DefaultPatternDetector) detectAmountPatterns(events []*architecture.Pa
 			Evidence:    []string{"High failure amounts", "Significant financial impact"},
 			CreatedAt:   time.Now(),
 			Metadata: map[string]interface{}{
-				"threshold":     highValueThreshold,
+				"threshold":        highValueThreshold,
 				"high_value_count": len(highValueEvents),
-				"total_events":  len(events),
+				"total_events":     len(events),
 			},
 		}
 		patterns = append(patterns, pattern)
 	}
-	
+
 	return patterns
 }
 
 // detectTimePatterns detects time-based patterns
 func (pd *DefaultPatternDetector) detectTimePatterns(events []*architecture.PaymentFailure) []Pattern {
 	patterns := make([]Pattern, 0)
-	
+
 	// Detect day-of-week pattern
 	dayOfWeekPattern := pd.detectDayOfWeekPattern(events)
 	if dayOfWeekPattern != nil {
@@ -224,55 +224,55 @@ func (pd *DefaultPatternDetector) detectTimePatterns(events []*architecture.Paym
 	if timeOfDayPattern != nil {
 		patterns = append(patterns, *timeOfDayPattern)
 	}
-	
+
 	return patterns
 }
 
 // Helper methods for pattern detection
 func (pd *DefaultPatternDetector) groupEventsByCustomer(events []*architecture.PaymentFailure) map[string][]*architecture.PaymentFailure {
 	groups := make(map[string][]*architecture.PaymentFailure)
-	
+
 	for _, event := range events {
 		if event.CustomerID != "" {
 			customerID := event.CustomerID
 			groups[customerID] = append(groups[customerID], event)
 		}
 	}
-	
+
 	return groups
 }
 
 func (pd *DefaultPatternDetector) groupEventsByBusinessCategory(events []*architecture.PaymentFailure) map[string][]*architecture.PaymentFailure {
 	groups := make(map[string][]*architecture.PaymentFailure)
-	
+
 	for _, event := range events {
 		if event.BusinessCategory != "" {
 			groups[event.BusinessCategory] = append(groups[event.BusinessCategory], event)
 		}
 	}
-	
+
 	return groups
 }
 
 func (pd *DefaultPatternDetector) filterEventsByCustomer(events []*architecture.PaymentFailure, customerID string) []*architecture.PaymentFailure {
 	filtered := make([]*architecture.PaymentFailure, 0)
-	
+
 	for _, event := range events {
 		if event.CustomerID == customerID {
 			filtered = append(filtered, event)
 		}
 	}
-	
+
 	return filtered
 }
 
 func (pd *DefaultPatternDetector) extractAmounts(events []*architecture.PaymentFailure) []float64 {
 	amounts := make([]float64, 0, len(events))
-	
+
 	for _, event := range events {
 		amounts = append(amounts, event.Amount)
 	}
-	
+
 	return amounts
 }
 
@@ -280,25 +280,25 @@ func (pd *DefaultPatternDetector) calculateHighValueThreshold(amounts []float64)
 	if len(amounts) == 0 {
 		return 0
 	}
-	
+
 	// Use 90th percentile as high-value threshold
 	index := int(float64(len(amounts)) * 0.9)
 	if index >= len(amounts) {
 		index = len(amounts) - 1
 	}
-	
+
 	return amounts[index]
 }
 
 func (pd *DefaultPatternDetector) filterHighValueEvents(events []*architecture.PaymentFailure, threshold float64) []*architecture.PaymentFailure {
 	filtered := make([]*architecture.PaymentFailure, 0)
-	
+
 	for _, event := range events {
 		if event.Amount >= threshold {
 			filtered = append(filtered, event)
 		}
 	}
-	
+
 	return filtered
 }
 
@@ -306,17 +306,17 @@ func (pd *DefaultPatternDetector) calculateConfidence(events []*architecture.Pay
 	if len(events) < 3 {
 		return 0.3
 	}
-	
+
 	// Simple confidence calculation based on event count and consistency
 	baseConfidence := 0.5
 	eventBonus := float64(len(events)) * 0.1
 	consistencyBonus := pd.calculateConsistencyBonus(events)
-	
+
 	confidence := baseConfidence + eventBonus + consistencyBonus
 	if confidence > 1.0 {
 		confidence = 1.0
 	}
-	
+
 	return confidence
 }
 
@@ -324,38 +324,38 @@ func (pd *DefaultPatternDetector) calculateAmountConfidence(highValueEvents []*a
 	if len(totalEvents) == 0 {
 		return 0
 	}
-	
+
 	// Confidence based on proportion of high-value events
 	proportion := float64(len(highValueEvents)) / float64(len(totalEvents))
-	return proportion * 0.8 + 0.2 // Base confidence of 0.2
+	return proportion*0.8 + 0.2 // Base confidence of 0.2
 }
 
 func (pd *DefaultPatternDetector) calculateBusinessCategoryConfidence(categoryEvents []*architecture.PaymentFailure, totalEvents []*architecture.PaymentFailure) float64 {
 	if len(totalEvents) == 0 {
 		return 0
 	}
-	
+
 	// Confidence based on proportion of category events
 	proportion := float64(len(categoryEvents)) / float64(len(totalEvents))
-	return proportion * 0.7 + 0.3 // Base confidence of 0.3
+	return proportion*0.7 + 0.3 // Base confidence of 0.3
 }
 
 func (pd *DefaultPatternDetector) calculateConsistencyBonus(events []*architecture.PaymentFailure) float64 {
 	if len(events) < 2 {
 		return 0
 	}
-	
+
 	// Calculate time consistency between events
 	timeGaps := make([]time.Duration, 0)
 	for i := 1; i < len(events); i++ {
 		gap := events[i].OccurredAt.Sub(events[i-1].OccurredAt)
 		timeGaps = append(timeGaps, gap)
 	}
-	
+
 	if len(timeGaps) == 0 {
 		return 0
 	}
-	
+
 	// Calculate standard deviation of time gaps
 	meanGap := pd.calculateMeanDuration(timeGaps)
 	variance := 0.0
@@ -364,22 +364,22 @@ func (pd *DefaultPatternDetector) calculateConsistencyBonus(events []*architectu
 		variance += float64(diff * diff)
 	}
 	variance /= float64(len(timeGaps))
-	
+
 	// Lower variance = higher consistency = higher bonus
 	consistencyScore := 1.0 / (1.0 + variance/float64(time.Hour*24)) // Normalize by day
-	return consistencyScore * 0.2 // Max bonus of 0.2
+	return consistencyScore * 0.2                                    // Max bonus of 0.2
 }
 
 func (pd *DefaultPatternDetector) calculateMeanDuration(durations []time.Duration) time.Duration {
 	if len(durations) == 0 {
 		return 0
 	}
-	
+
 	total := time.Duration(0)
 	for _, duration := range durations {
 		total += duration
 	}
-	
+
 	return total / time.Duration(len(durations))
 }
 
@@ -400,17 +400,17 @@ func (pd *DefaultPatternDetector) calculateCustomerRiskLevel(events []*architect
 	if len(events) == 0 {
 		return "low"
 	}
-	
+
 	// Simple risk level calculation based on event count and amounts
 	eventCount := len(events)
 	totalAmount := pd.calculateTotalAmount(events)
-	
+
 	if eventCount >= 5 || totalAmount >= 10000 {
 		return "high"
 	} else if eventCount >= 3 || totalAmount >= 5000 {
 		return "medium"
 	}
-	
+
 	return "low"
 }
 
@@ -418,11 +418,11 @@ func (pd *DefaultPatternDetector) calculateTimeSpan(events []*architecture.Payme
 	if len(events) < 2 {
 		return 0
 	}
-	
+
 	// Find earliest and latest events
 	earliest := events[0].OccurredAt
 	latest := events[0].OccurredAt
-	
+
 	for _, event := range events {
 		if event.OccurredAt.Before(earliest) {
 			earliest = event.OccurredAt
@@ -431,7 +431,7 @@ func (pd *DefaultPatternDetector) calculateTimeSpan(events []*architecture.Payme
 			latest = event.OccurredAt
 		}
 	}
-	
+
 	return latest.Sub(earliest)
 }
 
@@ -439,14 +439,14 @@ func (pd *DefaultPatternDetector) detectDayOfWeekPattern(events []*architecture.
 	if len(events) < 7 {
 		return nil
 	}
-	
+
 	// Count events by day of week
 	dayCounts := make(map[time.Weekday]int)
 	for _, event := range events {
 		day := event.OccurredAt.Weekday()
 		dayCounts[day]++
 	}
-	
+
 	// Find the day with most events
 	var maxDay time.Weekday
 	maxCount := 0
@@ -456,7 +456,7 @@ func (pd *DefaultPatternDetector) detectDayOfWeekPattern(events []*architecture.
 			maxDay = day
 		}
 	}
-	
+
 	// Only create pattern if there's a significant difference
 	if maxCount >= 2 && float64(maxCount)/float64(len(events)) >= 0.3 {
 		return &Pattern{
@@ -467,13 +467,13 @@ func (pd *DefaultPatternDetector) detectDayOfWeekPattern(events []*architecture.
 			Evidence:    []string{maxDay.String(), "Peak failure day"},
 			CreatedAt:   time.Now(),
 			Metadata: map[string]interface{}{
-				"peak_day":    maxDay.String(),
-				"peak_count":  maxCount,
+				"peak_day":     maxDay.String(),
+				"peak_count":   maxCount,
 				"total_events": len(events),
 			},
 		}
 	}
-	
+
 	return nil
 }
 
@@ -481,14 +481,14 @@ func (pd *DefaultPatternDetector) detectTimeOfDayPattern(events []*architecture.
 	if len(events) < 24 {
 		return nil
 	}
-	
+
 	// Count events by hour of day
 	hourCounts := make(map[int]int)
 	for _, event := range events {
 		hour := event.OccurredAt.Hour()
 		hourCounts[hour]++
 	}
-	
+
 	// Find the hour with most events
 	var maxHour int
 	maxCount := 0
@@ -498,7 +498,7 @@ func (pd *DefaultPatternDetector) detectTimeOfDayPattern(events []*architecture.
 			maxHour = hour
 		}
 	}
-	
+
 	// Only create pattern if there's a significant difference
 	if maxCount >= 2 && float64(maxCount)/float64(len(events)) >= 0.15 {
 		return &Pattern{
@@ -509,13 +509,13 @@ func (pd *DefaultPatternDetector) detectTimeOfDayPattern(events []*architecture.
 			Evidence:    []string{fmt.Sprintf("%02d:00", maxHour), "Peak failure hour"},
 			CreatedAt:   time.Now(),
 			Metadata: map[string]interface{}{
-				"peak_hour":   maxHour,
-				"peak_count":  maxCount,
+				"peak_hour":    maxHour,
+				"peak_count":   maxCount,
 				"total_events": len(events),
 			},
 		}
 	}
-	
+
 	return nil
 }
 
@@ -523,17 +523,17 @@ func (pd *DefaultPatternDetector) findPeakTimes(events []*architecture.PaymentFa
 	if len(events) == 0 {
 		return []time.Time{}
 	}
-	
+
 	// For simplicity, return the first few event times as peak times
 	peakCount := 3
 	if len(events) < peakCount {
 		peakCount = len(events)
 	}
-	
+
 	peakTimes := make([]time.Time, 0, peakCount)
 	for i := 0; i < peakCount; i++ {
 		peakTimes = append(peakTimes, events[i].OccurredAt)
 	}
-	
+
 	return peakTimes
 }

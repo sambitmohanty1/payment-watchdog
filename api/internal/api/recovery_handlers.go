@@ -202,9 +202,9 @@ func (h *RecoveryHandlers) GetWorkflows(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"workflows": workflows,
 		"pagination": gin.H{
-			"page":       page,
-			"limit":      limit,
-			"total":      total,
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
 			"total_pages": (total + int64(limit) - 1) / int64(limit),
 		},
 	})
@@ -387,9 +387,9 @@ func (h *RecoveryHandlers) GetWorkflowExecutions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"executions": executions,
 		"pagination": gin.H{
-			"page":       page,
-			"limit":      limit,
-			"total":      total,
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
 			"total_pages": (total + int64(limit) - 1) / int64(limit),
 		},
 	})
@@ -635,9 +635,9 @@ func (h *RecoveryHandlers) GetTemplates(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"templates": templates,
 		"pagination": gin.H{
-			"page":       page,
-			"limit":      limit,
-			"total":      total,
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
 			"total_pages": (total + int64(limit) - 1) / int64(limit),
 		},
 	})
