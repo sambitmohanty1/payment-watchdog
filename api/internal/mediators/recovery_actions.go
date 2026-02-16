@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 )
 
 // RecoveryActionInterface defines recovery actions for payment providers
@@ -96,10 +96,15 @@ func (s *StripeRecoveryActions) RetryPayment(ctx context.Context, paymentFailure
 	// For now, simulate Stripe API call
 	// In production, this would use the actual Stripe SDK
 
-	// Determine retry amount
+	// Determine retry amount with proper validation
 	retryAmount := paymentFailure.AmountCents
 	if config.NewAmount != nil {
-		retryAmount = int64(*config.NewAmount * 100)
+		// Convert dollars to cents safely with validation
+		convertedAmount, err := utils.SafeDollarsToCents(config.NewAmount)
+		if err != nil {
+			return nil, fmt.Errorf("invalid retry amount: %w", err)
+		}
+		retryAmount = convertedAmount
 		span.SetAttributes(attribute.Float64("retry_amount", float64(retryAmount)/100))
 	}
 
