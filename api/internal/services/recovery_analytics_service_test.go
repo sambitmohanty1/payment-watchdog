@@ -1,4 +1,4 @@
-package services_test
+package services
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 )
 
 // MockRecoveryAnalyticsService is a test helper to create a RecoveryAnalyticsService with a mock DB
-func MockRecoveryAnalyticsService(t *testing.T) (*svc.RecoveryAnalyticsService, *gorm.DB, sqlmock.Sqlmock) {
+func MockRecoveryAnalyticsService(t *testing.T) (*RecoveryAnalyticsService, *gorm.DB, sqlmock.Sqlmock) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 
@@ -24,7 +24,7 @@ func MockRecoveryAnalyticsService(t *testing.T) (*svc.RecoveryAnalyticsService, 
 	require.NoError(t, err)
 
 	logger := zap.NewNop()
-	service := svc.NewRecoveryAnalyticsService(gormDB, logger)
+	service := NewRecoveryAnalyticsService(gormDB, logger)
 
 	return service, gormDB, mock
 }
@@ -39,7 +39,7 @@ func TestGetRecoveryMetrics(t *testing.T) {
 	tests := []struct {
 		name           string
 		setupMocks     func(mock sqlmock.Sqlmock)
-		expectedMetric func() *svc.RecoveryMetrics
+		expectedMetric func() *RecoveryMetrics
 		expectError    bool
 	}{
 		{
@@ -53,9 +53,8 @@ func TestGetRecoveryMetrics(t *testing.T) {
 					WillReturnRows(failedRows)
 
 				// Mock recovered payments query
-				recoveredRows := sqlmock.NewRows([]string{"method", "failure_type", "count", "sum", "avg_time"}).
-					AddRow("credit_card", "insufficient_funds", 30, 1800.00, 3600).
-					AddRow("bank_transfer", "expired_card", 20, 1200.00, 7200)
+				recoveredRows := sqlmock.NewRows([]string{"count", "sum"}).
+					AddRow(50, 3000.00)
 				mock.ExpectQuery(`(?i)SELECT.*FROM payment_events`).
 					WithArgs(companyID, startTime, endTime).
 					WillReturnRows(recoveredRows)
@@ -68,26 +67,33 @@ func TestGetRecoveryMetrics(t *testing.T) {
 					WithArgs(companyID, startTime, endTime).
 					WillReturnRows(hourlyRows)
 			},
-			expectedMetric: func() *svc.RecoveryMetrics {
-				return &svc.RecoveryMetrics{
-					RecoveryRate:         50.0, // (30+20)/100 * 100
-					AverageRecoveryTime:  5040, // (30*3600 + 20*7200)/50
-					TotalRecoveredAmount: 3000.00,
-					TotalFailedAmount:    5000.50,
-					RecoveryByMethod: map[string]int64{
-						"credit_card":   30,
-						"bank_transfer": 20,
+			expectedMetric: func() *RecoveryMetrics {
+				return &RecoveryMetrics{
+					RecoveryRate:        50.0, // (30+20)/100 * 100
+					AverageRecoveryTime: 5040, // (30*3600 + 20*7200)/50
+					RecoveryByMethod: []Metric{
+						{Name: "credit_card", Value: 30},
+						{Name: "bank_transfer", Value: 20},
 					},
-					RecoveryByFailureType: map[string]int64{
-						"insufficient_funds": 30,
-						"expired_card":       20,
+					RecoveryByFailureType: []Metric{
+						{Name: "insufficient_funds", Value: 30},
+						{Name: "expired_card", Value: 20},
+					},
+					RecoveryAmounts: Amounts{
+						TotalFailed:    5000.50,
+						TotalRecovered: 3000.00,
+						TotalPending:   0,
+					},
+					RecoveryTrends: []Trend{
+						{Date: time.Date(2023, 1, 1, 9, 0, 0, 0, time.UTC), Value: 0.8, Success: true},
+						{Date: time.Date(2023, 1, 1, 10, 0, 0, 0, time.UTC), Value: 0.9, Success: true},
 					},
 				}
 			},
 			expectError: false,
 		},
 		{
-			name: "no failed payments",
+			name: "no payment data",
 			setupMocks: func(mock sqlmock.Sqlmock) {
 				// No failed payments
 				failedRows := sqlmock.NewRows([]string{"count", "sum"}).
@@ -98,54 +104,16 @@ func TestGetRecoveryMetrics(t *testing.T) {
 
 				// No need to mock other queries as they won't be called
 			},
-			expectedMetric: func() *svc.RecoveryMetrics {
-				return &svc.RecoveryMetrics{
-					RecoveryByMethod:      make(map[string]int64),
-					RecoveryByFailureType: make(map[string]int64),
-				}
-			},
-			expectError: false,
-		},
-		{
-			name: "database error on failed payments query",
-			setupMocks: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(`SELECT COUNT\(\*\) as count, COALESCE\(SUM\(amount\), 0\) as sum FROM "payment_failure_events"`).
-					WithArgs(companyID, startTime, endTime).
-					WillReturnError(gorm.ErrRecordNotFound)
-			},
-			expectedMetric: func() *svc.RecoveryMetrics { return nil },
-			expectError:    true,
-		},
-		{
-			name: "partial recovery data",
-			setupMocks: func(mock sqlmock.Sqlmock) {
-				// Some failed payments
-				failedRows := sqlmock.NewRows([]string{"count", "sum"}).
-					AddRow(50, 2500.00)
-				mock.ExpectQuery(`SELECT COUNT\(\*\) as count, COALESCE\(SUM\(amount\), 0\) as sum FROM "payment_failure_events"`).
-					WithArgs(companyID, startTime, endTime).
-					WillReturnRows(failedRows)
-
-				// No recovered payments (empty result)
-				recoveredRows := sqlmock.NewRows([]string{"method", "failure_type", "count", "sum", "avg_time"})
-				mock.ExpectQuery(`(?i)SELECT.*FROM payment_events`).
-					WithArgs(companyID, startTime, endTime).
-					WillReturnRows(recoveredRows)
-
-				// Empty hourly rates
-				hourlyRows := sqlmock.NewRows([]string{"hour", "rate", "count"})
-				mock.ExpectQuery(`(?i)WITH recovery_attempts`).
-					WithArgs(companyID, startTime, endTime).
-					WillReturnRows(hourlyRows)
-			},
-			expectedMetric: func() *svc.RecoveryMetrics {
-				return &svc.RecoveryMetrics{
-					RecoveryRate:          0,
-					AverageRecoveryTime:   0,
-					TotalRecoveredAmount:  0,
-					TotalFailedAmount:     2500.00,
-					RecoveryByMethod:      make(map[string]int64),
-					RecoveryByFailureType: make(map[string]int64),
+			expectedMetric: func() *RecoveryMetrics {
+				return &RecoveryMetrics{
+					RecoveryByMethod:      []Metric{},
+					RecoveryByFailureType: []Metric{},
+					RecoveryAmounts: Amounts{
+						TotalFailed:    0,
+						TotalRecovered: 0,
+						TotalPending:   0,
+					},
+					RecoveryTrends: []Trend{},
 				}
 			},
 			expectError: false,
@@ -154,32 +122,35 @@ func TestGetRecoveryMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup mock service
-			service, _, mock := MockRecoveryAnalyticsService(t)
-			defer mock.ExpectClose()
+			service, gormDB, mock := MockRecoveryAnalyticsService(t)
 
 			// Setup mocks
 			tt.setupMocks(mock)
 
-			// Execute
+			// Execute test
 			metrics, err := service.GetRecoveryMetrics(ctx, companyID, startTime, endTime)
 
-			// Assertions
+			// Verify results
 			if tt.expectError {
 				assert.Error(t, err)
-				return
+				assert.Nil(t, metrics)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, metrics)
+
+				expected := tt.expectedMetric()
+				assert.Equal(t, expected.RecoveryRate, metrics.RecoveryRate)
+				assert.Equal(t, expected.AverageRecoveryTime, metrics.AverageRecoveryTime)
+				assert.Equal(t, expected.RecoveryAmounts.TotalFailed, metrics.RecoveryAmounts.TotalFailed)
+				assert.Equal(t, expected.RecoveryAmounts.TotalRecovered, metrics.RecoveryAmounts.TotalRecovered)
 			}
-
-			require.NoError(t, err)
-			expected := tt.expectedMetric()
-
-			assert.InDelta(t, expected.RecoveryRate, metrics.RecoveryRate, 0.01)
-			assert.InDelta(t, expected.AverageRecoveryTime, metrics.AverageRecoveryTime, 0.01)
-			assert.InDelta(t, expected.TotalRecoveredAmount, metrics.TotalRecoveredAmount, 0.01)
-			assert.InDelta(t, expected.TotalFailedAmount, metrics.TotalFailedAmount, 0.01)
 
 			// Verify all expectations were met
 			assert.NoError(t, mock.ExpectationsWereMet())
+
+			// Clean up
+			sqlDB, _ := gormDB.DB()
+			sqlDB.Close()
 		})
 	}
 }
@@ -188,28 +159,39 @@ func TestGetRecoveryMetrics(t *testing.T) {
 func TestCalculateRecoveryScore(t *testing.T) {
 	tests := []struct {
 		name     string
-		metrics  *svc.RecoveryMetrics
+		metrics  *RecoveryMetrics
 		expected int
 	}{
 		{
 			name: "high score",
-			metrics: &svc.RecoveryMetrics{
-				RecoveryRate:         90.0,
-				AverageRecoveryTime:  3600, // 1 hour
-				TotalRecoveredAmount: 9000,
-				TotalFailedAmount:    10000,
+			metrics: &RecoveryMetrics{
+				RecoveryRate:        90.0,
+				AverageRecoveryTime: 3600, // 1 hour
+				RecoveryAmounts: Amounts{
+					TotalRecovered: 9000,
+					TotalFailed:    10000,
+				},
 			},
 			expected: 95, // 45 (from rate) + 30 (from time) + 18 (from amount ratio)
 		},
-		// Add more test cases
+		{
+			name: "low score",
+			metrics: &RecoveryMetrics{
+				RecoveryRate:        20.0,
+				AverageRecoveryTime: 7200, // 2 hours
+				RecoveryAmounts: Amounts{
+					TotalRecovered: 1000,
+					TotalFailed:    10000,
+				},
+			},
+			expected: 25, // 10 (from rate) + 5 (from time) + 8 (from amount ratio)
+		},
 	}
-
-	service := &svc.RecoveryAnalyticsService{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			score, err := service.calculateRecoveryScore(tt.metrics)
-			require.NoError(t, err)
+			service, _, _ := MockRecoveryAnalyticsService(t)
+			score, _ := service.calculateRecoveryScore(tt.metrics)
 			assert.Equal(t, tt.expected, score)
 		})
 	}

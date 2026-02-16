@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -17,6 +19,9 @@ import (
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/api"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/database"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/mediators"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 )
 
 func main() {
@@ -39,8 +44,9 @@ func main() {
 		logger.Fatal("Failed to run migrations", zap.Error(err))
 	}
 
-	// 1. OBSERVABILITY: Simple metrics server
+	// 1. OBSERVABILITY: Metrics Server
 	go func() {
+		http.Handle("/metrics", promhttp.Handler())
 		logger.Info("Starting metrics server on :9090")
 		http.ListenAndServe(":9090", nil)
 	}()
@@ -49,21 +55,23 @@ func main() {
 	api.SetupRoutes(r, db, logger)
 
 	srv := &http.Server{
-		Addr:    ":" + cfg.Port,
+		Addr:     ":" + cfg.Port,
 		Handler: r,
 	}
+        Handler: r,
+    }
 
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("listen: %s\n", zap.Error(err))
-		}
-	}()
+    go func() {
+        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            logger.Fatal("listen: %s\n", zap.Error(err))
+        }
+    }()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+    quit := make(chan os.Signal, 1)
+    signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+    <-quit
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	srv.Shutdown(ctx)
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+    srv.Shutdown(ctx)
 }

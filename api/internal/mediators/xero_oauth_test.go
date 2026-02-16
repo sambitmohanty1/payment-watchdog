@@ -101,7 +101,7 @@ func TestXeroOAuthFlow(t *testing.T) {
 
 		// Step 2: Exchange authorization code for tokens
 		authCode := "test-auth-code-123"
-		tokens, err := mediator.ExchangeCodeForTokens(context.Background(), config.OAuthConfig, authCode)
+		tokens, err := mediator.ExchangeCodeForTokens(context.Background(), authCode, state)
 		require.NoError(t, err)
 		require.NotNil(t, tokens)
 
@@ -164,14 +164,14 @@ func TestXeroOAuthErrorHandling(t *testing.T) {
 
 	t.Run("Invalid Authorization Code", func(t *testing.T) {
 		// Test with invalid authorization code
-		_, err := mediator.ExchangeCodeForTokens(context.Background(), config.OAuthConfig, "invalid-code")
+		_, err := mediator.ExchangeCodeForTokens(context.Background(), "invalid-code", "test-state")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid_grant")
 	})
 
 	t.Run("Expired Authorization Code", func(t *testing.T) {
 		// Test with expired authorization code
-		_, err := mediator.ExchangeCodeForTokens(context.Background(), config.OAuthConfig, "expired-code")
+		_, err := mediator.ExchangeCodeForTokens(context.Background(), "expired-code", "test-state")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid_grant")
 	})

@@ -81,8 +81,9 @@ func TestEventProcessorService(t *testing.T) {
 		events: make(map[string][]interface{}),
 	}
 
-	// Create mock rule engine
-	ruleEngine := rules.NewRuleEngine(logger)
+	// Create mock rule engine using factory
+	factory := rules.NewRuleEngineFactory(logger)
+	ruleEngine := factory.CreateEmptyBasicRuleEngine()
 
 	// Create event processor service
 	service := NewEventProcessorService(nil, ruleEngine, testEventBus, logger)
