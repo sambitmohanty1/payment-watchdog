@@ -19,5 +19,5 @@ commonLabels:
 
 images:
 - name: payment-watchdog-web
-  newName: ${{ secrets.DOCKERHUB_USERNAME }}/payment-watchdog-web
+  newName: ghcr.io/sambitmohanty1/payment-watchdog/web
   newTag: latest
