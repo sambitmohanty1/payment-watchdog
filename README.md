@@ -140,7 +140,7 @@ go test ./services -run TestGetRecoveryMetrics  # Will use PostgreSQL if availab
 
 ---
 
-## 🔧 **API Documentation**
+## 🔧 **API Documentations**
 
 ### **Base URLs**
 - **Local**: `http://localhost:8080`
