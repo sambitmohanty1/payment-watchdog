@@ -125,7 +125,7 @@ func (x *XeroMediator) ExchangeCodeForTokens(ctx context.Context, code, state st
 	}
 
 	// Prepare token exchange request
-	tokenURL := "https://identity.xero.com/connect/token"
+	tokenURL := x.oauthConfig.TokenURL
 
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
