@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Removed standalone output to enable API routes
-  // output: 'standalone',
+  // Enable standalone output for Docker builds
+  output: 'standalone',
   experimental: {
     appDir: true,
     serverComponentsExternalPackages: [],
