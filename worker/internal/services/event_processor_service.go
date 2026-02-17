@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -46,10 +45,10 @@ func (s *EventProcessorService) handlePaymentFailure(ctx context.Context, payloa
 	// 1. Unmarshal payload
 	// The EventBus passes us a map or the raw JSON bytes depending on implementation.
 	// Since we standardized the EventBus to send map[string]interface{} unmarshaled from JSON:
-	
-	// We need to marshal it back to unmarshal into the struct, or map manually. 
+
+	// We need to marshal it back to unmarshal into the struct, or map manually.
 	// To be safe and clean, let's assume payload comes as map from the updated EventBus.
-	
+
 	bytes, err := json.Marshal(payload)
 	if err != nil {
 		return err
@@ -69,7 +68,7 @@ func (s *EventProcessorService) handlePaymentFailure(ctx context.Context, payloa
 	// 3. Example: Log High Value failures
 	// $1000.00 = 100000 cents
 	if event.AmountCents > 100000 {
-		s.logger.Info("High value payment failure detected", 
+		s.logger.Info("High value payment failure detected",
 			zap.Int64("amount_cents", event.AmountCents),
 			zap.String("currency", event.Currency))
 	}
@@ -81,4 +80,9 @@ func (s *EventProcessorService) handlePaymentFailure(ctx context.Context, payloa
 	}
 
 	return nil
+}
+
+// ProcessPaymentFailureEvent is a public method for benchmarks and testing
+func (s *EventProcessorService) ProcessPaymentFailureEvent(ctx context.Context, event *models.PaymentFailureEvent) error {
+	return s.handlePaymentFailure(ctx, event)
 }

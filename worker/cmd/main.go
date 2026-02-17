@@ -131,11 +131,12 @@ func startWorker(lc fx.Lifecycle, processor *services.EventProcessorService, log
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting Payment Watchdog Worker...")
-			return processor.StartEventProcessing(ctx)
+			return processor.Start(ctx)
 		},
 		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping Payment Watchdog Worker...")
-			return processor.StopEventProcessing(ctx)
+			// No explicit stop needed - Start() handles context cancellation
+			return nil
 		},
 	})
 }
