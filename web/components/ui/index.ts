@@ -5,7 +5,7 @@ export { default as Badge } from './Badge'
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './Card'
 export { Input } from './Input'
 export { LoadingSpinner } from './LoadingSpinner'
-export { Button, buttonVariants } from './button'
+export { Button, buttonVariants } from './Button'
 export { 
   DropdownMenu,
   DropdownMenuContent,
