@@ -1,10 +1,13 @@
-name: Deploy to Staging
+name: Deploy to Staging (DISABLED - Use payment-watchdog-ci.yml)
 
 on:
   push:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
+
+# Disable this workflow to avoid duplication with payment-watchdog-ci.yml
+if: github.event_name != 'push' || false
 
 env:
   REGISTRY: ghcr.io
