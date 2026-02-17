@@ -15,10 +15,10 @@ resources:
 labels:
   - pairs:
       app.kubernetes.io/part-of: payment-watchdog
-      environment: development
+      environment: staging
 
 # Global namespace
-namespace: lexure
+namespace: staging
 
 # Configure name prefix and suffix
 namePrefix: ""
