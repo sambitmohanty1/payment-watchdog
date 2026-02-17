@@ -3,8 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { RefreshCw, CheckCircle, Clock, AlertCircle, TrendingUp } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { Card, CardContent, CardHeader, CardTitle, LoadingSpinner } from '@/components/ui'
 
 interface RecoveryMetric {
   label: string

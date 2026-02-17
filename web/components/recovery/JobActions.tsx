@@ -1,13 +1,7 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui'
 import { Plus, RefreshCw, Download, Filter } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 

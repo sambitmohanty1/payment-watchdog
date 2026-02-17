@@ -3,10 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Activity, AlertCircle, Clock, Zap, CheckCircle } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Button } from '@/components/ui/button'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { Progress } from '@/components/ui/progress'
+import { Card, CardContent, CardHeader, CardTitle, Button, LoadingSpinner, Progress } from '@/components/ui'
 
 interface RecoveryStat {
   label: string

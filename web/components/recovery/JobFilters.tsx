@@ -1,14 +1,7 @@
 'use client'
 
 import { Search } from 'lucide-react'
-import { Input } from '@/components/ui/Input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui'
 
 type FilterValues = {
   search: string

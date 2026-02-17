@@ -3,22 +3,7 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { MoreHorizontal, Clock, CheckCircle2, XCircle, AlertCircle, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import Badge from '@/components/ui/Badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { Button, Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui'
 
 type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'needs_attention'
 

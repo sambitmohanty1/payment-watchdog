@@ -3,9 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { GitBranch, Zap, Users, DollarSign } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Progress } from '@/components/ui/progress'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { Card, CardContent, CardHeader, CardTitle, Progress, LoadingSpinner } from '@/components/ui'
 
 interface WorkflowMetric {
   name: string
