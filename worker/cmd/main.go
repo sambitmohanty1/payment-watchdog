@@ -15,10 +15,10 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/config"
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/eventbus"
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/rules"
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/services"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/eventbus"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 )
 
 func main() {

@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 )
 
 // BenchmarkEventProcessorService provides comprehensive performance benchmarks

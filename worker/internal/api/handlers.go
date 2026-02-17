@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/models"
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/services"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

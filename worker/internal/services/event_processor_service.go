@@ -9,8 +9,8 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/eventbus"
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/eventbus"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 )
 
 type EventProcessorService struct {

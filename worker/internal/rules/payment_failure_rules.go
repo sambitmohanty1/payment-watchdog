@@ -1,7 +1,7 @@
 package rules
 
 import (
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 )
 
 // PaymentFailureRule defines a rule for evaluating payment failures

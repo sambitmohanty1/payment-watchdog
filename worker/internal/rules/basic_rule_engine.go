@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 	"go.uber.org/zap"
 )
 

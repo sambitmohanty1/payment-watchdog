@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/architecture"
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/rules"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 )
 
 // TestEventBus is a mock event bus for testing

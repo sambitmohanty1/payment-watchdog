@@ -284,7 +284,7 @@ jobs:
       - name: Build and push Worker image
         uses: docker/build-push-action@v6
         with:
-          context: worker
+          context: .
           file: worker/Dockerfile.production
           push: true
           tags: ${{ steps.meta.outputs.tags }}-worker

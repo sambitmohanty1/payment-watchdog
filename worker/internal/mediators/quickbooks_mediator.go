@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 	"github.com/google/uuid"
 )
 
