@@ -306,6 +306,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+# ADD THIS AUTHENTICATION STEP ---
+      - name: Set up Kubernetes Context
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
       # SECURE: Handles Kubeconfig securely with proper decoding
       - name: Set k8s context
         run: |
