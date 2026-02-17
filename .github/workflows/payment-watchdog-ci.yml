@@ -306,12 +306,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # SECURE: Handles Kubeconfig securely without manual base64 decoding
+      # SECURE: Handles Kubeconfig securely with proper decoding
       - name: Set k8s context
-        uses: azure/k8s-set-context@v4
-        with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+          kubectl config set-context --current --namespace=staging
 
       - name: Update staging deployment
         run: |
