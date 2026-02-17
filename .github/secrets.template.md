@@ -1,14 +1,14 @@
 # GitHub Actions Environment Variables Template
 # Copy this to your GitHub repository Settings > Secrets and variables > Actions
 
-# Required Secrets
-STAGING_HOST=your-server-domain.com
-STAGING_USER=deploy
-STAGING_SSH_KEY=-----BEGIN OPENSSH PRIVATE KEY-----
-# Your private SSH key content here
------END OPENSSH PRIVATE KEY-----
+# Kubernetes Deployment Secrets
+KUBE_CONFIG=base64-encoded-kubeconfig-content
+# Get this with: kubectl config view --raw | base64 -w 0
 
-# Database Configuration
+# Slack Notifications (Optional)
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+
+# Database Configuration (for staging)
 STAGING_DB_PASSWORD=your_secure_db_password
 STRIPE_SECRET_KEY=sk_test_your_stripe_key
 
