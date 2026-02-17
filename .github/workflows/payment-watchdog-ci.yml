@@ -319,7 +319,18 @@ jobs:
           
           # Update image tags in kustomization
           IMAGE_TAG=${{ github.sha }}
-          sed -i "s|newTag: latest|newTag: ${IMAGE_TAG}|g" kustomization.yaml
+          
+          # Update API image
+          sed -i "s|newName: ghcr.io/sambitmohanty1/payment-watchdog/api|newName: ghcr.io/sambitmohanty1/payment-watchdog/api|g" apps/payment-watchdog-api/kustomization.yaml
+          sed -i "s|newTag: latest|newTag: ${IMAGE_TAG}|g" apps/payment-watchdog-api/kustomization.yaml
+          
+          # Update Web image
+          sed -i "s|newName: ghcr.io/sambitmohanty1/payment-watchdog/web|newName: ghcr.io/sambitmohanty1/payment-watchdog/web|g" apps/payment-watchdog-web/kustomization.yaml
+          sed -i "s|newTag: latest|newTag: ${IMAGE_TAG}|g" apps/payment-watchdog-web/kustomization.yaml
+          
+          # Update Worker image (recovery-orchestration)
+          sed -i "s|newName: ghcr.io/sambitmohanty1/payment-watchdog/worker|newName: ghcr.io/sambitmohanty1/payment-watchdog/worker|g" apps/recovery-orchestration/kustomization.yaml
+          sed -i "s|newTag: latest|newTag: ${IMAGE_TAG}|g" apps/recovery-orchestration/kustomization.yaml
           
           # Deploy to staging namespace
           kubectl config set-context --current --namespace=staging
@@ -328,8 +339,8 @@ jobs:
       - name: Wait for rollout
         run: |
           kubectl rollout status deployment/payment-watchdog-api --timeout=300s
-          kubectl rollout status deployment/payment-watchdog-web --timeout=300s
-          kubectl rollout status deployment/payment-watchdog-worker --timeout=300s
+          kubectl rollout status deployment/payment-watchdog-ui --timeout=300s
+          kubectl rollout status deployment/recovery-orchestration --timeout=300s
 
       - name: Run smoke tests
         run: |
@@ -337,11 +348,15 @@ jobs:
           sleep 30
 
           # Test API health
-          kubectl exec -it deployment/payment-watchdog-api -- curl -f http://localhost:8080/health
+          kubectl exec deployment/payment-watchdog-api -- curl -f http://localhost:8080/health
 
           # Test web accessibility
-          WEB_POD=$(kubectl get pods -l app=payment-watchdog-web -o jsonpath='{.items[0].metadata.name}')
-          kubectl exec -it $WEB_POD -- curl -f http://localhost:3000
+          WEB_POD=$(kubectl get pods -l app=payment-watchdog,component=ui -o jsonpath='{.items[0].metadata.name}')
+          kubectl exec $WEB_POD -- curl -f http://localhost:3000
+
+          # Test worker service
+          WORKER_POD=$(kubectl get pods -l app.kubernetes.io/name=recovery-orchestration -o jsonpath='{.items[0].metadata.name}')
+          kubectl exec $WORKER_POD -- ps aux | grep payment-watchdog-worker
 
       - name: Notify deployment success
         if: success()
