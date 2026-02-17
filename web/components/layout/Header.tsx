@@ -2,14 +2,13 @@
 
 import { Bell, Search, User, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/Input'
+import { Button, Input } from '@/components/ui'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@/components/ui'
 
 export function Header() {
   const { theme, setTheme } = useTheme()
