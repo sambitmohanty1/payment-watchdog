@@ -68,9 +68,9 @@ func TestDollarsToCents(t *testing.T) {
 		},
 		{
 			name:        "amount exceeding max",
-			dollars:     MaxAmount + 1,
+			dollars:     MaxAmount + 1000,
 			expectError: true,
-			errorMsg:    "exceeds maximum allowed",
+			errorMsg:    "amount 92233720368548768.00 exceeds maximum allowed 92233720368547760.00",
 		},
 	}
 
@@ -176,9 +176,9 @@ func TestValidateAmount(t *testing.T) {
 		},
 		{
 			name:        "amount exceeding max",
-			amount:      func() *float64 { v := MaxAmount + 1; return &v }(),
+			amount:      func() *float64 { v := MaxAmount + 1000; return &v }(),
 			expectError: true,
-			errorMsg:    "exceeds maximum allowed",
+			errorMsg:    "amount 92233720368548768.00 exceeds maximum allowed 92233720368547760.00",
 		},
 	}
 

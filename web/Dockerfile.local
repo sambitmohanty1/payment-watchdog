@@ -1,0 +1,39 @@
+# Payment Watchdog Web - Local Build Dockerfile
+FROM redis:7-alpine
+
+# Install Node.js and runtime dependencies
+RUN apk --no-cache add nodejs npm
+
+# Create app user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install only production dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy the pre-built application
+COPY .next/standalone ./
+COPY .next/static ./.next/static
+COPY public ./public
+
+# Change ownership to app user
+RUN chown -R appuser:appgroup /app
+
+# Switch to app user
+USER appuser
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000 || exit 1
+
+# Run the application
+CMD ["node", "server.js"]

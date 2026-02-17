@@ -63,19 +63,16 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const { onAnimationStart, onAnimationEnd, ...restProps } = props
     
     return (
-      <motion.button
+      <button
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || loading}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ type: "spring", stiffness: 400, damping: 17 }}
-        {...restProps}
+        {...props}
       >
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {icon && !loading && <span className="mr-2">{icon}</span>}
         {children}
-      </motion.button>
+      </button>
     )
   }
 )

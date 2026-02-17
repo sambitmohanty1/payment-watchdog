@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { Play, Pause, CheckCircle, XCircle, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/Badge'
+import Badge from '@/components/ui/Badge'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 
 interface RecoveryJob {
@@ -82,7 +82,7 @@ export function ActiveJobsOverview() {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Active Recovery Jobs
-          <Badge variant="secondary">{jobs?.length || 0} jobs</Badge>
+          <Badge variant="info">{jobs?.length || 0} jobs</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>

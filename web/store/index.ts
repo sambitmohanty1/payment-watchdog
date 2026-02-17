@@ -133,14 +133,14 @@ export const useAppStore = create<AppState>()(
         clearPersistedData: () => {
           // Clear localStorage
           if (typeof window !== 'undefined') {
-            localStorage.removeItem('lexure-intelligence-store');
+            localStorage.removeItem('payment-watchdog-store');
           }
           // Reset to initial state
           set(initialState);
         },
       }),
       {
-        name: 'lexure-intelligence-store',
+        name: 'payment-watchdog-store',
         partialize: (state) => ({
           company: state.company,
           companyId: state.companyId,
@@ -151,7 +151,7 @@ export const useAppStore = create<AppState>()(
       }
     ),
     {
-      name: 'lexure-intelligence-store',
+      name: 'payment-watchdog-store',
     }
   )
 );

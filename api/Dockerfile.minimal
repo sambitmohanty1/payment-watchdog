@@ -1,0 +1,11 @@
+# Payment Watchdog API - Minimal Dockerfile
+FROM scratch
+
+# Copy pre-built binary
+COPY payment-watchdog-api /payment-watchdog-api
+
+# Expose port
+EXPOSE 8080
+
+# Run application
+CMD ["/payment-watchdog-api"]
