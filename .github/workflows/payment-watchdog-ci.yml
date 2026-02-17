@@ -311,6 +311,14 @@ jobs:
         run: |
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > /tmp/kubeconfig
           export KUBECONFIG=/tmp/kubeconfig
+          
+          # Get available contexts and use the first one if no current context
+          CURRENT_CONTEXT=$(kubectl config current-context 2>/dev/null || echo "")
+          if [ -z "$CURRENT_CONTEXT" ]; then
+            AVAILABLE_CONTEXT=$(kubectl config get-contexts -o name | head -1)
+            kubectl config use-context "$AVAILABLE_CONTEXT"
+          fi
+          
           kubectl config set-context --current --namespace=staging
 
       - name: Update staging deployment
