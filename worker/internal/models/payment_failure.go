@@ -23,6 +23,9 @@ type PaymentFailureEvent struct {
 	AmountCents int64  `json:"amount_cents"`
 	Currency    string `json:"currency" gorm:"default:'AUD'"`
 
+	// Computed field for backward compatibility with rules
+	Amount float64 `json:"amount" gorm:"-"` // Computed from AmountCents
+
 	CustomerID    string     `json:"customer_id"`
 	CustomerEmail string     `json:"customer_email"`
 	CustomerName  string     `json:"customer_name"`
@@ -93,26 +96,9 @@ type CustomerCommunication struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// Company represents a company using the service
-type Company struct {
-	ID     uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	Name   string    `json:"name" gorm:"not null"`
-	Domain string    `json:"domain"`
-	Status string    `json:"status" gorm:"default:'active'"`
-
-	// Configuration
-	StripeAccountID string                 `json:"stripe_account_id"`
-	AlertSettings   map[string]interface{} `json:"alert_settings" gorm:"type:jsonb"`
-	RetrySettings   map[string]interface{} `json:"retry_settings" gorm:"type:jsonb"`
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
 // Table names
 func (p *PaymentFailureEvent) TableName() string { return "payment_failure_events" }
 func (d *DeadLetterEntry) TableName() string     { return "dead_letter_entries" }
-func (c *Company) TableName() string             { return "companies" }
 
 // Hooks
 func (p *PaymentFailureEvent) BeforeCreate(tx *gorm.DB) error {
@@ -124,5 +110,14 @@ func (p *PaymentFailureEvent) BeforeCreate(tx *gorm.DB) error {
 		p.CreatedAt = now
 	}
 	p.UpdatedAt = now
+
+	// Compute Amount from AmountCents for backward compatibility
+	p.Amount = float64(p.AmountCents) / 100.0
+
 	return nil
+}
+
+// GetAmount returns the amount in dollars (computed from cents)
+func (p *PaymentFailureEvent) GetAmount() float64 {
+	return float64(p.AmountCents) / 100.0
 }

@@ -102,7 +102,7 @@ type RecoveryWorkflowExecution struct {
 	// Relations
 	Workflow       RecoveryWorkflow        `json:"workflow,omitempty" gorm:"foreignKey:WorkflowID"`
 	PaymentFailure PaymentFailureEvent     `json:"payment_failure,omitempty" gorm:"foreignKey:PaymentFailureID"`
-	Company        Company                 `json:"company,omitempty" gorm:"foreignKey:CompanyID"`
+	Company        database.Company        `json:"company,omitempty" gorm:"foreignKey:CompanyID"`
 	CurrentStep    *RecoveryWorkflowStep   `json:"current_step,omitempty" gorm:"foreignKey:CurrentStepID"`
 	StepExecutions []RecoveryStepExecution `json:"step_executions,omitempty" gorm:"foreignKey:WorkflowExecutionID;constraint:OnDelete:CASCADE"`
 }
@@ -200,7 +200,7 @@ type RecoveryAction struct {
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 
 	// Relations
-	Company           Company                    `json:"company,omitempty" gorm:"foreignKey:CompanyID"`
+	Company           database.Company           `json:"company,omitempty" gorm:"foreignKey:CompanyID"`
 	PaymentFailure    PaymentFailureEvent        `json:"payment_failure,omitempty" gorm:"foreignKey:PaymentFailureID"`
 	WorkflowExecution *RecoveryWorkflowExecution `json:"workflow_execution,omitempty" gorm:"foreignKey:WorkflowExecutionID"`
 	StepExecution     *RecoveryStepExecution     `json:"step_execution,omitempty" gorm:"foreignKey:StepExecutionID"`

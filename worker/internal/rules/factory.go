@@ -41,14 +41,14 @@ func (f *RuleEngineFactory) CreateBasicRuleEngine() RuleEngine {
 	engine := NewBasicRuleEngine(f.logger)
 
 	// Add essential payment failure rules for Sprint 3
-	paymentFailureRules := NewPaymentFailureRules(f.logger)
+	paymentFailureRules := NewComprehensivePaymentFailureRules(f.logger)
 
-	for _, rule := range paymentFailureRules.GetDefaultRules() {
+	for _, rule := range paymentFailureRules.GetComprehensiveRules() {
 		engine.AddRule(rule)
 	}
 
 	f.logger.Info("Basic rule engine created for Sprint 3",
-		zap.Int("total_rules", len(paymentFailureRules.GetDefaultRules())))
+		zap.Int("total_rules", len(paymentFailureRules.GetComprehensiveRules())))
 
 	return NewRuleEngineAdapter(engine)
 }
