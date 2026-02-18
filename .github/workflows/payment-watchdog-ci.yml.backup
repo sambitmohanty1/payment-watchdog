@@ -378,3 +378,21 @@ jobs:
           # Test worker service
           WORKER_POD=$(kubectl get pods -l app.kubernetes.io/name=recovery-orchestration -o jsonpath='{.items[0].metadata.name}')
           kubectl exec $WORKER_POD -- ps aux | grep payment-watchdog-worker
+
+      - name: Notify deployment success
+        if: success() && secrets.SLACK_WEBHOOK_URL != ''
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: "Payment Watchdog deployed to staging successfully"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify deployment failure
+        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: "Payment Watchdog staging deployment failed"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
