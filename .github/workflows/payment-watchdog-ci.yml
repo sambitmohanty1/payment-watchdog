@@ -326,8 +326,11 @@ jobs:
           fi
           
           kubectl config set-context --current --namespace=staging
+          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
 
       - name: Update staging deployment
+        env:
+          KUBECONFIG: /tmp/kubeconfig
         run: |
           cd api/deployments/kubernetes
           
@@ -351,12 +354,16 @@ jobs:
           kubectl apply -k .
 
       - name: Wait for rollout
+        env:
+          KUBECONFIG: /tmp/kubeconfig
         run: |
           kubectl rollout status deployment/payment-watchdog-api --timeout=300s
           kubectl rollout status deployment/payment-watchdog-ui --timeout=300s
           kubectl rollout status deployment/recovery-orchestration --timeout=300s
 
       - name: Run smoke tests
+        env:
+          KUBECONFIG: /tmp/kubeconfig
         run: |
           # Wait for services to be ready
           sleep 30
@@ -373,7 +380,7 @@ jobs:
           kubectl exec $WORKER_POD -- ps aux | grep payment-watchdog-worker
 
       - name: Notify deployment success
-        if: success()
+        if: success() && secrets.SLACK_WEBHOOK_URL != ''
         uses: 8398a7/action-slack@v3
         with:
           status: success
@@ -382,7 +389,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notify deployment failure
-        if: failure()
+        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
         uses: 8398a7/action-slack@v3
         with:
           status: failure
