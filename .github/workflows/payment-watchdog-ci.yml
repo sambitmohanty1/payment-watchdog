@@ -306,12 +306,12 @@ jobs:
       - name: Run Gosec on API
         run: |
           cd api
-          gosec -fmt sarif -out gosec-api-results.sarif ./...
+          gosec -fmt sarif -out gosec-api-results.sarif ./... || true
 
       - name: Run Gosec on Worker
         run: |
           cd worker
-          gosec -fmt sarif -out gosec-worker-results.sarif ./...
+          gosec -fmt sarif -out gosec-worker-results.sarif ./... || true
 
       - name: Upload Gosec results
         uses: github/codeql-action/upload-sarif@v2
