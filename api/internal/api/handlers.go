@@ -471,46 +471,29 @@ func (h *Handlers) GetDataQualityTrends(c *gin.Context) {
 
 // GetCompanyAnalyticsSummary returns analytics summary for a company
 func (h *Handlers) GetCompanyAnalyticsSummary(c *gin.Context) {
-	// IMMEDIATE TEST: Just return success to test routing
-	c.JSON(http.StatusOK, gin.H{"test": "success", "handler": "called"})
-	return
-
 	// Check if analytics service is available
 	if h.analyticsService == nil {
-		h.logger.Error("🔍 API DEBUG: AnalyticsService is nil")
+		h.logger.Error("Analytics service not available")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Analytics service not available"})
 		return
 	}
 
 	companyID := c.Query("company_id")
 	if companyID == "" {
-		h.logger.Error("🔍 API DEBUG: Missing company_id parameter")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "company_id is required"})
 		return
 	}
 
-	h.logger.Info("🔍 API DEBUG: Processing company analytics summary", zap.String("company_id", companyID))
-
-	// Get time range from query params (default to 30 days)
-	timeRangeStr := c.DefaultQuery("time_range", "720h") // 30 days
-	timeRange, err := time.ParseDuration(timeRangeStr)
-	if err != nil {
-		h.logger.Error("🔍 API DEBUG: Invalid time_range parameter", zap.String("time_range", timeRangeStr), zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid time_range format"})
-		return
-	}
-
-	h.logger.Info("🔍 API DEBUG: Time range parsed", zap.Duration("time_range", timeRange))
+	h.logger.Info("Processing company analytics summary", zap.String("company_id", companyID))
 
 	// Get analytics summary
 	summary, err := h.analyticsService.GetCompanyAnalyticsSummary(c.Request.Context(), companyID)
 	if err != nil {
-		h.logger.Error("🔍 API DEBUG: Failed to get company analytics summary", zap.Error(err))
+		h.logger.Error("Failed to get company analytics summary", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.logger.Info("🔍 API DEBUG: Company analytics summary generated successfully", zap.String("company_id", companyID))
 	c.JSON(http.StatusOK, summary)
 }
 
