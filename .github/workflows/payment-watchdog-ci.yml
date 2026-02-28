@@ -220,6 +220,7 @@ jobs:
       # OWASP Dependency Check
       - name: Set up Java (Dependency Check requires Java)
         uses: actions/setup-java@v3
+        if: false
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -255,6 +256,7 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-fs-results.sarif'
+          category: 'trivy-fs'
 
       # Build Docker images for container scanning
       - name: Build Docker images for scanning
@@ -292,6 +294,7 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-api-results.sarif'
+          category: 'trivy-api'
 
       # Go-specific security scanning
       - name: Set up Go
@@ -318,6 +321,7 @@ jobs:
         if: always()
         with:
           sarif_file: 'api/gosec-api-results.sarif'
+          category: 'gosec-api'
 
       # Node.js security scanning
       - name: Set up Node.js

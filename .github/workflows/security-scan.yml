@@ -112,6 +112,7 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-fs-results.sarif'
+          category: 'trivy-fs'
           
       - name: Build Docker images for scanning
         run: |
@@ -153,6 +154,7 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-web-results.sarif'
+          category: 'trivy-web'
           
       - name: Upload Trivy artifacts
         uses: actions/upload-artifact@v4
@@ -193,6 +195,7 @@ jobs:
         if: always()
         with:
           sarif_file: 'api/gosec-api-results.sarif'
+          category: 'gosec-api'
           
       - name: Run Gosec on Worker
         run: |
@@ -206,6 +209,7 @@ jobs:
         if: always()
         with:
           sarif_file: 'worker/gosec-worker-results.sarif'
+          category: 'gosec-worker'
           
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
