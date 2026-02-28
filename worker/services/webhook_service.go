@@ -9,9 +9,9 @@ import (
 
 	"encoding/json"
 
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 	"github.com/stripe/stripe-go/v74"
 	"github.com/stripe/stripe-go/v74/webhook"
 	"golang.org/x/time/rate"
@@ -106,7 +106,8 @@ func (s *WebhookService) HandleStripeWebhook(c *gin.Context) {
 		return
 	}
 	fmt.Printf("Request body length: %d bytes\n", len(body))
-	fmt.Printf("Request headers: %+v\n", c.Request.Header)
+	// Security: Removed header logging to prevent sensitive data exposure
+	// fmt.Printf("Request headers: %+v\n", c.Request.Header)
 
 	// Verify webhook signature
 	fmt.Printf("Verifying webhook signature...\n")
