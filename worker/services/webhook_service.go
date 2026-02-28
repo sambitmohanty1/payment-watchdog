@@ -1,6 +1,8 @@
 package services
 
 import (
+	"sync"
+
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +25,7 @@ type WebhookProcessor struct {
 	MaxRetries      int
 	RetryDelay      time.Duration
 	DeadLetterQueue chan WebhookEvent
+	EventQueue      chan WebhookEvent
 	RateLimiter     *rate.Limiter
 }
 
@@ -56,6 +59,7 @@ type WebhookMetrics struct {
 	LastWebhookReceived   time.Time
 	CompanyWebhookCounts  map[string]int64
 	ProcessingErrors      []WebhookError
+	mu                    sync.Mutex
 }
 
 // WebhookService handles incoming webhook events
@@ -73,6 +77,7 @@ func NewWebhookService(db *gorm.DB, ruleEngine rules.RuleEngine, webhookSecret s
 		MaxRetries:      3,
 		RetryDelay:      time.Second * 2,
 		DeadLetterQueue: make(chan WebhookEvent, 100),
+		EventQueue:      make(chan WebhookEvent, 1000),
 		RateLimiter:     rate.NewLimiter(rate.Limit(100), 200), // 100 req/sec, burst of 200
 	}
 
@@ -81,13 +86,20 @@ func NewWebhookService(db *gorm.DB, ruleEngine rules.RuleEngine, webhookSecret s
 		ProcessingErrors:     make([]WebhookError, 0),
 	}
 
-	return &WebhookService{
+	service := &WebhookService{
 		db:            db,
 		ruleEngine:    ruleEngine,
 		processor:     processor,
 		metrics:       metrics,
 		webhookSecret: webhookSecret,
 	}
+
+	// Start worker pool
+	for i := 0; i < 5; i++ {
+		go service.worker()
+	}
+
+	return service
 }
 
 // HandleStripeWebhook processes incoming Stripe webhooks
@@ -147,32 +159,24 @@ func (s *WebhookService) HandleStripeWebhook(c *gin.Context) {
 	}
 	fmt.Printf("Created webhook event for company: %s\n", companyID)
 
-	// Process webhook with retry logic
-	fmt.Printf("Processing webhook with retry logic...\n")
-	err = s.processor.ProcessWithRetry(webhookEvent)
-	if err != nil {
-		fmt.Printf("ERROR: Webhook processing failed after retries: %v\n", err)
-		s.logWebhookError(WebhookError{
-			Type:      "processing",
-			Severity:  "critical",
-			Message:   fmt.Sprintf("webhook processing failed after retries: %v", err),
-			Retryable: false,
-			CompanyID: companyID,
-			EventID:   event.ID,
-			Timestamp: time.Now(),
-		})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "webhook processing failed"})
-		return
+	// Queue webhook event for async processing
+	fmt.Printf("Queueing webhook event for async processing...\n")
+	select {
+	case s.processor.EventQueue <- webhookEvent:
+		fmt.Printf("Webhook event queued successfully\n")
+
+		// Partially update metrics for received event
+		s.metrics.mu.Lock()
+		s.metrics.TotalReceived++
+		s.metrics.LastWebhookReceived = time.Now()
+		s.metrics.mu.Unlock()
+
+		fmt.Printf("=== Webhook Processing Accepted ===\n")
+		c.JSON(http.StatusAccepted, gin.H{"status": "webhook accepted for processing", "company_id": companyID})
+	default:
+		fmt.Printf("ERROR: Event queue is full\n")
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "service unavailable, queue full"})
 	}
-	fmt.Printf("Webhook processing completed successfully\n")
-
-	// Update metrics
-	fmt.Printf("Updating metrics...\n")
-	s.updateMetrics(companyID, true, time.Since(webhookEvent.Timestamp))
-	fmt.Printf("Metrics updated successfully\n")
-
-	fmt.Printf("=== Webhook Processing Completed Successfully ===\n")
-	c.JSON(http.StatusOK, gin.H{"status": "webhook processed successfully", "company_id": companyID})
 }
 
 // ProcessWithRetry processes webhook events with exponential backoff retry
@@ -279,7 +283,9 @@ func min(a, b int) int {
 
 // logWebhookError logs webhook processing errors
 func (s *WebhookService) logWebhookError(err WebhookError) {
+	s.metrics.mu.Lock()
 	s.metrics.ProcessingErrors = append(s.metrics.ProcessingErrors, err)
+	s.metrics.mu.Unlock()
 
 	// Log error with structured logging
 	fmt.Printf("Webhook Error: Type=%s, Severity=%s, Company=%s, Message=%s\n",
@@ -288,8 +294,10 @@ func (s *WebhookService) logWebhookError(err WebhookError) {
 
 // updateMetrics updates webhook processing metrics
 func (s *WebhookService) updateMetrics(companyID string, success bool, processingTime time.Duration) {
-	s.metrics.TotalReceived++
-	s.metrics.LastWebhookReceived = time.Now()
+	s.metrics.mu.Lock()
+	defer s.metrics.mu.Unlock()
+
+	// Note: TotalReceived and LastWebhookReceived are updated when queuing to reflect actual arrival
 
 	if success {
 		s.metrics.SuccessfullyProcessed++
@@ -321,7 +329,6 @@ func (s *WebhookService) HandleTestWebhook(c *gin.Context) {
 		return
 	}
 
-	startTime := time.Now()
 	fmt.Printf("Test webhook started for company: %s\n", companyID)
 
 	// Create a test payment failure event with proper Stripe types
@@ -352,27 +359,46 @@ func (s *WebhookService) HandleTestWebhook(c *gin.Context) {
 		Timestamp: time.Now(),
 	}
 
-	// Process with retry logic
-	fmt.Printf("Processing webhook event with retry logic...\n")
-	err := s.processor.ProcessWithRetry(webhookEvent)
-	if err != nil {
-		fmt.Printf("Webhook processing failed: %v\n", err)
-		// Update metrics for failed processing
-		s.updateMetrics(companyID, false, time.Since(startTime))
-		fmt.Printf("Updated metrics for failed processing\n")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "test webhook processing failed"})
-		return
+	// Queue webhook event for async processing
+	fmt.Printf("Queueing test webhook event for async processing...\n")
+	select {
+	case s.processor.EventQueue <- webhookEvent:
+		// Partially update metrics for received event
+		s.metrics.mu.Lock()
+		s.metrics.TotalReceived++
+		s.metrics.LastWebhookReceived = time.Now()
+		s.metrics.mu.Unlock()
+
+		c.JSON(http.StatusAccepted, gin.H{
+			"status":     "test webhook accepted for processing",
+			"event_id":   testEvent.ID,
+			"message":    "Test payment failure event queued for processing",
+			"company_id": companyID,
+		})
+	default:
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "service unavailable, queue full"})
 	}
+}
 
-	fmt.Printf("Webhook processing successful, updating metrics...\n")
-	// Update metrics for successful processing
-	s.updateMetrics(companyID, true, time.Since(startTime))
-	fmt.Printf("Metrics updated successfully. Total received: %d\n", s.metrics.TotalReceived)
+func (s *WebhookService) worker() {
+	for event := range s.processor.EventQueue {
 
-	c.JSON(http.StatusOK, gin.H{
-		"status":     "test webhook processed successfully",
-		"event_id":   testEvent.ID,
-		"message":    "Test payment failure event created and processed",
-		"company_id": companyID,
-	})
+		startTime := time.Now()
+		err := s.processor.ProcessWithRetry(event)
+		if err != nil {
+			fmt.Printf("ERROR: Webhook processing failed after retries: %v\n", err)
+			s.logWebhookError(WebhookError{
+				Type:      "processing",
+				Severity:  "critical",
+				Message:   fmt.Sprintf("webhook processing failed after retries: %v", err),
+				Retryable: false,
+				CompanyID: event.CompanyID,
+				EventID:   event.Event.ID,
+				Timestamp: time.Now(),
+			})
+			s.updateMetrics(event.CompanyID, false, time.Since(startTime))
+		} else {
+			s.updateMetrics(event.CompanyID, true, time.Since(startTime))
+		}
+	}
 }
