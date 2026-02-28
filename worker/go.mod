@@ -96,3 +96,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/mysql v1.5.6 // indirect
 )
+
+replace filippo.io/edwards25519 => filippo.io/edwards25519 v1.1.1
