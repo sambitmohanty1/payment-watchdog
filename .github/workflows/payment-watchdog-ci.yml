@@ -206,16 +206,16 @@ jobs:
 
       # GitHub CodeQL SAST
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v4
         with:
           languages: go, javascript
           queries: security-extended,security-and-quality
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v2
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v4
 
       # OWASP Dependency Check
       - name: Set up Java (Dependency Check requires Java)
@@ -251,7 +251,7 @@ jobs:
           severity: 'CRITICAL,HIGH,MEDIUM'
 
       - name: Upload Trivy fs results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-fs-results.sarif'
@@ -288,7 +288,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy container results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-api-results.sarif'
@@ -314,7 +314,7 @@ jobs:
           gosec -fmt sarif -out gosec-worker-results.sarif ./...
 
       - name: Upload Gosec results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'api/gosec-api-results.sarif'
