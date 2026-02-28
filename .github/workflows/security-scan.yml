@@ -170,7 +170,7 @@ jobs:
       - name: Install Gosec
         env:
           GOPROXY: "https://proxy.golang.org,direct"
-        run: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
         
       - name: Run Gosec on API
         run: |
