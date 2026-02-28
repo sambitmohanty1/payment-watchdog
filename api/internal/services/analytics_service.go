@@ -228,20 +228,9 @@ type FailureReason struct {
 // Helper methods
 
 func (s *AnalyticsService) getCompanyPaymentFailures(ctx context.Context, companyID string, timeRange time.Duration) ([]models.PaymentFailureEvent, error) {
-	s.logger.Info("🔍 ANALYTICS DEBUG: getCompanyPaymentFailures called",
-		zap.String("company_id", companyID),
-		zap.Duration("time_range", timeRange),
-		zap.String("db_type", fmt.Sprintf("%T", s.db)),
-		zap.Bool("db_is_nil", s.db == nil))
-
 	var failures []models.PaymentFailureEvent
 
 	startTime := time.Now().Add(-timeRange)
-
-	s.logger.Info("🔍 ANALYTICS DEBUG: About to execute database query",
-		zap.String("query", "SELECT * FROM payment_failure_events WHERE company_id = ? AND created_at >= ?"),
-		zap.String("company_id", companyID),
-		zap.Time("start_time", startTime))
 
 	err := s.db.Where("company_id = ? AND created_at >= ?", companyID, startTime).
 		Order("created_at DESC").
