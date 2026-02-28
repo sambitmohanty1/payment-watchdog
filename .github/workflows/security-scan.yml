@@ -57,6 +57,7 @@ jobs:
         
       - name: Set up Java (Dependency Check requires Java)
         uses: actions/setup-java@v4
+        if: false
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -115,9 +116,9 @@ jobs:
       - name: Build Docker images for scanning
         run: |
           echo "Building Docker images for security scanning..."
-          docker build -t payment-watchdog-api:scan ./api || echo "API Docker build failed"
-          docker build -t payment-watchdog-worker:scan ./worker || echo "Worker Docker build failed"
-          docker build -t payment-watchdog-web:scan ./web || echo "Web Docker build failed"
+          docker build -t payment-watchdog-api:scan ./api
+          docker build -t payment-watchdog-worker:scan ./worker
+          docker build -t payment-watchdog-web:scan ./web
           echo "Docker builds completed"
           
       - name: Run Trivy on API image
@@ -178,7 +179,7 @@ jobs:
           cache: true
           
       - name: Install Gosec
-        run: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
         
       - name: Run Gosec on API
         run: |
