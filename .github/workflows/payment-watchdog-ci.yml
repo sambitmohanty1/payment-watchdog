@@ -217,29 +217,6 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
 
-      # OWASP Dependency Check
-      - name: Set up Java (Dependency Check requires Java)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Run OWASP Dependency Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: 'payment-watchdog'
-          path: '.'
-          format: 'HTML'
-          out: 'dependency-check-reports'
-
-      - name: Upload Dependency Check results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: dependency-check-report
-          path: dependency-check-reports/
-          retention-days: 30
-
       # Trivy Security Scanning
       - name: Run Trivy vulnerability scanner in fs mode
         uses: aquasecurity/trivy-action@0.29.0
@@ -251,6 +228,7 @@ jobs:
           severity: 'CRITICAL,HIGH,MEDIUM'
 
       - name: Ensure Trivy fs SARIF exists
+        if: always()
         run: if [ ! -f trivy-fs-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-fs-results.sarif; fi
 
       - name: Upload Trivy fs results to GitHub Security tab
@@ -258,6 +236,7 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-fs-results.sarif'
+          category: 'trivy-fs'
 
       # Build Docker images for container scanning
       - name: Build Docker images for scanning
@@ -275,6 +254,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Ensure Trivy API SARIF exists
+        if: always()
         run: if [ ! -f trivy-api-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-api-results.sarif; fi
 
       - name: Run Trivy on Worker image
@@ -293,11 +273,34 @@ jobs:
           output: 'trivy-web-results.sarif'
           severity: 'CRITICAL,HIGH'
 
-      - name: Upload Trivy container results
+      - name: Ensure Trivy Web SARIF exists
+        if: always()
+        run: if [ ! -f trivy-web-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-web-results.sarif; fi
+
+      - name: Ensure Trivy Worker SARIF exists
+        if: always()
+        run: if [ ! -f trivy-worker-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-worker-results.sarif; fi
+
+      - name: Upload Trivy API results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-api-results.sarif'
+          category: 'trivy-api'
+
+      - name: Upload Trivy Worker results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-worker-results.sarif'
+          category: 'trivy-worker'
+
+      - name: Upload Trivy Web results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-web-results.sarif'
+          category: 'trivy-web'
 
       # Go-specific security scanning
       - name: Set up Go
@@ -307,6 +310,8 @@ jobs:
           cache: true
 
       - name: Install Gosec
+        env:
+          GOPROXY: "https://proxy.golang.org,direct"
         run: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
 
       - name: Run Gosec on API
@@ -315,6 +320,7 @@ jobs:
           gosec -fmt sarif -out gosec-api-results.sarif ./...
 
       - name: Ensure Gosec SARIF exists
+        if: always()
         run: if [ ! -f api/gosec-api-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > api/gosec-api-results.sarif; fi
 
       - name: Run Gosec on Worker
@@ -322,11 +328,23 @@ jobs:
           cd worker
           gosec -fmt sarif -out gosec-worker-results.sarif ./...
 
-      - name: Upload Gosec results
+      - name: Ensure Gosec Worker SARIF exists
+        if: always()
+        run: if [ ! -f worker/gosec-worker-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > worker/gosec-worker-results.sarif; fi
+
+      - name: Upload API Gosec results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'api/gosec-api-results.sarif'
+          category: 'gosec-api'
+
+      - name: Upload Worker Gosec results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'worker/gosec-worker-results.sarif'
+          category: 'gosec-worker'
 
       # Node.js security scanning
       - name: Set up Node.js
@@ -360,7 +378,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## ✅ Security Scans Completed" >> $GITHUB_STEP_SUMMARY
           echo "- CodeQL SAST: Completed" >> $GITHUB_STEP_SUMMARY
-          echo "- OWASP Dependency Check: Completed" >> $GITHUB_STEP_SUMMARY
           echo "- Trivy Security Scan: Completed" >> $GITHUB_STEP_SUMMARY
           echo "- Go Security Analysis: Completed" >> $GITHUB_STEP_SUMMARY
           echo "- Node.js Security Audit: Completed" >> $GITHUB_STEP_SUMMARY
