@@ -4,7 +4,7 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     appDir: true,
-    serverComponentsExternalPackages: [],
+    serverExternalPackages: [],
   },
   
   // HTTPS configuration removed - using custom server instead
@@ -51,18 +51,18 @@ const nextConfig = {
     CUSTOM_KEY: process.env.CUSTOM_KEY || '',
   },
   
-  // Handle proxy issues in webpack
-  webpack: (config, { dev, isServer }) => {
-    if (dev && !isServer) {
-      // Add proxy bypass for development
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        net: false,
-        tls: false,
-      };
-    }
-    return config;
-  },
+  // Handle proxy issues in webpack - DISABLED FOR NEXT.JS 16
+  // webpack: (config, { dev, isServer }) => {
+  //   if (dev && !isServer) {
+  //     // Add proxy bypass for development
+  //     config.resolve.fallback = {
+  //       ...config.resolve.fallback,
+  //       net: false,
+  //       tls: false,
+  //     };
+  //   }
+  //   return config;
+  // },
 };
 
 module.exports = nextConfig;

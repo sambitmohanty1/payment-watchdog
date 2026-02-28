@@ -1,0 +1,3 @@
+module.exports=[33290,a=>{"use strict";var b=a.i(7997);function c({children:a}){return(0,b.jsx)("html",{lang:"en",children:(0,b.jsx)("body",{className:"font-sans",children:(0,b.jsx)("div",{className:"min-h-screen bg-gray-50",children:a})})})}a.s(["default",()=>c,"metadata",0,{title:"Payment Watchdog - Payment Recovery Management",description:"Monitor and manage payment recovery workflows",keywords:"payment recovery, payment failures, cashflow, fintech, SaaS",authors:[{name:"Payment Watchdog Team"}],viewport:"width=device-width, initial-scale=1",robots:"index, follow"}])}];
+
+//# sourceMappingURL=app_layout_tsx_271801d7._.js.map
