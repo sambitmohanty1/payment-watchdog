@@ -1,0 +1,131 @@
+version: 2
+updates:
+  # Go dependencies for API service
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "sambitmohanty1"
+    assignees:
+      - "sambitmohanty1"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "go"
+    ignore:
+      # Ignore major version updates for stability
+      - dependency-name: "github.com/gin-gonic/gin"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "gorm.io/gorm"
+        update-types: ["version-update:semver-major"]
+
+  # Go dependencies for Worker service
+  - package-ecosystem: "gomod"
+    directory: "/worker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "sambitmohanty1"
+    assignees:
+      - "sambitmohanty1"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "go"
+    ignore:
+      # Ignore major version updates for stability
+      - dependency-name: "github.com/gin-gonic/gin"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "gorm.io/gorm"
+        update-types: ["version-update:semver-major"]
+
+  # Node.js dependencies for Web UI
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "sambitmohanty1"
+    assignees:
+      - "sambitmohanty1"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "javascript"
+    ignore:
+      # Ignore major version updates for Next.js and React for stability
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+
+  # Node.js dependencies for UI (alternative)
+  - package-ecosystem: "npm"
+    directory: "/ui"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "sambitmohanty1"
+    assignees:
+      - "sambitmohanty1"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "javascript"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "sambitmohanty1"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "wednesday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "sambitmohanty1"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"

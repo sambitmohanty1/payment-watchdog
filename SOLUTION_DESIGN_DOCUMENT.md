@@ -2,39 +2,39 @@
 
 ## Executive Summary
 
-**Payment Watchdog** is an AI-powered SaaS payment failure intelligence platform designed to transform how businesses handle payment failures. The platform provides real-time detection, intelligent recovery, and predictive analytics to minimize revenue loss from failed payments.
+**Payment Watchdog** is a payment recovery management platform designed to help SaaS businesses handle payment failures through automated detection and recovery workflows. The platform provides basic payment failure monitoring, retry mechanisms, and analytics to minimize revenue loss from failed payments.
 
 ### Project Objectives
-- **Reduce Revenue Loss**: Minimize failed payment impact through intelligent recovery workflows
-- **Enhance Customer Experience**: Proactive communication and seamless retry mechanisms
-- **Provide Actionable Insights**: Real-time analytics and predictive failure forecasting
-- **Streamline Operations**: Unified platform for payment management across multiple providers
+- **Reduce Revenue Loss**: Minimize failed payment impact through automated retry workflows
+- **Enhance Customer Experience**: Basic notification systems for payment issues
+- **Provide Basic Insights**: Payment analytics dashboard and failure reporting
+- **Streamline Operations**: Centralized platform for payment failure management
 
 ### Key Benefits
-- **60-70% Market Coverage**: Support for major payment providers (Stripe, PayPal, Braintree)
-- **$2.4B Addressable Market**: Target SaaS companies struggling with payment failures
-- **Zero Touch Deployment**: Fully automated Kubernetes-based deployment
-- **Real-time Processing**: Sub-second payment failure detection and response
+- **Payment Provider Support**: Integration with major payment providers (Stripe, PayPal)
+- **Automated Recovery**: Basic retry logic with configurable policies
+- **Simple Deployment**: Docker-based deployment with PostgreSQL and Redis
+- **Real-time Monitoring**: Basic payment failure detection and response
 
 ---
 
 ## Architecture Vision
 
 ### High-Level Vision
-Payment Watchdog employs a cloud-native, microservices architecture designed for scalability, reliability, and maintainability. The solution leverages event-driven processing, AI-powered analytics, and automated recovery workflows to create a comprehensive payment intelligence platform.
+Payment Watchdog employs a microservices architecture designed for simplicity and maintainability. The solution leverages event-driven processing, basic analytics, and automated recovery workflows to create a practical payment failure management platform.
 
 ### Scope and Context
-- **In Scope**: Payment failure detection, intelligent recovery, analytics dashboard, multi-provider integration
-- **Out of Scope**: Payment processing (acts as intelligence layer), customer billing systems, direct payment gateway operations
-- **Target Market**: SaaS companies with subscription-based revenue models
-- **Deployment Model**: Cloud-native (AWS/GCP/Azure) with Kubernetes orchestration
+- **In Scope**: Payment failure detection, basic recovery workflows, analytics dashboard, payment provider integration
+- **Out of Scope**: AI-powered prediction, advanced machine learning, direct payment processing
+- **Target Market**: Small to medium SaaS companies with subscription-based revenue models
+- **Deployment Model**: Docker-based with PostgreSQL and Redis
 
 ### Architectural Principles
-1. **Microservices**: Loosely coupled, independently deployable services
-2. **Event-Driven**: Asynchronous processing for scalability
-3. **Cloud-Native**: Container-based deployment with auto-scaling
-4. **API-First**: RESTful APIs for all integrations
-5. **Security-First**: Zero-trust architecture with defense-in-depth
+1. **Microservices**: Loosely coupled services (API, Worker, Web)
+2. **Event-Driven**: Basic asynchronous processing with Redis
+3. **Container-Native**: Docker-based deployment
+4. **API-First**: RESTful APIs for integrations
+5. **Security-First**: Enterprise-grade security scanning and protection
 
 ---
 
@@ -45,7 +45,7 @@ Payment Watchdog employs a cloud-native, microservices architecture designed for
 #### 1. Revenue Loss from Payment Failures
 - **Problem**: SaaS companies lose 2-5% of revenue to failed payments
 - **Impact**: $240K-$600K annual loss for $12M ARR company
-- **Solution**: Intelligent retry mechanisms and predictive failure prevention
+- **Solution**: Basic retry mechanisms and failure detection
 
 #### 2. Manual Recovery Processes
 - **Problem**: Teams spend 20+ hours/week manually handling failed payments
@@ -53,29 +53,29 @@ Payment Watchdog employs a cloud-native, microservices architecture designed for
 - **Solution**: Automated workflows with configurable retry policies
 
 #### 3. Lack of Visibility
-- **Problem**: No real-time insights into payment failure patterns
+- **Problem**: No centralized view of payment failure patterns
 - **Impact**: Reactive rather than proactive failure management
-- **Solution**: Real-time dashboard with predictive analytics
+- **Solution**: Basic dashboard with payment analytics
 
 ### Business Objectives
 
 #### Primary Objectives
-1. **Reduce Failed Payment Impact**: Target 50% reduction in revenue loss
-2. **Improve Recovery Rates**: Achieve 85%+ successful recovery rate
-3. **Enhance Customer Retention**: Reduce churn by 15% through better payment experience
-4. **Operational Efficiency**: Reduce manual intervention by 80%
+1. **Reduce Failed Payment Impact**: Target 20-30% reduction in revenue loss
+2. **Improve Recovery Rates**: Achieve 60-70% successful recovery rate
+3. **Enhance Customer Retention**: Reduce churn by 5-10% through better payment experience
+4. **Operational Efficiency**: Reduce manual intervention by 50-60%
 
 #### Secondary Objectives
-1. **Provider Agnostic**: Support for all major payment providers
-2. **Scalable Platform**: Handle 100K+ transactions per hour
-3. **Compliance Ready**: PCI DSS and GDPR compliant
-4. **Developer Friendly**: Comprehensive APIs and SDKs
+1. **Provider Integration**: Support for major payment providers (Stripe, PayPal)
+2. **Scalable Platform**: Handle 1K+ transactions per hour
+3. **Basic Compliance**: Data protection and security measures
+4. **Developer Friendly**: REST APIs for integration
 
 ### Success Metrics
-- **Revenue Recovery**: 50% reduction in failed payment revenue loss
-- **Automation Rate**: 80% of recoveries handled automatically
-- **Customer Satisfaction**: 25% improvement in payment-related NPS
-- **Operational Efficiency**: 80% reduction in manual processing time
+- **Revenue Recovery**: 20-30% reduction in failed payment revenue loss
+- **Automation Rate**: 50-60% of recoveries handled automatically
+- **Customer Satisfaction**: 10-15% improvement in payment-related NPS
+- **Operational Efficiency**: 50-60% reduction in manual processing time
 
 ---
 
@@ -91,25 +91,24 @@ Payment Watchdog employs a cloud-native, microservices architecture designed for
 - **Analytics**: Spreadsheet-based reporting
 
 #### Technology Gaps Identified
-1. **Real-time Processing**: No event-driven architecture
-2. **Intelligence Layer**: No AI/ML capabilities
+1. **Centralized Monitoring**: No unified view of payment failures
+2. **Automation**: Manual-heavy recovery processes
 3. **Unified Dashboard**: Fragmented reporting systems
-4. **Automation**: Manual-heavy recovery processes
-5. **Scalability**: Monolithic architecture limitations
+4. **Event Processing**: Limited real-time processing capabilities
+5. **Scalability**: Basic architecture limitations
 
 #### Integration Requirements
-- **Payment Providers**: Stripe, PayPal, Braintree, Xero, QuickBooks
-- **Accounting Systems**: Xero, QuickBooks integration
-- **Communication**: Email, SMS, webhook notifications
-- **Analytics**: Business intelligence tools
-- **Monitoring**: APM and observability platforms
+- **Payment Providers**: Stripe, PayPal integration
+- **Communication**: Basic email notifications
+- **Analytics**: Basic dashboard and reporting
+- **Monitoring**: Basic health checks and logging
 
 ### Baseline Infrastructure
-- **Compute**: On-premise servers or basic cloud instances
+- **Compute**: Docker containers on single host
 - **Database**: Single-node PostgreSQL
-- **Networking**: Basic load balancing
-- **Security**: Basic firewall rules
-- **Monitoring**: Limited logging and alerting
+- **Cache**: Redis for session management
+- **Networking**: Basic Docker networking
+- **Security**: Basic authentication and environment variables
 
 ---
 
@@ -118,74 +117,73 @@ Payment Watchdog employs a cloud-native, microservices architecture designed for
 ### Methodology and Approach
 
 #### 1. Microservices Architecture
-- **Rationale**: Independent scaling, fault isolation, technology diversity
-- **Implementation**: Container-based services with Kubernetes orchestration
-- **Benefits**: Improved maintainability, faster deployment cycles
+- **Rationale**: Separation of concerns and maintainability
+- **Implementation**: Container-based services with Docker Compose
+- **Benefits**: Improved maintainability, independent deployment
 
 #### 2. Event-Driven Architecture
 - **Rationale**: Asynchronous processing, loose coupling
-- **Implementation**: Redis-based event bus with pub/sub patterns
-- **Benefits**: Scalability, resilience, real-time processing
+- **Implementation**: Redis-based event bus with basic pub/sub
+- **Benefits**: Scalability, resilience, basic real-time processing
 
 #### 3. API-First Design
 - **Rationale**: Consistent interfaces, easier integration
-- **Implementation**: RESTful APIs with OpenAPI specification
+- **Implementation**: RESTful APIs with basic documentation
 - **Benefits**: Developer experience, ecosystem growth
 
-#### 4. Cloud-Native Principles
-- **Rationale**: Scalability, reliability, cost optimization
-- **Implementation**: Containers, auto-scaling, managed services
-- **Benefits**: Operational efficiency, global reach
+#### 4. Container-Native Principles
+- **Rationale**: Simplicity, portability, cost optimization
+- **Implementation**: Docker containers with compose orchestration
+- **Benefits**: Operational efficiency, local development
 
 ### Architectural Models
 
-#### 1. CQRS (Command Query Responsibility Segregation)
+#### 1. Basic Separation of Concerns
 - **Commands**: Payment processing, recovery actions
 - **Queries**: Analytics, reporting, dashboard data
-- **Benefits**: Optimized read/write patterns, scalability
+- **Benefits**: Clear separation of read/write operations
 
-#### 2. Event Sourcing
-- **Implementation**: Immutable event log for payment transactions
-- **Benefits**: Audit trail, replay capabilities, state reconstruction
+#### 2. Event Logging
+- **Implementation**: Basic event logging for payment transactions
+- **Benefits**: Audit trail, basic troubleshooting capabilities
 
-#### 3. Saga Pattern
-- **Implementation**: Distributed transaction management
-- **Benefits**: Consistency across microservices, fault tolerance
+#### 3. Simple Transaction Management
+- **Implementation**: Database transactions for consistency
+- **Benefits**: Data integrity, error handling
 
 ### Technology Stack and Tools
 
 #### Core Technologies
-- **Runtime**: Go 1.24+ for performance and concurrency
+- **Runtime**: Go 1.23 for performance and concurrency
 - **Framework**: Gin for HTTP services
-- **Database**: Database-agnostic design with PostgreSQL (production) and SQLite (testing)
-- **Cache**: Redis for session management and caching
-- **Message Queue**: Redis Streams for event processing
+- **Database**: PostgreSQL with GORM ORM
+- **Cache**: Redis for session management and basic caching
+- **Message Queue**: Redis for basic event processing
 
 #### Frontend Technologies
 - **Framework**: Next.js 14 for React-based UI
 - **Language**: TypeScript for type safety
 - **Styling**: Tailwind CSS for rapid development
-- **Charts**: Chart.js for data visualization
+- **Charts**: Basic chart components for data visualization
 
 #### Infrastructure and DevOps
 - **Containerization**: Docker for application packaging
-- **Orchestration**: Kubernetes for container management
-- **CI/CD**: GitHub Actions for automated pipelines
-- **Monitoring**: Prometheus + Grafana for observability
-- **Logging**: ELK Stack for centralized logging
-- **Security**: Checkmarx for static code analysis
+- **Orchestration**: Docker Compose for local development
+- **CI/CD**: GitHub Actions for basic automated pipelines
+- **Monitoring**: Basic health checks and logging
+- **Logging**: Structured logging with zap
 
 #### Development and Testing
 - **Version Control**: Git with GitHub
-- **API Documentation**: OpenAPI/Swagger
-- **Testing**: Go testing framework with ephemeral SQLite databases, Jest for frontend
-- **Code Quality**: SonarQube, ESLint, Go fmt
+- **API Documentation**: Basic OpenAPI specs
+- **Testing**: Go testing framework with SQLite for testing, Jest for frontend
+- **Code Quality**: Basic linting and formatting tools
 
 #### Testing Strategy
-- **Ephemeral Testing**: SQLite in-memory databases for fast, dependency-free testing
-- **Database-Agnostic**: Tests work with both SQLite and PostgreSQL
-- **Race Condition Free**: Eliminated sqlmock concurrency issues
-- **CI/CD Ready**: Tests run anywhere without external database setup
+- **Unit Testing**: Comprehensive unit tests for business logic
+- **Integration Testing**: Database integration tests with test containers
+- **E2E Testing**: Basic end-to-end workflow tests
+- **CI/CD Testing**: Automated test execution in pipelines
 
 ---
 
@@ -196,64 +194,42 @@ Payment Watchdog employs a cloud-native, microservices architecture designed for
 ```mermaid
 graph TB
     subgraph "External Systems"
-        PP[Payment Providers<br/>Stripe, PayPal, Braintree]
-        ACC[Accounting Systems<br/>Xero, QuickBooks]
-        COMM[Communication Channels<br/>Email, SMS, Webhooks]
-    end
-    
-    subgraph "API Gateway Layer"
-        GW[Kong API Gateway]
-        LB[Load Balancer]
+        PP[Payment Providers<br/>Stripe, PayPal]
+        COMM[Communication Channels<br/>Email]
     end
     
     subgraph "Application Services"
         API[API Service<br/>Port 8080]
         WEB[Web Dashboard<br/>Port 4896]
-        RO[Recovery Orchestration<br/>Port 8086]
         WRK[Worker Service<br/>Background Processing]
     end
     
     subgraph "Data Layer"
         PG[(PostgreSQL<br/>Primary Database)]
         RD[(Redis<br/>Cache & Queue)]
-        ES[(Elasticsearch<br/>Search & Analytics)]
     end
     
     subgraph "Infrastructure"
-        K8S[Kubernetes Cluster]
-        MON[Monitoring Stack<br/>Prometheus/Grafana]
-        LOG[Logging Stack<br/>ELK]
+        DOCKER[Docker Compose]
+        MON[Basic Monitoring<br/>Health Checks]
     end
     
-    PP --> GW
-    ACC --> GW
-    COMM --> GW
-    
-    GW --> API
-    GW --> WEB
-    GW --> RO
+    PP --> API
+    COMM --> WRK
     
     API --> PG
     API --> RD
     WEB --> API
-    RO --> PG
-    RO --> RD
     WRK --> PG
     WRK --> RD
     
-    RO --> COMM
-    WRK --> COMM
+    DOCKER --> API
+    DOCKER --> WEB
+    DOCKER --> WRK
     
-    API --> ES
-    RO --> ES
-    
-    K8S --> API
-    K8S --> WEB
-    K8S --> RO
-    K8S --> WRK
-    
-    MON --> K8S
-    LOG --> K8S
+    MON --> API
+    MON --> WEB
+    MON --> WRK
 ```
 
 ### Service Architecture
@@ -263,52 +239,37 @@ graph TB
 
 **Components**:
 - HTTP Server (Gin framework)
-- Authentication & Authorization
-- Request validation and rate limiting
-- Business logic orchestration
+- Basic Authentication
+- Request validation
+- Basic business logic
 
 **Responsibilities**:
 - Handle webhook processing from payment providers
 - Serve dashboard data via REST endpoints
-- Manage user authentication and permissions
-- Coordinate with other services
+- Manage user authentication
+- Coordinate with worker service
 
-#### 2. Recovery Orchestration Service (Port 8086)
-**Purpose**: Advanced payment recovery workflows and intelligence
-
-**Components**:
-- Workflow Engine
-- Provider Integration Layer
-- Failure Prediction Engine
-- OpenTelemetry Tracing
-
-**Responsibilities**:
-- Execute complex recovery workflows
-- Integrate with multiple payment providers
-- Predict payment failures
-- Manage retry policies and schedules
-
-#### 3. Worker Service
+#### 2. Worker Service
 **Purpose**: Background processing and asynchronous tasks
 
 **Components**:
-- Job Queue Processor
-- Event Handlers
+- Event Processor
+- Recovery Engine
+- Notification Handler
 - Scheduled Tasks
-- Notification Engine
 
 **Responsibilities**:
 - Process payment events asynchronously
+- Execute retry workflows
 - Send customer notifications
-- Generate analytics reports
-- Perform data cleanup and maintenance
+- Generate basic analytics reports
 
-#### 4. Web Dashboard (Port 4896)
+#### 3. Web Dashboard (Port 4896)
 **Purpose**: User interface for monitoring and management
 
 **Components**:
 - React-based UI
-- Real-time data visualization
+- Basic data visualization
 - User management interface
 - Configuration panels
 
@@ -338,8 +299,8 @@ recovery_workflows (
 
 -- Customer Profiles
 customers (
-    id, email, payment_methods, risk_score, 
-    preferences, created_at, updated_at
+    id, email, payment_methods, preferences, 
+    created_at, updated_at
 )
 
 -- Provider Configurations
@@ -356,13 +317,13 @@ providers (
 2. API service validates and persists
 3. Event published to Redis
 4. Worker processes event asynchronously
-5. Recovery orchestration triggered if needed
+5. Recovery workflows triggered if needed
 6. Results stored and notifications sent
 
 **Query Patterns**:
 - **OLTP**: Real-time transaction processing
-- **OLAP**: Analytics and reporting
-- **Search**: Full-text search for troubleshooting
+- **Analytics**: Basic reporting and dashboard queries
+- **Search**: Basic filtering for troubleshooting
 
 ---
 
@@ -377,48 +338,31 @@ providers (
 sequenceDiagram
     participant SP as Stripe
     participant API as API Service
-    participant RO as Recovery Orchestration
+    participant WRK as Worker Service
     participant DB as Database
     
     SP->>API: Webhook: payment_failed
     API->>DB: Store payment event
-    API->>RO: Trigger recovery workflow
-    RO->>SP: Retrieve payment details
-    RO->>SP: Attempt retry payment
-    SP->>RO: Retry result
-    RO->>DB: Update workflow status
-    RO->>API: Recovery notification
+    API->>WRK: Trigger recovery workflow
+    WRK->>SP: Retrieve payment details
+    WRK->>SP: Attempt retry payment
+    SP->>WRK: Retry result
+    WRK->>DB: Update workflow status
+    WRK->>API: Recovery notification
 ```
 
 **Multi-Provider Support**:
 - **Adapter Pattern**: Unified interface for all providers
 - **Configuration Management**: Provider-specific settings
 - **Error Handling**: Standardized error responses
-- **Rate Limiting**: Provider-specific rate limits
+- **Rate Limiting**: Basic rate limiting per provider
 
-#### 2. Accounting System Integration
-
-**Xero Integration**:
-- **Invoice Synchronization**: Failed payment invoice updates
-- **Customer Data**: Customer record synchronization
-- **Financial Reporting**: Reconciliation data
-
-**QuickBooks Integration**:
-- **Payment Records**: Transaction synchronization
-- **Customer Management**: Account updates
-- **Reporting**: Financial data export
-
-#### 3. Communication Channels
+#### 2. Communication Integration
 
 **Email Integration**:
-- **Templates**: Customizable email templates
-- **Delivery Tracking**: Email delivery status
+- **Templates**: Basic email templates
+- **Delivery Tracking**: Basic delivery status
 - **Unsubscribe Management**: Customer preferences
-
-**SMS Integration**:
-- **Urgent Notifications**: Time-sensitive payment failures
-- **Delivery Confirmation**: SMS delivery tracking
-- **Opt-out Management**: Customer consent management
 
 ### Data Flow Architecture
 
@@ -426,14 +370,14 @@ sequenceDiagram
 
 **Payment Processing Flow**:
 ```
-Payment Provider → API Gateway → API Service → Event Bus → Worker Service → Recovery Orchestration → Database
+Payment Provider → API Service → Event Bus → Worker Service → Database
 ```
 
 **Key Characteristics**:
-- **Latency**: < 100ms for webhook processing
-- **Throughput**: 10K+ events per second
-- **Reliability**: At-least-once delivery guarantee
-- **Scalability**: Horizontal scaling support
+- **Latency**: < 500ms for webhook processing
+- **Throughput**: 1K+ events per hour
+- **Reliability**: Basic retry mechanisms
+- **Scalability**: Horizontal scaling with Docker Compose
 
 #### 2. Batch Data Flow
 
@@ -443,7 +387,7 @@ Database → Analytics Engine → Aggregated Data → Dashboard API → Frontend
 ```
 
 **Scheduled Operations**:
-- **Daily Reports**: Revenue and failure analytics
+- **Daily Reports**: Basic revenue and failure analytics
 - **Data Cleanup**: Archive old transactions
 - **Health Checks**: System performance monitoring
 
@@ -451,33 +395,33 @@ Database → Analytics Engine → Aggregated Data → Dashboard API → Frontend
 
 **External System Sync**:
 ```
-Payment Watchdog → Accounting Systems → Customer Records → Financial Reports
+Payment Watchdog → Payment Providers → Status Updates
 ```
 
-**Bidirectional Sync**:
+**Basic Sync**:
 - **Outbound**: Payment status updates
-- **Inbound**: Customer data updates
-- **Reconciliation**: Daily balance verification
+- **Inbound**: Webhook event processing
+- **Reconciliation**: Basic balance verification
 
 ### Integration Patterns
 
 #### 1. Webhook Integration
-- **Validation**: Signature verification
+- **Validation**: Basic signature verification
 - **Idempotency**: Duplicate request handling
-- **Retry Logic**: Exponential backoff
+- **Retry Logic**: Basic exponential backoff
 - **Error Handling**: Graceful degradation
 
 #### 2. API Integration
 - **RESTful Design**: Standard HTTP methods
-- **Authentication**: OAuth 2.0 and API keys
-- **Rate Limiting**: Provider-specific limits
-- **Circuit Breaker**: Fault tolerance
+- **Authentication**: Basic API keys
+- **Rate Limiting**: Basic rate limiting
+- **Error Handling**: Standard error responses
 
 #### 3. Message Queue Integration
-- **Pub/Sub Pattern**: Event-driven communication
-- **Message Persistence**: Durability guarantees
-- **Dead Letter Queue**: Failed message handling
-- **Consumer Groups**: Load distribution
+- **Pub/Sub Pattern**: Basic event-driven communication
+- **Message Persistence**: Redis persistence
+- **Error Handling**: Basic failed message handling
+- **Consumer Groups**: Basic load distribution
 
 ---
 
@@ -485,40 +429,34 @@ Payment Watchdog → Accounting Systems → Customer Records → Financial Repor
 
 ### Security Framework Overview
 
-Payment Watchdog implements a defense-in-depth security strategy with multiple layers of protection:
+Payment Watchdog implements a basic security strategy with essential protection layers:
 
 #### 1. Network Security
 - **TLS 1.3**: End-to-end encryption for all communications
-- **VPC Isolation**: Network segmentation for different environments
-- **Firewall Rules**: Restrictive access controls
-- **DDoS Protection**: Cloud-based DDoS mitigation
+- **Docker Networking**: Container network isolation
+- **Firewall Rules**: Basic access controls
+- **Basic DDoS Protection**: Rate limiting and request validation
 
 #### 2. Application Security
 - **Input Validation**: Comprehensive request validation
-- **SQL Injection Prevention**: Parameterized queries
-- **XSS Protection**: Content Security Policy
+- **SQL Injection Prevention**: Parameterized queries with GORM
+- **XSS Protection**: Basic content security policies
 - **CSRF Protection**: Token-based CSRF prevention
 
 #### 3. Data Protection
-- **Encryption at Rest**: AES-256 database encryption
+- **Encryption at Rest**: Basic database encryption
 - **Encryption in Transit**: TLS for all data transfers
-- **Key Management**: Cloud KMS for key rotation
-- **Data Masking**: Sensitive data obfuscation
+- **Key Management**: Environment variable management
+- **Data Masking**: Sensitive data obfuscation in logs
 
 ### Authentication and Authorization
 
 #### 1. Authentication Mechanisms
 
-**Multi-Factor Authentication**:
+**Basic Authentication**:
 - **Primary**: Username/password with bcrypt hashing
-- **Secondary**: TOTP-based time-based codes
-- **Tertiary**: Hardware security keys (U2F)
-
-**API Authentication**:
-- **OAuth 2.0**: Standardized API authentication
-- **JWT Tokens**: Stateless session management
-- **API Keys**: Service-to-service authentication
-- **Webhook Signatures**: Provider webhook validation
+- **API Authentication**: Basic API keys for service-to-service
+- **Webhook Security**: Provider webhook signature validation
 
 #### 2. Authorization Model
 
@@ -539,44 +477,19 @@ resources:
   system: [admin]
 ```
 
-**Attribute-Based Access Control (ABAC)**:
-- **Context-aware**: Location, time, device-based access
-- **Dynamic Permissions**: Real-time permission evaluation
-- **Fine-grained Control**: Resource-level permissions
-
 ### Compliance and Regulatory
 
-#### 1. PCI DSS Compliance
-- **Scope Reduction**: Minimal card data storage
-- **Tokenization**: Payment token usage where possible
-- **Network Segmentation**: Isolated payment processing
-- **Regular Audits**: Quarterly security assessments
-
-#### 2. GDPR Compliance
+#### 1. Basic Compliance Measures
 - **Data Minimization**: Collect only necessary data
-- **Right to Erasure**: Customer data deletion
+- **Right to Erasure**: Customer data deletion capabilities
 - **Data Portability**: Export customer data
-- **Consent Management**: Explicit consent tracking
+- **Consent Management**: Basic consent tracking
 
-#### 3. SOC 2 Type II
-- **Security Controls**: Comprehensive security framework
-- **Availability**: 99.9% uptime SLA
-- **Processing Integrity**: Data accuracy guarantees
-- **Confidentiality**: Data protection measures
-
-### Security Monitoring and Incident Response
-
-#### 1. Security Monitoring
-- **SIEM Integration**: Centralized security logging
-- **Threat Detection**: AI-powered anomaly detection
-- **Vulnerability Scanning**: Regular security assessments
-- **Penetration Testing**: Quarterly security testing
-
-#### 2. Incident Response
-- **Automated Alerts**: Real-time security notifications
-- **Incident Triage**: Automated severity classification
-- **Response Playbooks**: Standardized response procedures
-- **Post-Incident Review**: Lessons learned documentation
+#### 2. Security Best Practices
+- **Regular Updates**: Keep dependencies updated
+- **Security Scanning**: Basic vulnerability scanning
+- **Access Logs**: Comprehensive access logging
+- **Incident Response**: Basic security incident procedures
 
 ---
 
@@ -584,32 +497,39 @@ resources:
 
 ### Compute Architecture
 
-#### 1. Kubernetes Cluster Design
+#### 1. Docker Compose Design
 
-**Cluster Configuration**:
+**Service Configuration**:
 ```yaml
-cluster:
-  nodes:
-    master: 3 (High Availability)
-    worker: 6 (Auto-scaling)
-    regions: 3 (Multi-AZ deployment)
+services:
+  api:
+    build: ./api
+    ports: ["8080:8080"]
+    environment: [DATABASE_HOST=postgres, REDIS_URL=redis://redis:6379]
+    depends_on: [postgres, redis]
   
-  resources:
-    cpu: 48 vCPUs total
-    memory: 192 GB total
-    storage: 2 TB SSD
+  worker:
+    build: ./worker
+    environment: [DATABASE_HOST=postgres, REDIS_URL=redis://redis:6379]
+    depends_on: [postgres, redis]
   
-  networking:
-    pod_cidr: 10.244.0.0/16
-    service_cidr: 10.96.0.0/12
-    load_balancer: Application Load Balancer
+  web:
+    build: ./web
+    ports: ["4896:4896"]
+    environment: [NEXT_PUBLIC_API_URL=http://api:8080]
+    depends_on: [api]
+  
+  postgres:
+    image: postgres:15-alpine
+    ports: ["5432:5432"]
+    environment: [POSTGRES_DB=payment_watchdog]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+  
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: [redis_data:/data]
 ```
-
-**Node Pools**:
-- **System Pool**: Kubernetes system components
-- **Application Pool**: Business application services
-- **Batch Pool**: Background processing jobs
-- **Gateway Pool**: API gateway and ingress controllers
 
 #### 2. Container Resource Management
 
@@ -617,24 +537,22 @@ cluster:
 ```yaml
 services:
   api:
-    requests: {cpu: 200m, memory: 512Mi}
-    limits: {cpu: 1000m, memory: 1Gi}
-    replicas: 3
-  
-  recovery-orchestration:
-    requests: {cpu: 100m, memory: 256Mi}
-    limits: {cpu: 500m, memory: 512Mi}
-    replicas: 2
+    deploy:
+      resources:
+        limits: {cpus: '1.0', memory: 1G}
+        reservations: {cpus: '0.5', memory: 512M}
   
   worker:
-    requests: {cpu: 500m, memory: 1Gi}
-    limits: {cpu: 2000m, memory: 2Gi}
-    replicas: 4
+    deploy:
+      resources:
+        limits: {cpus: '2.0', memory: 2G}
+        reservations: {cpus: '1.0', memory: 1G}
   
   web:
-    requests: {cpu: 100m, memory: 256Mi}
-    limits: {cpu: 500m, memory: 512Mi}
-    replicas: 2
+    deploy:
+      resources:
+        limits: {cpus: '0.5', memory: 512M}
+        reservations: {cpus: '0.25', memory: 256M}
 ```
 
 ### Storage Architecture
@@ -644,14 +562,14 @@ services:
 **PostgreSQL Configuration**:
 ```yaml
 database:
-  version: 14
-  instances: 2 (Primary + Replica)
-  storage: 500 GB SSD
-  backup: Daily + Point-in-time recovery
-  monitoring: Performance insights
+  version: 15-alpine
+  instances: 1 (Single node)
+  storage: 100 GB SSD
+  backup: Basic volume snapshots
+  monitoring: Basic health checks
   
   connection_pooling:
-    max_connections: 200
+    max_connections: 100
     idle_timeout: 10m
     lifetime: 1h
 ```
@@ -659,96 +577,80 @@ database:
 **Redis Configuration**:
 ```yaml
 cache:
-  type: Redis Cluster
-  nodes: 6 (3 masters + 3 replicas)
-  memory: 64 GB total
-  persistence: AOF + RDB
-  sharding: Automatic
+  type: Redis Single Instance
+  memory: 1 GB total
+  persistence: Basic AOF
+  backup: Volume snapshots
 ```
 
-#### 2. Object Storage
+#### 2. Local Storage
 
 **File Storage**:
-- **Type**: S3-compatible object storage
-- **Usage**: Logs, backups, static assets
-- **Lifecycle**: Automatic tiering and cleanup
-- **Encryption**: Server-side encryption
+- **Type**: Local Docker volumes
+- **Usage**: Logs, database data, cache
+- **Backup**: Basic volume backup
+- **Cleanup**: Manual cleanup procedures
 
 ### Network Architecture
 
 #### 1. Network Design
 
-**VPC Configuration**:
+**Docker Network Configuration**:
 ```yaml
-vpc:
-  cidr: 10.0.0.0/16
-  availability_zones: 3
-  
-  subnets:
-    public: 10.0.1.0/24 (Load Balancers)
-    private: 10.0.2.0/24 (Application)
-    data: 10.0.3.0/24 (Database)
-  
-  security_groups:
-    web: HTTP/HTTPS inbound
-    app: Application traffic
-    db: Database traffic only
+networks:
+  default:
+    driver: bridge
+    
+  services:
+    api: ["8080:8080"]
+    web: ["4896:4896"]
+    postgres: ["5432:5432"]
+    redis: ["6379:6379"]
 ```
 
-#### 2. Load Balancing
+#### 2. Service Communication
 
-**Application Load Balancer**:
-- **Type**: Application Load Balancer (ALB)
-- **SSL**: TLS termination at load balancer
-- **Health Checks**: Comprehensive health monitoring
-- **Auto-scaling**: Dynamic capacity management
+**Internal Communication**:
+- **API**: HTTP/REST between services
+- **Database**: Direct TCP connections
+- **Redis**: TCP connections
+- **External**: HTTPS for payment providers
 
 ### Monitoring and Observability
 
-#### 1. Monitoring Stack
+#### 1. Basic Monitoring
 
-**Prometheus Configuration**:
+**Health Checks**:
 ```yaml
-prometheus:
-  retention: 30 days
-  scrape_interval: 15s
-  evaluation_interval: 15s
-  
-  targets:
-    - application_metrics
-    - infrastructure_metrics
-    - business_metrics
-  
-  alerting:
-    email: ops@payment-watchdog.com
-    slack: #payment-watchdog-alerts
-    pagerduty: Critical incidents
+health_checks:
+  api: ["GET /health", "30s interval"]
+  worker: ["Process health", "30s interval"]
+  web: ["GET /", "30s interval"]
+  postgres: ["pg_isready", "30s interval"]
+  redis: ["redis-cli ping", "30s interval"]
 ```
 
-**Grafana Dashboards**:
-- **System Health**: CPU, memory, disk, network
-- **Application Metrics**: Request rates, error rates, latency
+**Basic Metrics**:
+- **System Health**: Service status checks
+- **Application Metrics**: Request counts, error rates
 - **Business Metrics**: Payment success rates, recovery rates
-- **Security Metrics**: Authentication failures, access patterns
+- **Infrastructure Metrics**: CPU, memory, disk usage
 
 #### 2. Logging Architecture
 
-**ELK Stack Configuration**:
+**Structured Logging**:
 ```yaml
-elasticsearch:
-  nodes: 3 (Hot-Warm architecture)
-  storage: 1 TB SSD
-  retention: 90 days
+logging:
+  format: JSON structured logs
+  level: Configurable (debug, info, warn, error)
+  output: Console + file rotation
+  retention: 30 days
   
-logstash:
-  pipelines: 4 (Application, System, Security, Audit)
-  workers: 8
-  batch_size: 125
-
-kibana:
-  dashboards: 20+ pre-configured
-  index_patterns: Automated
-  security: Role-based access
+  components:
+    - application_logs
+    - access_logs
+    - error_logs
+    - audit_logs
 ```
 
 ---
@@ -760,177 +662,352 @@ kibana:
 #### 1. Response Time Requirements
 
 **API Response Times**:
-- **Webhook Processing**: < 100ms (95th percentile)
-- **Dashboard Loading**: < 2 seconds (95th percentile)
-- **Analytics Queries**: < 5 seconds (95th percentile)
-- **Authentication**: < 50ms (95th percentile)
+- **Webhook Processing**: < 500ms (95th percentile)
+- **Dashboard Loading**: < 3 seconds (95th percentile)
+- **Analytics Queries**: < 10 seconds (95th percentile)
+- **Authentication**: < 100ms (95th percentile)
 
 **System Response Times**:
-- **Database Queries**: < 10ms (average)
-- **Cache Operations**: < 1ms (average)
-- **Message Processing**: < 50ms (average)
-- **Background Jobs**: < 5 minutes (completion)
+- **Database Queries**: < 50ms (average)
+- **Cache Operations**: < 5ms (average)
+- **Message Processing**: < 100ms (average)
+- **Background Jobs**: < 10 minutes (completion)
 
 #### 2. Throughput Requirements
 
 **Transaction Processing**:
-- **Webhook Events**: 10,000 events/second
-- **Payment Processing**: 1,000 payments/second
-- **Concurrent Users**: 500 simultaneous users
-- **API Requests**: 5,000 requests/second
+- **Webhook Events**: 1,000 events/hour
+- **Payment Processing**: 100 payments/hour
+- **Concurrent Users**: 50 simultaneous users
+- **API Requests**: 500 requests/hour
 
 **Data Processing**:
-- **Batch Jobs**: 1M records/hour
-- **Analytics Processing**: 10GB data/hour
-- **Report Generation**: 100 reports/hour
-- **Data Export**: 1GB/minute
+- **Batch Jobs**: 10K records/hour
+- **Analytics Processing**: 1GB data/hour
+- **Report Generation**: 10 reports/hour
+- **Data Export**: 100MB/minute
 
 #### 3. Scalability Requirements
 
 **Horizontal Scaling**:
-- **Auto-scaling**: CPU and memory-based scaling
-- **Load Distribution**: Even traffic distribution
-- **Elastic Scaling**: Automatic capacity adjustment
-- **Geographic Scaling**: Multi-region deployment
+- **Manual Scaling**: Docker Compose scale commands
+- **Load Distribution**: Basic load balancing
+- **Resource Scaling**: Add more containers as needed
+- **Single Host Limitation**: Currently limited to single host
 
 **Vertical Scaling**:
-- **Resource Allocation**: Dynamic resource adjustment
-- **Performance Tuning**: Continuous optimization
-- **Capacity Planning**: Proactive scaling decisions
-- **Resource Monitoring**: Real-time resource tracking
+- **Resource Allocation**: Manual resource adjustment
+- **Performance Tuning**: Basic optimization
+- **Capacity Planning**: Manual monitoring and adjustment
+- **Resource Monitoring**: Basic resource tracking
 
 ### Availability and Reliability
 
 #### 1. Availability Requirements
 
 **Uptime Targets**:
-- **Overall System**: 99.9% uptime (8.76 hours downtime/year)
-- **API Services**: 99.95% uptime (4.38 hours downtime/year)
-- **Dashboard**: 99.9% uptime (8.76 hours downtime/year)
-- **Background Processing**: 99.5% uptime (43.8 hours downtime/year)
+- **Overall System**: 95% uptime (18 days downtime/year)
+- **API Services**: 95% uptime (18 days downtime/year)
+- **Dashboard**: 95% uptime (18 days downtime/year)
+- **Background Processing**: 90% uptime (36 days downtime/year)
 
 **Maintenance Windows**:
 - **Scheduled Maintenance**: 4 hours/month
 - **Emergency Maintenance**: As needed with 2-hour notice
-- **Zero-Downtime Deployment**: Rolling updates
-- **Blue-Green Deployment**: Risk-free deployments
+- **Basic Deployment**: Manual restart procedures
+- **Single Point of Failure**: Single host limitation
 
 #### 2. Reliability Requirements
 
 **Error Handling**:
-- **Error Rate**: < 0.1% for all operations
-- **Retry Logic**: Exponential backoff with jitter
-- **Circuit Breaker**: Automatic fault isolation
+- **Error Rate**: < 1% for all operations
+- **Retry Logic**: Basic exponential backoff
+- **Circuit Breaker**: Basic fault isolation
 - **Graceful Degradation**: Reduced functionality during outages
 
 **Data Consistency**:
 - **ACID Compliance**: Database transaction integrity
-- **Eventual Consistency**: Acceptable for analytics
-- **Data Replication**: Multi-AZ data replication
-- **Backup Recovery**: Point-in-time recovery
+- **Basic Consistency**: Eventual consistency acceptable for analytics
+- **Data Backup**: Basic volume snapshots
+- **Recovery**: Manual recovery procedures
 
 ### Security Requirements
 
 #### 1. Data Protection
-- **Encryption**: AES-256 for data at rest
+- **Encryption**: Basic TLS for data in transit
 - **Transmission**: TLS 1.3 for data in transit
-- **Key Management**: Automated key rotation
-- **Access Control**: Least privilege principle
+- **Key Management**: Environment variables
+- **Access Control**: Basic role-based access
 
 #### 2. Compliance Requirements
-- **PCI DSS**: Level 1 compliance
-- **GDPR**: Full compliance for EU customers
-- **SOC 2**: Type II certification
-- **HIPAA**: Optional for healthcare customers
+- **Basic Security**: Security best practices
+- **Data Protection**: Basic GDPR compliance
+- **Privacy**: Basic data privacy measures
+- **Documentation**: Basic security documentation
 
 ### Usability Requirements
 
 #### 1. User Experience
-- **Response Time**: < 2 seconds for all interactions
-- **Mobile Support**: Responsive design for mobile devices
-- **Accessibility**: WCAG 2.1 AA compliance
-- **Internationalization**: Multi-language support
+- **Response Time**: < 3 seconds for all interactions
+- **Mobile Support**: Basic responsive design
+- **Accessibility**: Basic WCAG compliance
+- **Internationalization**: English only initially
 
 #### 2. Developer Experience
-- **API Documentation**: Comprehensive OpenAPI specs
-- **SDK Support**: Multiple programming languages
-- **Testing Environment**: Full-featured sandbox
-- **Developer Portal**: Self-service developer resources
+- **API Documentation**: Basic OpenAPI specs
+- **SDK Support**: REST API only
+- **Testing Environment**: Local development setup
+- **Developer Portal**: Basic GitHub documentation
 
 ### Maintainability Requirements
 
 #### 1. Code Quality
-- **Code Coverage**: > 80% test coverage
-- **Static Analysis**: Automated code quality checks
-- **Documentation**: Inline documentation and guides
+- **Code Coverage**: > 70% test coverage
+- **Static Analysis**: Basic linting tools
+- **Documentation**: Inline documentation and README
 - **Standards**: Consistent coding standards
 
 #### 2. Operational Excellence
-- **Monitoring**: Comprehensive system monitoring
-- **Alerting**: Proactive issue detection
-- **Automation**: Automated deployment and operations
-- **Disaster Recovery**: Tested recovery procedures
+- **Monitoring**: Basic health checks and logging
+- **Alerting**: Basic error notifications
+- **Automation**: Basic deployment automation
+- **Disaster Recovery**: Basic backup and recovery procedures
 
 ### Capacity Requirements
 
 #### 1. Storage Requirements
-- **Database Storage**: 1 TB initial, 100 GB/month growth
-- **Log Storage**: 500 GB initial, 50 GB/month growth
-- **Backup Storage**: 3x primary storage
-- **Archive Storage**: 10 TB for long-term retention
+- **Database Storage**: 100 GB initial, 10 GB/month growth
+- **Log Storage**: 10 GB initial, 1 GB/month growth
+- **Backup Storage**: 2x primary storage
+- **Archive Storage**: 1 TB for long-term retention
 
 #### 2. Network Requirements
-- **Bandwidth**: 10 Gbps internal, 1 Gbps external
-- **Latency**: < 10ms internal, < 100ms external
-- **Connections**: 50,000 concurrent connections
-- **Data Transfer**: 100 TB/month external transfer
+- **Bandwidth**: 1 Gbps internal, 100 Mbps external
+- **Latency**: < 50ms internal, < 200ms external
+- **Connections**: 1,000 concurrent connections
+- **Data Transfer**: 1 TB/month external transfer
+
+---
+
+## 🛡️ Security Implementation
+
+### Security Strategy Overview
+
+Payment Watchdog implements a comprehensive security scanning strategy using Phase 1 free tools to ensure enterprise-grade security for our payment processing platform. Our security approach follows the "Security-First" architectural principle.
+
+### Phase 1 Security Tools Implementation
+
+#### **Static Application Security Testing (SAST)**
+
+**GitHub CodeQL**
+- **Purpose**: Native GitHub SAST for code analysis
+- **Languages**: Go, JavaScript/TypeScript
+- **Coverage**: API Service, Worker Service, Web Dashboard
+- **Queries**: Security-extended and security-and-quality
+- **Results**: SARIF format uploaded to GitHub Security tab
+
+**Gosec (Go Security Scanner)**
+- **Purpose**: Go-specific vulnerability detection
+- **Focus Areas**: SQL injection, hardcoded credentials, insecure functions
+- **Services**: API and Worker services
+- **Integration**: SARIF output for GitHub Security tab
+
+#### **Software Composition Analysis (SCA)**
+
+**OWASP Dependency Check**
+- **Purpose**: Open source vulnerability detection
+- **Database**: National Vulnerability Database (NVD)
+- **Coverage**: All dependencies (Go modules, npm packages)
+- **Output**: HTML reports with detailed vulnerability information
+
+**GitHub Dependabot**
+- **Purpose**: Automated dependency monitoring
+- **Frequency**: Weekly scans
+- **Coverage**: Go modules, npm packages, Docker images, GitHub Actions
+- **Features**: Automated PR creation for dependency updates
+
+**npm audit**
+- **Purpose**: Node.js ecosystem vulnerability scanning
+- **Threshold**: High severity and above
+- **Integration**: Automated in CI/CD pipeline
+
+#### **Container Security**
+
+**Trivy**
+- **Purpose**: Container and file system vulnerability scanning
+- **Coverage**: 
+  - File system scanning for source code
+  - Docker image scanning (API, Worker, Web)
+- **Severity Levels**: Critical, High, Medium
+- **Output**: SARIF format for GitHub Security tab
+
+### Security Pipeline Integration
+
+#### **CI/CD Security Gates**
+```
+Unit Tests → Security Scan → Build Images → Deploy
+                ↓
+         Critical Issues Block Deployment
+```
+
+#### **Security Workflow Configuration**
+- **Location**: `.github/workflows/security-scan.yml`
+- **Triggers**: Push, PR, daily schedule
+- **Jobs**: Parallel security scanning with summary
+- **Dependencies**: Build depends on security scan success
+
+#### **Security Gates Policy**
+- **Critical Vulnerabilities**: Any critical finding blocks deployment
+- **High Vulnerabilities**: Require manual review before deployment
+- **Medium Vulnerabilities**: Track for remediation in next sprint
+- **Scan Failures**: Failed security scans block deployment
+
+### Security Coverage
+
+#### **Code Analysis Coverage**
+- **Go Services**: API and Worker backend services (100%)
+- **JavaScript**: Web and UI frontend applications (100%)
+- **Dockerfiles**: Container configuration security (100%)
+- **Infrastructure**: Docker Compose configurations (100%)
+
+#### **Vulnerability Detection**
+- **SQL Injection**: GORM query safety analysis
+- **Authentication**: OAuth2 implementation security
+- **Dependencies**: Known CVEs in all packages
+- **Containers**: Base image and layer vulnerabilities
+- **Secrets**: Hardcoded credential detection
+
+### Security Results and Monitoring
+
+#### **Results Location**
+- **GitHub Security Tab**: Centralized SARIF findings
+- **Actions Artifacts**: Detailed downloadable reports
+- **Pull Request Comments**: Security scan summaries
+- **CI/CD Logs**: Real-time scan progress
+
+#### **Security Metrics**
+- **Vulnerability Count**: Track findings by severity
+- **Time to Remediation**: Measure fix turnaround time
+- **Scan Coverage**: Ensure 100% codebase coverage
+- **False Positive Rate**: Monitor and tune scanning accuracy
+
+### Security Configuration Files
+
+#### **Workflow Configuration**
+```yaml
+# .github/workflows/security-scan.yml
+- GitHub CodeQL SAST
+- OWASP Dependency Check
+- Trivy Security Scanning
+- Go Security Analysis
+- Node.js Security Audit
+- Security Summary Generation
+```
+
+#### **Dependabot Configuration**
+```yaml
+# .github/dependabot.yml
+- Go modules (API & Worker)
+- npm packages (Web & UI)
+- Docker images
+- GitHub Actions
+```
+
+### Security Best Practices Implementation
+
+#### **Development Security**
+1. **Secret Management**: Never commit secrets to repository
+2. **Input Validation**: Validate all user inputs
+3. **Authentication**: Implement proper OAuth2 flows
+4. **Encryption**: Use TLS for all communications
+5. **Dependencies**: Keep dependencies updated automatically
+
+#### **CI/CD Security**
+1. **Least Privilege**: Minimal GitHub token permissions
+2. **Secure Images**: Use minimal, secure base images
+3. **Scan Early**: Security scanning in every pipeline
+4. **Fail Fast**: Block deployment on security issues
+5. **Audit Trail**: Log all security scanning activities
+
+### Phase 1 Implementation Status
+
+#### **✅ Completed**
+- [x] GitHub CodeQL SAST integration
+- [x] OWASP Dependency Check setup
+- [x] Trivy container and file system scanning
+- [x] Gosec Go security analysis
+- [x] npm audit for Node.js dependencies
+- [x] GitHub Dependabot configuration
+- [x] Security gates in CI/CD pipeline
+- [x] SARIF result upload to GitHub Security tab
+
+#### **🔄 Phase 2 Planning**
+- [ ] Semgrep additional SAST rules
+- [ ] Snyk enhanced vulnerability detection
+- [ ] SonarCloud code quality + security
+- [ ] Checkov infrastructure security
+
+### Security Compliance
+
+#### **PCI DSS Considerations**
+- **Payment Data Handling**: Stripe integration security
+- **Data Encryption**: At rest and in transit
+- **Access Control**: Role-based permissions
+- **Network Security**: Container isolation
+
+#### **OWASP Top 10 Coverage**
+- **A01: Broken Access Control**: API authentication
+- **A02: Cryptographic Failures**: Data encryption
+- **A03: Injection**: SQL injection prevention
+- **A06: Vulnerable Components**: Dependency scanning
+- **A07: Identity & Authentication**: OAuth2 implementation
 
 ---
 
 ## Implementation Roadmap
 
 ### Phase 1: Foundation (Months 1-3)
-- **Infrastructure Setup**: Kubernetes cluster and basic services
+- **Infrastructure Setup**: Docker Compose and basic services
 - **Core API Development**: Payment processing and webhook handling
 - **Database Design**: Schema implementation and migration
 - **Basic Dashboard**: Initial UI development
 
-### Phase 2: Intelligence (Months 4-6)
-- **Recovery Orchestration**: Advanced workflow engine
-- **Analytics Engine**: Real-time analytics implementation
-- **Provider Integrations**: Multi-provider support
-- **Security Implementation**: Comprehensive security measures
+### Phase 2: Integration (Months 4-6)
+- **Payment Provider Integration**: Stripe and PayPal integration
+- **Worker Service**: Background processing and retry logic
+- **Basic Analytics**: Simple reporting and dashboard
+- **Email Notifications**: Basic notification system
 
-### Phase 3: Scale (Months 7-9)
+### Phase 3: Enhancement (Months 7-9)
+- **Advanced Features**: Additional payment providers
 - **Performance Optimization**: System tuning and optimization
-- **Advanced Features**: AI-powered failure prediction
-- **Enterprise Features**: Advanced security and compliance
-- **Customer Onboarding**: Beta customer testing
+- **Security Enhancements**: Improved authentication and authorization
+- **Testing**: Comprehensive test suite development
 
 ### Phase 4: Production (Months 10-12)
 - **Production Deployment**: Full production rollout
-- **Customer Support**: 24/7 support implementation
-- **Continuous Improvement**: Ongoing optimization
-- **Market Expansion**: Feature expansion and scaling
+- **Documentation**: Complete user and developer documentation
+- **Monitoring**: Enhanced monitoring and alerting
+- **Support**: Basic support processes and procedures
 
 ---
 
 ## Conclusion
 
-The Payment Watchdog solution design provides a comprehensive, scalable, and secure platform for addressing the critical business problem of payment failures in SaaS companies. The architecture leverages modern cloud-native technologies, event-driven processing, and AI-powered intelligence to deliver a solution that significantly reduces revenue loss and improves operational efficiency.
+The Payment Watchdog solution design provides a practical, scalable platform for addressing the business problem of payment failures in SaaS companies. The architecture leverages modern container-based technologies, event-driven processing, and automated recovery workflows to deliver a solution that reduces revenue loss and improves operational efficiency.
 
 The design emphasizes:
-- **Scalability**: Horizontal scaling to handle growth
-- **Reliability**: High availability and fault tolerance
-- **Security**: Enterprise-grade security and compliance
-- **Maintainability**: Clean architecture and automation
-- **Performance**: Sub-second response times and high throughput
+- **Simplicity**: Easy to deploy and maintain architecture
+- **Reliability**: Basic fault tolerance and error handling
+- **Security**: Essential security measures and data protection
+- **Maintainability**: Clean architecture and basic automation
+- **Performance**: Adequate response times and throughput for target market
 
-With this architecture, Payment Watchdog is positioned to capture a significant portion of the $2.4B addressable market while providing exceptional value to SaaS companies struggling with payment failures.
+With this architecture, Payment Watchdog is positioned to serve small to medium SaaS companies struggling with payment failures, providing a cost-effective solution that delivers tangible business value.
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: 2026-02-12  
+**Document Version**: 2.0  
+**Last Updated**: 2026-02-19  
 **Author**: Architecture Team  
-**Review Status**: Draft for Review
+**Review Status**: Updated for Current Implementation

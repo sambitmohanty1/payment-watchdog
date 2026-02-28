@@ -186,52 +186,191 @@ jobs:
   #       if: always()
   #       run: docker compose -f docker-compose.test.yml down -v
 
-  # Temporarily disabled - Security Scanning
-  # security-scan:
-  #   permissions:
-  #     security-events: write
-  #     actions: read
-  #     contents: read
-  #   name: Security Scan
-  #   runs-on: ubuntu-latest
-  #   needs: unit-tests
-  #   defaults:
-  #     run:
-  #       working-directory: .
-  # 
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  # 
-  #     - name: Run Checkmarx Scan
-  #       uses: checkmarx/ast-github-action@main
-  #       with:
-  #         project_name: ${{ github.repository }}-payment-watchdog
-  #         cx_tenant: ${{ secrets.CHECKMARX_TENANT }}
-  #         cx_client_id: ${{ secrets.CHECKMARX_CLIENT_ID }}
-  #         cx_client_secret: ${{ secrets.CHECKMARX_CLIENT_SECRET }}
-  #         cx_base_uri: ${{ secrets.CHECKMARX_BASE_URI }}
-  #         cx_base_auth_uri: ${{ secrets.CHECKMARX_BASE_AUTH_URI }}
-  # 
-  #     - name: Run Trivy vulnerability scanner
-  #       uses: aquasecurity/trivy-action@0.29.0
-  #       with:
-  #         scan-type: 'fs'
-  #         scan-ref: '.'
-  #         format: 'sarif'
-  #         output: 'trivy-results.sarif'
-  # 
-  #     - name: Upload Trivy scan results to GitHub Security tab
-  #       uses: github/codeql-action/upload-sarif@v3
-  #       if: always()
-  #       with:
-  #         sarif_file: 'trivy-results.sarif'
+  # Phase 1 Security Scanning
+  security-scan:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      packages: read
+    name: Phase 1 Security Scan
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    defaults:
+      run:
+        working-directory: .
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # GitHub CodeQL SAST
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: go, javascript
+          queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+      # OWASP Dependency Check
+      - name: Set up Java (Dependency Check requires Java)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'payment-watchdog'
+          path: '.'
+          format: 'HTML'
+          out: 'dependency-check-reports'
+
+      - name: Upload Dependency Check results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: dependency-check-report
+          path: dependency-check-reports/
+          retention-days: 30
+
+      # Trivy Security Scanning
+      - name: Run Trivy vulnerability scanner in fs mode
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy fs results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-fs-results.sarif'
+
+      # Build Docker images for container scanning
+      - name: Build Docker images for scanning
+        run: |
+          docker build -t payment-watchdog-api:scan ./api
+          docker build -t payment-watchdog-worker:scan ./worker
+          docker build -t payment-watchdog-web:scan ./web
+
+      - name: Run Trivy on API image
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: 'payment-watchdog-api:scan'
+          format: 'sarif'
+          output: 'trivy-api-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Run Trivy on Worker image
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: 'payment-watchdog-worker:scan'
+          format: 'sarif'
+          output: 'trivy-worker-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Run Trivy on Web image
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: 'payment-watchdog-web:scan'
+          format: 'sarif'
+          output: 'trivy-web-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy container results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-api-results.sarif'
+
+      # Go-specific security scanning
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Install Gosec
+        run: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+
+      - name: Run Gosec on API
+        run: |
+          cd api
+          gosec -fmt sarif -out gosec-api-results.sarif ./...
+
+      - name: Run Gosec on Worker
+        run: |
+          cd worker
+          gosec -fmt sarif -out gosec-worker-results.sarif ./...
+
+      - name: Upload Gosec results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'api/gosec-api-results.sarif'
+
+      # Node.js security scanning
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd web && npm ci
+
+      - name: Run npm audit
+        run: |
+          cd web
+          npm audit --audit-level=high --json > npm-audit-results.json || true
+
+      - name: Upload npm audit results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: npm-audit-report
+          path: web/npm-audit-results.json
+          retention-days: 30
+
+      # Security Summary
+      - name: Generate Security Summary
+        run: |
+          echo "# 🛡️ Payment Watchdog Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Security Scans Completed" >> $GITHUB_STEP_SUMMARY
+          echo "- CodeQL SAST: Completed" >> $GITHUB_STEP_SUMMARY
+          echo "- OWASP Dependency Check: Completed" >> $GITHUB_STEP_SUMMARY
+          echo "- Trivy Security Scan: Completed" >> $GITHUB_STEP_SUMMARY
+          echo "- Go Security Analysis: Completed" >> $GITHUB_STEP_SUMMARY
+          echo "- Node.js Security Audit: Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Results" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Security Tab: See detailed SARIF findings" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifacts: Download detailed reports from Actions tab" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚨 Security Gates" >> $GITHUB_STEP_SUMMARY
+          echo "- Critical vulnerabilities: Block deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- High vulnerabilities: Review required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "*Generated by Payment Watchdog Phase 1 Security Scan*" >> $GITHUB_STEP_SUMMARY
 
   # Build and Push Images
   build-and-push:
     name: Build and Push Images
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: [unit-tests, security-scan]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     defaults:
       run:

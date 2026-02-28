@@ -2,33 +2,209 @@
 
 ## Executive Summary
 
-**Payment Watchdog** is an AI-powered SaaS payment failure intelligence platform designed to transform how SaaS companies handle payment failures. The platform provides real-time detection, intelligent recovery, predictive intelligence, and unified management across multiple payment providers (Stripe, PayPal, Braintree, Xero, QuickBooks).
+**Payment Watchdog** is a payment recovery management platform designed to help SaaS companies handle payment failures through automated detection and recovery workflows.
 
 ### Key Objectives
-- **Eliminate Revenue Loss**: Detect and recover failed payments before they impact cash flow
-- **Unified Platform**: Single view across all payment methods and SaaS platforms
-- **Predictive Intelligence**: Prevent failures before they happen using AI/ML
-- **Market Coverage**: Target 60-70% of SaaS companies using major payment providers
-- **Revenue Potential**: Address $2.4B market in SaaS payment failures
+- **Reduce Revenue Loss**: Detect and recover failed payments through automated workflows
+- **Unified Platform**: Single interface for payment failure management
+- **Basic Analytics**: Monitor payment failure patterns and recovery rates
+- **Multi-Provider Support**: Support for major payment providers (Stripe, PayPal, Braintree)
 
 ---
 
 ## Architecture Vision
 
 ### High-Level Vision
-The Payment Watchdog platform follows a **microservices architecture** with **event-driven design** patterns, enabling scalable, resilient, and maintainable payment failure intelligence processing.
+The Payment Watchdog platform follows a **microservices architecture** with **event-driven design** patterns, enabling scalable and maintainable payment failure processing.
 
 ### Architectural Principles
 1. **Microservices First**: Independent, deployable services with clear boundaries
 2. **Event-Driven**: Asynchronous processing for scalability and resilience
 3. **API-First**: All services expose RESTful APIs for integration
-4. **Cloud-Native**: Designed for Kubernetes deployment with auto-scaling
-5. **Security-First**: Zero-trust architecture with end-to-end encryption
-6. **Observability**: Comprehensive monitoring, tracing, and logging
+4. **Cloud-Native**: Designed for container deployment with auto-scaling
+5. **Security-First**: Secure architecture with encryption and access controls
+6. **Observability**: Basic monitoring, logging, and health checks
 
 ### Scope and Context
-- **In Scope**: Payment failure detection, recovery orchestration, analytics, multi-provider integration
-- **Out of Scope**: Payment processing, customer data management, accounting system replacements
+- **In Scope**: Payment failure detection, basic recovery workflows, simple analytics, webhook integration
+- **Out of Scope**: Payment processing, advanced AI/ML predictions, enterprise accounting system replacements
+
+---
+
+## Strategic Runway
+
+### Current State (Months 0-3)
+**Foundation Capabilities:**
+- Basic payment failure detection via webhooks
+- Simple retry mechanisms with exponential backoff
+- PostgreSQL database with essential schema
+- Redis for caching and basic queuing
+- Docker containerization for deployment
+- Basic REST API endpoints
+- Simple dashboard for monitoring
+
+**Technical Debt:**
+- Limited error handling and retry strategies
+- Basic monitoring and alerting
+- Manual configuration management
+- Minimal test coverage
+
+### Near-Term Roadmap (Months 3-6)
+**Enhanced Capabilities:**
+- Improved retry logic with configurable policies
+- Enhanced error handling and failure classification
+- Basic analytics and reporting dashboard
+- Integration testing framework
+- Improved monitoring and alerting
+- Configuration management system
+
+**Infrastructure Improvements:**
+- Kubernetes deployment manifests
+- Basic CI/CD pipeline
+- Environment-specific configurations
+- Security scanning integration
+
+### Medium-Term Vision (Months 6-12)
+**Advanced Features:**
+- Multi-provider payment integration
+- Advanced analytics with failure pattern recognition
+- Customer communication workflows
+- Role-based access control
+- API rate limiting and throttling
+- Comprehensive audit logging
+
+**Platform Maturity:**
+- High availability deployment patterns
+- Disaster recovery procedures
+- Performance optimization
+- Security hardening
+- Compliance frameworks (SOC 2, GDPR)
+
+### Long-Term Strategic Direction (Months 12+)
+**Enterprise Capabilities:**
+- Machine learning for failure prediction
+- Advanced workflow orchestration
+- Real-time streaming analytics
+- Multi-tenant architecture
+- Advanced security features
+- Global deployment support
+
+---
+
+## Architectural Runway
+
+### Technology Evolution Path
+
+#### Phase 1: Foundation (Current)
+```yaml
+Technology Stack:
+  Backend: Go 1.23, Gin framework
+  Frontend: Next.js 14, React 18
+  Database: PostgreSQL 15
+  Cache: Redis 7
+  Container: Docker
+  Deployment: Docker Compose
+```
+
+#### Phase 2: Scalability (3-6 months)
+```yaml
+Technology Stack:
+  Backend: Go 1.23+ with enhanced middleware
+  Frontend: Next.js 14 with advanced components
+  Database: PostgreSQL with read replicas
+  Cache: Redis Cluster
+  Container: Docker with multi-stage builds
+  Deployment: Kubernetes with basic manifests
+  Monitoring: Prometheus + Grafana
+```
+
+#### Phase 3: Enterprise (6-12 months)
+```yaml
+Technology Stack:
+  Backend: Go with advanced patterns (CQRS, Event Sourcing)
+  Frontend: Next.js with advanced state management
+  Database: PostgreSQL with partitioning
+  Cache: Redis Enterprise
+  Message Queue: Apache Kafka or RabbitMQ
+  Deployment: Kubernetes with GitOps
+  Monitoring: Full observability stack
+  Security: Advanced threat detection
+```
+
+#### Phase 4: Platform (12+ months)
+```yaml
+Technology Stack:
+  Backend: Go with microservice patterns
+  Frontend: Micro-frontend architecture
+  Database: Multi-database strategy
+  Cache: Distributed caching
+  Message Queue: Event streaming platform
+  Deployment: Multi-cloud Kubernetes
+  Monitoring: AIOps integration
+  Security: Zero-trust architecture
+```
+
+### Scalability Runway
+
+#### Current Capacity
+- **Transactions**: 100 events/second
+- **Users**: 50 concurrent users
+- **Database**: Single PostgreSQL instance
+- **Cache**: Single Redis instance
+- **Storage**: Local persistent volumes
+
+#### Growth Targets
+```yaml
+6 Months:
+  Transactions: 1,000 events/second
+  Users: 500 concurrent users
+  Database: Primary + 1 replica
+  Cache: Redis cluster (3 nodes)
+  Storage: Cloud-based persistent storage
+
+12 Months:
+  Transactions: 10,000 events/second
+  Users: 5,000 concurrent users
+  Database: Primary + 3 replicas
+  Cache: Redis enterprise cluster
+  Storage: Distributed object storage
+
+24 Months:
+  Transactions: 100,000 events/second
+  Users: 50,000 concurrent users
+  Database: Sharded PostgreSQL
+  Cache: Multi-region Redis
+  Storage: Multi-cloud object storage
+```
+
+### Integration Runway
+
+#### Current Integrations
+- **Payment Providers**: Stripe (webhooks)
+- **Communication**: SMTP email
+- **Monitoring**: Basic health checks
+- **Deployment**: Manual Docker deployment
+
+#### Planned Integrations
+```yaml
+3-6 Months:
+  Payment Providers: PayPal, Braintree
+  Communication: SMS, Slack notifications
+  Monitoring: Prometheus, Grafana
+  Deployment: Kubernetes, CI/CD pipeline
+
+6-12 Months:
+  Accounting: Xero, QuickBooks
+  Communication: Webhooks, Zapier
+  Monitoring: Full observability stack
+  Security: SIEM integration
+
+12+ Months:
+  Analytics: Advanced BI tools
+  Communication: Multi-channel orchestration
+  Monitoring: AIOps platforms
+  Security: Advanced threat detection
+```
 
 ---
 

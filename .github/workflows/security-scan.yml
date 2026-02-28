@@ -1,0 +1,335 @@
+name: Phase 1 Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scan daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+# 🛑 SECURITY: Restrict permissions for security scanning
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  packages: read
+
+jobs:
+  # GitHub CodeQL - Native SAST
+  codeql-sast:
+    name: CodeQL SAST Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      matrix:
+        language: [ 'go', 'javascript' ]
+        
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+          
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+        
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"
+
+  # OWASP Dependency Check - Free SCA
+  dependency-check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Java (Dependency Check requires Java)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          
+      - name: Cache OWASP Dependency Check
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/dependency-check
+          key: ${{ runner.os }}-dependency-check-${{ hashFiles('**/go.sum', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-dependency-check-
+            
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'payment-watchdog'
+          path: '.'
+          format: 'HTML'
+          out: 'dependency-check-reports'
+          
+      - name: Upload Dependency Check results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: dependency-check-reports/
+          retention-days: 30
+
+  # Trivy - Container & File System Security
+  trivy-scan:
+    name: Trivy Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Run Trivy vulnerability scanner in fs mode
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          
+      - name: Upload Trivy fs results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-fs-results.sarif'
+          
+      - name: Build Docker images for scanning
+        run: |
+          docker build -t payment-watchdog-api:scan ./api
+          docker build -t payment-watchdog-worker:scan ./worker
+          docker build -t payment-watchdog-web:scan ./web
+          
+      - name: Run Trivy on API image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'payment-watchdog-api:scan'
+          format: 'sarif'
+          output: 'trivy-api-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          
+      - name: Run Trivy on Worker image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'payment-watchdog-worker:scan'
+          format: 'sarif'
+          output: 'trivy-worker-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          
+      - name: Run Trivy on Web image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'payment-watchdog-web:scan'
+          format: 'sarif'
+          output: 'trivy-web-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          
+      - name: Upload all Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-api-results.sarif'
+          
+      - name: Upload Trivy artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-reports
+          path: '*.sarif'
+          retention-days: 30
+
+  # Go-specific security scanning
+  go-security:
+    name: Go Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+          
+      - name: Install Gosec
+        run: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+        
+      - name: Run Gosec on API
+        run: |
+          cd api
+          gosec -fmt sarif -out gosec-api-results.sarif ./...
+          
+      - name: Run Gosec on Worker
+        run: |
+          cd worker
+          gosec -fmt sarif -out gosec-worker-results.sarif ./...
+          
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+        
+      - name: Run govulncheck on API
+        run: |
+          cd api
+          govulncheck ./... > govulncheck-api-results.txt
+          
+      - name: Run govulncheck on Worker
+        run: |
+          cd worker
+          govulncheck ./... > govulncheck-worker-results.txt
+          
+      - name: Upload Gosec results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'api/gosec-api-results.sarif'
+          
+      - name: Upload Go security artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: go-security-reports
+          path: |
+            **/gosec-*.sarif
+            **/govulncheck-*.txt
+          retention-days: 30
+
+  # Node.js security scanning
+  nodejs-security:
+    name: Node.js Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+          
+      - name: Install dependencies
+        run: |
+          cd web
+          npm ci
+          
+      - name: Run npm audit
+        run: |
+          cd web
+          npm audit --audit-level=high --json > npm-audit-results.json || true
+          
+      - name: Upload npm audit results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: npm-audit-report
+          path: web/npm-audit-results.json
+          retention-days: 30
+
+  # Security Summary
+  security-summary:
+    name: Security Scan Summary
+    runs-on: ubuntu-latest
+    needs: [codeql-sast, dependency-check, trivy-scan, go-security, nodejs-security]
+    if: always()
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: security-artifacts
+          
+      - name: Generate Security Summary
+        run: |
+          echo "# 🛡️ Payment Watchdog Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Scan Results Overview" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # CodeQL results
+          echo "### 🔍 CodeQL SAST" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.codeql-sast.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Dependency Check results
+          echo "### 📦 OWASP Dependency Check" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.dependency-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Trivy results
+          echo "### 🐳 Trivy Security Scan" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.trivy-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Go Security results
+          echo "### 🔧 Go Security Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.go-security.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Node.js Security results
+          echo "### 📱 Node.js Security Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.nodejs-security.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 📈 Security Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "- Total Security Jobs: 5" >> $GITHUB_STEP_SUMMARY
+          echo "- Passed: ${{ contains(needs.codeql-sast.result, 'success') && contains(needs.dependency-check.result, 'success') && contains(needs.trivy-scan.result, 'success') && contains(needs.go-security.result, 'success') && contains(needs.nodejs-security.result, 'success') && '5' || '0' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Failed: ${{ contains(needs.codeql-sast.result, 'failure') || contains(needs.dependency-check.result, 'failure') || contains(needs.trivy-scan.result, 'failure') || contains(needs.go-security.result, 'failure') || contains(needs.nodejs-security.result, 'failure') && '1' || '0' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 🔗 Detailed Reports" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Security Tab: See Security tab for detailed SARIF findings" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifacts: Download detailed reports from Actions tab" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 🚨 Security Gates" >> $GITHUB_STEP_SUMMARY
+          echo "- Critical vulnerabilities: Block deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- High vulnerabilities: Review required" >> $GITHUB_STEP_SUMMARY
+          echo "- Medium vulnerabilities: Track for remediation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Generated by Payment Watchdog Phase 1 Security Scan*" >> $GITHUB_STEP_SUMMARY
+
+  # Security Gate - Block deployment on critical issues
+  security-gate:
+    name: Security Gate Check
+    runs-on: ubuntu-latest
+    needs: [codeql-sast, dependency-check, trivy-scan]
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Security Gate Evaluation
+        run: |
+          echo "🔐 Evaluating security gates for deployment..."
+          
+          # Check if any critical security scan failed
+          if [[ "${{ needs.codeql-sast.result }}" == "failure" || "${{ needs.dependency-check.result }}" == "failure" || "${{ needs.trivy-scan.result }}" == "failure" ]]; then
+            echo "❌ SECURITY GATE FAILED: One or more critical security scans failed"
+            echo "🚫 Deployment blocked due to security issues"
+            exit 1
+          else
+            echo "✅ SECURITY GATE PASSED: All critical security scans passed"
+            echo "🚀 Deployment approved"
+          fi

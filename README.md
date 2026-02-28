@@ -1,66 +1,54 @@
-# ⚡ **Payment Watchdog**
-## AI-Powered SaaS Payment Failure Intelligence Platform
+# Payment Watchdog
+## Payment Recovery Management Platform
 
-[![Go Version](https://img.shields.io/badge/Go-1.24.4-blue.svg)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/Go-1.23-blue.svg)](https://golang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Production%20Ready-success.svg)](README.md)
+[![Security Scan](https://img.shields.io/badge/Security-Phase%201%20Implemented-brightgreen.svg)](#security)
+[![CodeQL](https://img.shields.io/badge/CodeQL-Enabled-blue.svg)](https://github.com/features/security)
+[![Dependabot](https://img.shields.io/badge/Dependabot-Enabled-blue.svg)](https://dependabot.com/)
 
 ---
 
-## 📋 **Project Overview**
+## Project Overview
 
-**Payment Watchdog** is a comprehensive AI-powered payment failure intelligence platform that transforms how SaaS companies handle payment failures. Never get blindsided by failed payments again — detect, recover, and prevent lost cashflow with one smart platform.
+Payment Watchdog is a payment recovery management platform designed to help SaaS companies handle payment failures through automated detection and recovery workflows.
 
-### **🎯 Mission**
-**"Never get blindsided by failed payments again — detect, recover, and prevent lost cashflow with one smart platform."**
-
-### **🚀 Vision**
-Transform how SaaS companies handle payment failures by providing:
-- **Real-time Detection**: Instant payment failure detection across all providers
-- **Intelligent Recovery**: Automated retry mechanisms and customer communication
-- **Predictive Intelligence**: Prevent failures before they happen
-- **Unified Platform**: Single view across all payment methods and SaaS platforms
-
-**Market Coverage**: 60-70% of SaaS companies (Stripe + PayPal + Braintree)
-**Revenue Potential**: $2.4B addressable market in SaaS payment failures
+### Features
+- Payment failure detection and monitoring
+- Basic recovery workflows with retry logic
+- Analytics dashboard for payment metrics
+- REST API for integration
+- Web interface for management
+- **Enterprise-grade security scanning** (Phase 1 implemented)
 
 ---
 
-## 🏗️ **Architecture**
+## Architecture
 
-### **Microservices Architecture**
-- **API Service**: REST API with Go + Gin framework
-- **Worker Service**: Background processing with concurrency controls
-- **Recovery Orchestration**: Advanced payment recovery workflows with multi-provider integration
-- **Web Interface**: Next.js dashboard with Tailwind CSS
-- **Database**: Database-agnostic design supporting PostgreSQL (production) and SQLite (testing)
-- **Cache/Queue**: Redis for event processing
-- **Event Bus**: Redis-based asynchronous processing
-
-### **Technology Stack**
-- **Backend**: Go 1.23, Gin, GORM, Redis, PostgreSQL/SQLite
+### Technology Stack
+- **Backend**: Go 1.23, Gin, GORM, PostgreSQL, Redis
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS
-- **Infrastructure**: Docker, Kubernetes, Kong API Gateway
-- **CI/CD**: GitHub Actions, Docker Hub, Checkmarx Security
-- **Testing**: SQLite in-memory databases for ephemeral testing
+- **Infrastructure**: Docker, Docker Compose
+- **Database**: PostgreSQL with Redis for caching
 
-### **Database Architecture**
-- **Production**: PostgreSQL with advanced analytics and JSONB support
-- **Testing**: SQLite in-memory databases for fast, ephemeral testing
-- **Database-Agnostic Service**: Automatic detection and adaptation to database type
-- **No Race Conditions**: Eliminated sqlmock concurrency issues with real database testing
+### Services
+- **API Service**: REST API with Go + Gin framework
+- **Worker Service**: Background processing
+- **Web Interface**: Next.js dashboard
+- **Database**: PostgreSQL
+- **Cache**: Redis for event processing
 
 ---
 
-## 🚀 **Quick Start**
+## Quick Start
 
-### **Prerequisites**
+### Prerequisites
 - Docker & Docker Compose
 - Go 1.23+
 - Node.js 18+
 
-### **Local Development**
+### Local Development
 ```bash
 # Clone the repository
 git clone https://github.com/payment-watchdog.git
@@ -75,7 +63,7 @@ docker-compose up -d
 # Redis at localhost:6379
 ```
 
-### **Development Commands**
+### Development Commands
 ```bash
 # API Service
 cd api && go run cmd/main.go
@@ -87,121 +75,185 @@ cd worker && go run cmd/main.go
 cd web && npm run dev
 ```
 
-### **Testing**
+### Testing
 ```bash
-# Run all tests with ephemeral SQLite databases
+# Run all tests
 go test ./...
 
 # Run specific service tests
 go test ./services -v
 
-# Test recovery analytics (uses SQLite in-memory)
-go test ./services -run TestGetRecoveryMetrics
-
-# Test with PostgreSQL (requires database setup)
-./start-payment-watchdog-db.sh  # Starts PostgreSQL on port 5569
-go test ./services -run TestGetRecoveryMetrics  # Will use PostgreSQL if available
+# Test with coverage
+go test ./... -cover
 ```
 
-### **Testing Architecture**
-- **Ephemeral Testing**: Uses SQLite in-memory databases by default
-- **No External Dependencies**: Tests run anywhere without database setup
-- **Database-Agnostic**: Service automatically adapts to available database
-- **Race Condition Free**: Eliminated sqlmock concurrency issues
-- **Production-Like**: Optional PostgreSQL testing for production validation
+---
+
+## 🛡️ Security
+
+Payment Watchdog implements enterprise-grade security scanning using Phase 1 free tools to ensure the security and integrity of our payment processing platform.
+
+### **Security Scanning Tools**
+- **GitHub CodeQL** - Native SAST for Go and JavaScript code analysis
+- **OWASP Dependency Check** - Open source vulnerability detection
+- **Trivy** - Container and file system security scanning
+- **Gosec** - Go-specific security analysis
+- **npm audit** - Node.js dependency vulnerability scanning
+- **GitHub Dependabot** - Automated dependency monitoring
+
+### **Security Features**
+- ✅ **Automated Scanning** - Runs on every push/PR + daily schedule
+- ✅ **Security Gates** - Critical findings block deployment
+- ✅ **Centralized Results** - GitHub Security tab integration
+- ✅ **Zero Cost** - All tools are free tier
+- ✅ **Comprehensive Coverage** - All services and dependencies
+
+### **Security Pipeline**
+```
+Unit Tests → Security Scan → Build Images → Deploy
+                ↓
+         Critical Issues Block Deployment
+```
+
+### **Viewing Security Results**
+- **GitHub Security Tab**: See SARIF findings from CodeQL, Trivy, Gosec
+- **Actions Artifacts**: Download detailed HTML and JSON reports
+- **Pull Request Comments**: Security scan summaries
+- **CI/CD Logs**: Real-time scan progress
+
+### **Security Configuration**
+- **Security Workflow**: `.github/workflows/security-scan.yml`
+- **Dependabot Config**: `.github/dependabot.yml`
+- **CI/CD Integration**: Security scans required before deployment
 
 ---
 
-## 📊 **Core Features**
+## API Documentation
 
-### **1. Payment Failure Detection**
-- Real-time monitoring of payment webhooks
-- Multi-provider support (Stripe, PayPal, Braintree)
-- Pattern recognition and anomaly detection
-
-### **2. Intelligent Recovery**
-- Smart retry logic with exponential backoff
-- Payment method fallback strategies
-- Automated customer communication
-- **Recovery Orchestration**: Advanced workflow management with OpenTelemetry tracing
-- Multi-provider integration (Stripe, Xero, QuickBooks)
-- Configurable retry policies and failure prediction
-
-### **3. Analytics Dashboard**
-- Real-time failure analytics
-- Customer risk scoring
-- Revenue impact tracking
-- Predictive failure forecasting
-
-### **4. Integration Hub**
-- REST API for easy integration
-- Webhook support for real-time updates
-- Zapier and native integrations
-
----
-
-## 🔧 **API Documentations**
-
-### **Base URLs**
+### Base URLs
 - **Local**: `http://localhost:8080`
-- **Production**: `https://api.payment-watchdog.com`
 
-### **Key Endpoints**
+### Key Endpoints
 - `GET /health` - Service health check
-- `GET /api/v1/dashboard/stats` - Dashboard statistics
-- `GET /api/v1/analytics/test` - Analytics test endpoint
-- `POST /api/v1/payments/webhook` - Payment webhook processing
-- `GET /health` - Recovery Orchestration health (Port 8086)
-- `GET /metrics` - Recovery Orchestration metrics (Port 8086)
+- `GET /api/v1/status` - API status
+- `GET /metrics` - Basic metrics
 
 ---
 
-## 🐳 **Docker Services**
+## Docker Services
 
 ```yaml
 services:
-  api:                    # Go REST API (Port 8080)
-  worker:                 # Background processing (No external port)
-  recovery-orchestration: # Payment recovery workflows (Port 8086)
-  web:                    # Next.js dashboard (Port 4896)
-  postgres:              # Database (Port 5432)
-  redis:                 # Cache & Queue (Port 6379)
-  mailhog:               # Email testing (Port 8025)
+  api:           # Go REST API (Port 8080)
+  worker:        # Background processing
+  web:           # Next.js dashboard (Port 4896)
+  postgres:      # Database (Port 5432)
+  redis:         # Cache & Queue (Port 6379)
+  mailhog:       # Email testing (Port 8025)
 ```
 
 ---
 
-## 🚀 **Deployment**
+## Deployment
 
-### **Local Development**
+### Local Development
 ```bash
 docker-compose up -d
 ```
 
-### **Production Deployment**
+### Production Deployment
 ```bash
-# Build and push images
+# Build images
 docker build -t payment-watchdog/api ./api
 docker build -t payment-watchdog/worker ./worker
-docker build -t payment-watchdog/recovery-orchestration ./recovery-orchestration
 docker build -t payment-watchdog/web ./web
 
-# Deploy to Kubernetes (Zero Touch Deployment)
-kustomize build api/deployments/kubernetes | kubectl apply -f -
-
-# Or deploy individual services
-kustomize build api/deployments/kubernetes/apps/recovery-orchestration | kubectl apply -f -
+# Deploy with Docker Compose
+docker-compose -f docker-compose.prod.yml up -d
 ```
-
-### **CI/CD Pipeline**
-- Automated testing and building
-- Security scanning with Checkmarx
-- Docker image building and pushing
-- Kubernetes deployment to staging/production
 
 ---
 
-## 🤝 **Contributing**
+## Solution Design
+
+### Architecture Overview
+
+Payment Watchdog follows a microservices architecture with the following components:
+
+```mermaid
+graph TB
+    subgraph "Frontend"
+        WEB[Next.js Dashboard]
+    end
+    
+    subgraph "Backend Services"
+        API[Go API Service]
+        WORKER[Background Worker]
+    end
+    
+    subgraph "Data Layer"
+        POSTGRES[(PostgreSQL)]
+        REDIS[(Redis Cache)]
+    end
+    
+    subgraph "External Services"
+        MAILHOG[Email Service]
+    end
+    
+    WEB --> API
+    API --> POSTGRES
+    API --> REDIS
+    WORKER --> POSTGRES
+    WORKER --> REDIS
+    WORKER --> MAILHOG
+```
+
+### Data Flow
+
+1. **Payment Events**: Webhooks and API calls enter through the API service
+2. **Processing**: Background worker processes payment failures and retries
+3. **Storage**: Payment data and metrics stored in PostgreSQL
+4. **Caching**: Redis used for session management and temporary data
+5. **Notifications**: Email notifications sent for critical failures
+
+### Service Responsibilities
+
+#### API Service (Port 8080)
+- RESTful API endpoints
+- Request validation and routing
+- Database connection management
+- Health checks and metrics
+
+#### Worker Service
+- Background job processing
+- Payment failure detection
+- Retry logic execution
+- Email notification handling
+
+#### Web Interface (Port 4896)
+- Dashboard for payment metrics
+- Configuration management
+- Real-time status monitoring
+
+### Database Schema
+
+The system uses PostgreSQL with the following key tables:
+- `payments`: Payment transaction records
+- `payment_failures`: Failed payment attempts
+- `recovery_attempts`: Retry execution logs
+- `users`: System user accounts
+
+### Deployment Architecture
+
+The application is designed to run in Docker containers with:
+- Stateless services for horizontal scaling
+- External database for data persistence
+- Redis for caching and session management
+- Environment-based configuration
+
+---
+
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -209,7 +261,7 @@ kustomize build api/deployments/kubernetes/apps/recovery-orchestration | kubectl
 4. Add tests
 5. Submit a pull request
 
-### **Development Guidelines**
+### Development Guidelines
 - Follow Go best practices
 - Use conventional commits
 - Write comprehensive tests
@@ -217,14 +269,14 @@ kustomize build api/deployments/kubernetes/apps/recovery-orchestration | kubectl
 
 ---
 
-## 📄 **License**
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 📞 **Support**
+## Support
 
-For support, email support@payment-watchdog.com or join our Slack community.
+For support, please open an issue on GitHub.
 
-**Payment Watchdog** - Never lose another payment again! ⚡
+Payment Watchdog - Payment Recovery Management
