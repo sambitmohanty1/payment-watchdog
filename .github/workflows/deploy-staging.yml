@@ -6,15 +6,13 @@ on:
   pull_request:
     branches: [ main ]
 
-# Disable this workflow to avoid duplication with payment-watchdog-ci.yml
-if: github.event_name != 'push' || false
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   test:
+    if: github.event_name != 'push' || false
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code

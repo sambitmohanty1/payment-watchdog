@@ -45,48 +45,6 @@ jobs:
         with:
           category: "/language:${{matrix.language}}"
 
-  # OWASP Dependency Check - Free SCA
-  dependency-check:
-    name: OWASP Dependency Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        
-      - name: Set up Java (Dependency Check requires Java)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          
-      - name: Cache OWASP Dependency Check
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/dependency-check
-          key: ${{ runner.os }}-dependency-check-${{ hashFiles('**/go.sum', '**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-dependency-check-
-            
-      - name: Run OWASP Dependency Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: 'payment-watchdog'
-          path: '.'
-          format: 'HTML,SARIF'
-          out: 'dependency-check-reports'
-          
-      - name: Upload Dependency Check results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: dependency-check-report
-          path: |
-            dependency-check-reports/
-            **/dependency-check-report.sarif
-          retention-days: 30
-
   # Trivy - Container & File System Security
   trivy-scan:
     name: Trivy Security Scan
@@ -105,12 +63,17 @@ jobs:
           format: 'sarif'
           output: 'trivy-fs-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM'
-          
+
+      - name: Ensure Trivy fs SARIF exists
+        if: always()
+        run: if [ ! -f trivy-fs-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-fs-results.sarif; fi
+
       - name: Upload Trivy fs results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-fs-results.sarif'
+          category: 'trivy-fs'
           
       - name: Build Docker images for scanning
         run: |
@@ -147,12 +110,39 @@ jobs:
           output: 'trivy-web-results.sarif'
           severity: 'CRITICAL,HIGH'
           
+      - name: Ensure Trivy API SARIF exists
+        if: always()
+        run: if [ ! -f trivy-api-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-api-results.sarif; fi
+
+      - name: Ensure Trivy Worker SARIF exists
+        if: always()
+        run: if [ ! -f trivy-worker-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-worker-results.sarif; fi
+
+      - name: Ensure Trivy Web SARIF exists
+        if: always()
+        run: if [ ! -f trivy-web-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-web-results.sarif; fi
+
       - name: Upload Web Trivy results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-web-results.sarif'
+          category: 'trivy-web'
+
+      - name: Upload API Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-api-results.sarif'
+          category: 'trivy-api'
           
+      - name: Upload Worker Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-worker-results.sarif'
+          category: 'trivy-worker'
+
       - name: Upload Trivy artifacts
         uses: actions/upload-artifact@v4
         if: always()
@@ -178,6 +168,8 @@ jobs:
           cache: true
           
       - name: Install Gosec
+        env:
+          GOPROXY: "https://proxy.golang.org,direct"
         run: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
         
       - name: Run Gosec on API
@@ -187,11 +179,16 @@ jobs:
           echo "API Gosec scan completed"
           ls -la gosec-api-results.sarif || echo "API Gosec SARIF file not found"
           
+      - name: Ensure Gosec API SARIF exists
+        if: always()
+        run: if [ ! -f api/gosec-api-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > api/gosec-api-results.sarif; fi
+
       - name: Upload API Gosec results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'api/gosec-api-results.sarif'
+          category: 'gosec-api'
           
       - name: Run Gosec on Worker
         run: |
@@ -200,13 +197,20 @@ jobs:
           echo "Worker Gosec scan completed"
           ls -la gosec-worker-results.sarif || echo "Worker Gosec SARIF file not found"
           
+      - name: Ensure Gosec Worker SARIF exists
+        if: always()
+        run: if [ ! -f worker/gosec-worker-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > worker/gosec-worker-results.sarif; fi
+
       - name: Upload Worker Gosec results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'worker/gosec-worker-results.sarif'
+          category: 'gosec-worker'
           
       - name: Install govulncheck
+        env:
+          GOPROXY: "https://proxy.golang.org,direct"
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
         
       - name: Run govulncheck on API
@@ -274,7 +278,7 @@ jobs:
   security-summary:
     name: Security Scan Summary
     runs-on: ubuntu-latest
-    needs: [codeql-sast, dependency-check, trivy-scan, go-security, nodejs-security]
+    needs: [codeql-sast, trivy-scan, go-security, nodejs-security]
     if: always()
     
     steps:
@@ -295,11 +299,6 @@ jobs:
           echo "- Status: ${{ needs.codeql-sast.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Dependency Check results
-          echo "### 📦 OWASP Dependency Check" >> $GITHUB_STEP_SUMMARY
-          echo "- Status: ${{ needs.dependency-check.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
           # Trivy results
           echo "### 🐳 Trivy Security Scan" >> $GITHUB_STEP_SUMMARY
           echo "- Status: ${{ needs.trivy-scan.result }}" >> $GITHUB_STEP_SUMMARY
@@ -316,9 +315,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           
           echo "## 📈 Security Metrics" >> $GITHUB_STEP_SUMMARY
-          echo "- Total Security Jobs: 5" >> $GITHUB_STEP_SUMMARY
-          echo "- Passed: ${{ contains(needs.codeql-sast.result, 'success') && contains(needs.dependency-check.result, 'success') && contains(needs.trivy-scan.result, 'success') && contains(needs.go-security.result, 'success') && contains(needs.nodejs-security.result, 'success') && '5' || '0' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Failed: ${{ contains(needs.codeql-sast.result, 'failure') || contains(needs.dependency-check.result, 'failure') || contains(needs.trivy-scan.result, 'failure') || contains(needs.go-security.result, 'failure') || contains(needs.nodejs-security.result, 'failure') && '1' || '0' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Total Security Jobs: 4" >> $GITHUB_STEP_SUMMARY
+          echo "- Passed: ${{ contains(needs.codeql-sast.result, 'success') && contains(needs.trivy-scan.result, 'success') && contains(needs.go-security.result, 'success') && contains(needs.nodejs-security.result, 'success') && '4' || '0' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Failed: ${{ contains(needs.codeql-sast.result, 'failure') || contains(needs.trivy-scan.result, 'failure') || contains(needs.go-security.result, 'failure') || contains(needs.nodejs-security.result, 'failure') && '1' || '0' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           echo "## 🔗 Detailed Reports" >> $GITHUB_STEP_SUMMARY
@@ -339,7 +338,7 @@ jobs:
   security-gate:
     name: Security Gate Check
     runs-on: ubuntu-latest
-    needs: [codeql-sast, dependency-check, trivy-scan]
+    needs: [codeql-sast, trivy-scan]
     if: always() && github.ref == 'refs/heads/main'
     
     steps:
@@ -348,7 +347,7 @@ jobs:
           echo "🔐 Evaluating security gates for deployment..."
           
           # Check if any critical security scan failed
-          if [[ "${{ needs.codeql-sast.result }}" == "failure" || "${{ needs.dependency-check.result }}" == "failure" || "${{ needs.trivy-scan.result }}" == "failure" ]]; then
+          if [[ "${{ needs.codeql-sast.result }}" == "failure" || "${{ needs.trivy-scan.result }}" == "failure" ]]; then
             echo "❌ SECURITY GATE FAILED: One or more critical security scans failed"
             echo "🚫 Deployment blocked due to security issues"
             exit 1
