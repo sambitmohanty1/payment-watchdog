@@ -6,25 +6,25 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 	"go.uber.org/zap"
 )
 
 // Handlers contains all the API handlers with their dependencies
 type Handlers struct {
-	paymentFailureService    *services.PaymentFailureService
-	webhookService           *services.WebhookService
-	alertService             *services.AlertService
-	retryService             *services.RetryService
-	dataQualityService       *services.DataQualityService
-	analyticsService         *services.AnalyticsService
-	recoveryService          *services.RecoveryOrchestrationService
-	communicationService     *services.CommunicationService
-	recoveryHandlers         *RecoveryHandlers
-	logger                   *zap.Logger
+	paymentFailureService *services.PaymentFailureService
+	webhookService        *services.WebhookService
+	alertService          *services.AlertService
+	retryService          *services.RetryService
+	dataQualityService    *services.DataQualityService
+	analyticsService      *services.AnalyticsService
+	recoveryService       *services.RecoveryOrchestrationService
+	communicationService  *services.CommunicationService
+	recoveryHandlers      *RecoveryHandlers
+	logger                *zap.Logger
 }
 
 // NewHandlers creates a new Handlers instance
@@ -40,7 +40,7 @@ func NewHandlers(
 	logger *zap.Logger,
 ) *Handlers {
 	recoveryHandlers := NewRecoveryHandlers(recoveryService, communicationService)
-	
+
 	return &Handlers{
 		paymentFailureService: paymentFailureService,
 		webhookService:        webhookService,
@@ -471,10 +471,6 @@ func (h *Handlers) GetDataQualityTrends(c *gin.Context) {
 
 // GetCompanyAnalyticsSummary returns analytics summary for a company
 func (h *Handlers) GetCompanyAnalyticsSummary(c *gin.Context) {
-	// IMMEDIATE TEST: Just return success to test routing
-	c.JSON(http.StatusOK, gin.H{"test": "success", "handler": "called"})
-	return
-
 	// Check if analytics service is available
 	if h.analyticsService == nil {
 		h.logger.Error("🔍 API DEBUG: AnalyticsService is nil")
