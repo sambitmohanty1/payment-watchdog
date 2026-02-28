@@ -233,7 +233,7 @@ jobs:
           out: 'dependency-check-reports'
 
       - name: Upload Dependency Check results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: dependency-check-report
@@ -337,7 +337,7 @@ jobs:
           npm audit --audit-level=high --json > npm-audit-results.json || true
 
       - name: Upload npm audit results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: npm-audit-report
