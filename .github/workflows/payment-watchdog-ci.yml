@@ -250,6 +250,9 @@ jobs:
           output: 'trivy-fs-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM'
 
+      - name: Ensure Trivy fs SARIF exists
+        run: if [ ! -f trivy-fs-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-fs-results.sarif; fi
+
       - name: Upload Trivy fs results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         if: always()
@@ -270,6 +273,9 @@ jobs:
           format: 'sarif'
           output: 'trivy-api-results.sarif'
           severity: 'CRITICAL,HIGH'
+
+      - name: Ensure Trivy API SARIF exists
+        run: if [ ! -f trivy-api-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-api-results.sarif; fi
 
       - name: Run Trivy on Worker image
         uses: aquasecurity/trivy-action@0.29.0
@@ -307,6 +313,9 @@ jobs:
         run: |
           cd api
           gosec -fmt sarif -out gosec-api-results.sarif ./...
+
+      - name: Ensure Gosec SARIF exists
+        run: if [ ! -f api/gosec-api-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > api/gosec-api-results.sarif; fi
 
       - name: Run Gosec on Worker
         run: |
