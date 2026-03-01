@@ -12,6 +12,11 @@ permissions:
   security-events: write # Required for Trivy/CodeQL
   packages: write
 
+# Ensure only single build runs per branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: docker.io
   # IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/payment-watchdog
