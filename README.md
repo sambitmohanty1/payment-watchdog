@@ -1,7 +1,7 @@
 # Payment Watchdog
 ## Payment Recovery Management Platform
 
-[![Go Version](https://img.shields.io/badge/Go-1.23-blue.svg)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/Go-1.24-blue.svg)](https://golang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Security Scan](https://img.shields.io/badge/Security-Phase%201%20Implemented-brightgreen.svg)](#security)
@@ -16,28 +16,30 @@ Payment Watchdog is a payment recovery management platform designed to help SaaS
 
 ### Features
 - Payment failure detection and monitoring
-- Basic recovery workflows with retry logic
-- Analytics dashboard for payment metrics
-- REST API for integration
-- Web interface for management
+- Advanced recovery workflows with exponential backoff and dead letter queues
+- Analytics dashboard with failure prediction and metrics
+- REST API for integration with comprehensive error handling
+- Web interface for management and monitoring
 - **Enterprise-grade security scanning** (Phase 1 implemented)
+- **Comprehensive CI/CD pipeline** with security gates and automated deployment
 
 ---
 
 ## Architecture
 
 ### Technology Stack
-- **Backend**: Go 1.23, Gin, GORM, PostgreSQL, Redis
+- **Backend**: Go 1.24, Gin, GORM, PostgreSQL, Redis
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS
 - **Infrastructure**: Docker, Docker Compose
 - **Database**: PostgreSQL with Redis for caching
 
 ### Services
-- **API Service**: REST API with Go + Gin framework
-- **Worker Service**: Background processing
-- **Web Interface**: Next.js dashboard
-- **Database**: PostgreSQL
-- **Cache**: Redis for event processing
+- **API Service**: REST API with Go + Gin framework, comprehensive error handling
+- **Worker Service**: Background processing with failure prediction and retry orchestration
+- **Web Interface**: Next.js dashboard with real-time monitoring
+- **Database**: PostgreSQL with optimized query patterns
+- **Cache**: Redis for event processing and session management
+- **Security**: Multi-layered scanning with SARIF integration
 
 ---
 
@@ -45,7 +47,7 @@ Payment Watchdog is a payment recovery management platform designed to help SaaS
 
 ### Prerequisites
 - Docker & Docker Compose
-- Go 1.23+
+- Go 1.24+
 - Node.js 18+
 
 ### Local Development
@@ -94,12 +96,13 @@ go test ./... -cover
 Payment Watchdog implements enterprise-grade security scanning using Phase 1 free tools to ensure the security and integrity of our payment processing platform.
 
 ### **Security Scanning Tools**
-- **GitHub CodeQL** - Native SAST for Go and JavaScript code analysis
+- **GitHub CodeQL v3** - Native SAST for Go and JavaScript code analysis
 - **OWASP Dependency Check** - Open source vulnerability detection
-- **Trivy** - Container and file system security scanning
-- **Gosec** - Go-specific security analysis
+- **Trivy v0.24.0** - Container and file system security scanning
+- **Gosec v2** - Go-specific security analysis with SARIF output
 - **npm audit** - Node.js dependency vulnerability scanning
 - **GitHub Dependabot** - Automated dependency monitoring
+- **Security Gates** - Critical findings block deployment to production
 
 ### **Security Features**
 - ✅ **Automated Scanning** - Runs on every push/PR + daily schedule
@@ -110,9 +113,11 @@ Payment Watchdog implements enterprise-grade security scanning using Phase 1 fre
 
 ### **Security Pipeline**
 ```
-Unit Tests → Security Scan → Build Images → Deploy
+Unit Tests → Security Scan (CodeQL, Trivy, Gosec, OWASP) → Build Images → Deploy to Staging → Production
                 ↓
          Critical Issues Block Deployment
+         ↓
+    Automated Security Reports & Artifacts
 ```
 
 ### **Viewing Security Results**
@@ -163,13 +168,16 @@ docker-compose up -d
 
 ### Production Deployment
 ```bash
-# Build images
-docker build -t payment-watchdog/api ./api
-docker build -t payment-watchdog/worker ./worker
-docker build -t payment-watchdog/web ./web
+# Build production images
+docker build -f api/Dockerfile.production -t payment-watchdog/api ./api
+docker build -f worker/Dockerfile.production -t payment-watchdog/worker ./worker
+docker build -f web/Dockerfile.production -t payment-watchdog/web ./web
 
-# Deploy with Docker Compose
-docker-compose -f docker-compose.prod.yml up -d
+# Deploy to staging
+docker-compose -f docker-compose.staging.yml up -d
+
+# Deploy to production (Kubernetes)
+kubectl apply -f api/deployments/kubernetes/
 ```
 
 ---
@@ -210,11 +218,13 @@ graph TB
 
 ### Data Flow
 
-1. **Payment Events**: Webhooks and API calls enter through the API service
-2. **Processing**: Background worker processes payment failures and retries
-3. **Storage**: Payment data and metrics stored in PostgreSQL
-4. **Caching**: Redis used for session management and temporary data
-5. **Notifications**: Email notifications sent for critical failures
+1. **Payment Events**: Webhooks and API calls enter through API service
+2. **Processing**: Background worker processes payment failures with intelligent retry logic
+3. **Analytics**: Failure prediction engine analyzes patterns and suggests optimizations
+4. **Storage**: Payment data and metrics stored in PostgreSQL with optimized indexing
+5. **Caching**: Redis used for session management, rate limiting, and temporary data
+6. **Notifications**: Multi-channel notifications (email, SMS, webhook) for critical failures
+7. **Monitoring**: Real-time dashboards and alerting system
 
 ### Service Responsibilities
 
@@ -225,23 +235,29 @@ graph TB
 - Health checks and metrics
 
 #### Worker Service
-- Background job processing
-- Payment failure detection
-- Retry logic execution
-- Email notification handling
+- Background job processing with priority queues
+- Payment failure detection and classification
+- Intelligent retry logic with exponential backoff
+- Dead letter queue handling for failed retries
+- Failure prediction and analytics processing
+- Multi-channel notification dispatch
 
 #### Web Interface (Port 4896)
-- Dashboard for payment metrics
-- Configuration management
-- Real-time status monitoring
+- Real-time payment metrics dashboard
+- Configuration management for recovery workflows
+- Failure pattern analysis and prediction
+- Alert management and notification preferences
+- System health monitoring and performance metrics
 
 ### Database Schema
 
-The system uses PostgreSQL with the following key tables:
-- `payments`: Payment transaction records
-- `payment_failures`: Failed payment attempts
-- `recovery_attempts`: Retry execution logs
-- `users`: System user accounts
+The system uses PostgreSQL with optimized schema including:
+- `payments`: Payment transaction records with indexes
+- `payment_failures`: Failed payment attempts with classification
+- `recovery_attempts`: Retry execution logs with success/failure tracking
+- `users`: System user accounts with role-based access
+- `analytics`: Failure patterns and prediction data
+- `notifications`: Multi-channel notification logs
 
 ### Deployment Architecture
 
