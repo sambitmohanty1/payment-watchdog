@@ -506,11 +506,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Decode Kubeconfig
+        id: decode
+        run: |
+          DECODED_FILE=$(mktemp)
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$DECODED_FILE"
+
+          # Use dynamic EOF marker to handle multiline output safely
+          EOF_MARKER=$(head -c 16 /dev/urandom | od -An -t x | tr -d ' \n')
+          echo "kubeconfig<<$EOF_MARKER" >> "$GITHUB_OUTPUT"
+          cat "$DECODED_FILE" >> "$GITHUB_OUTPUT"
+          # Ensure trailing newline
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
+
+          rm "$DECODED_FILE"
+
       - name: Set up Kubernetes Context
         uses: azure/k8s-set-context@v3
         with:
           method: kubeconfig
-          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+          kubeconfig: ${{ steps.decode.outputs.kubeconfig }}
 
       - name: Set namespace context
         run: kubectl config set-context --current --namespace=staging
