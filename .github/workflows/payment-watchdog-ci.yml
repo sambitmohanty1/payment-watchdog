@@ -35,6 +35,7 @@ jobs:
         with:
           go-version: '1.24'
           cache: true # Native caching enabled
+          cache-dependency-path: "**/*.sum"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -206,16 +207,16 @@ jobs:
 
       # GitHub CodeQL SAST
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: go, javascript
           queries: security-extended,security-and-quality
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
 
       # Trivy Security Scanning
       - name: Run Trivy vulnerability scanner in fs mode
@@ -232,7 +233,7 @@ jobs:
         run: if [ ! -f trivy-fs-results.sarif ]; then echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"Security Scanner","rules":[]}},"results":[]}]}' > trivy-fs-results.sarif; fi
 
       - name: Upload Trivy fs results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-fs-results.sarif'
@@ -282,21 +283,21 @@ jobs:
         run: if [ ! -f trivy-worker-results.sarif ]; then echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"Security Scanner","rules":[]}},"results":[]}]}' > trivy-worker-results.sarif; fi
 
       - name: Upload Trivy API results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-api-results.sarif'
           category: 'trivy-api'
 
       - name: Upload Trivy Worker results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-worker-results.sarif'
           category: 'trivy-worker'
 
       - name: Upload Trivy Web results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-web-results.sarif'
@@ -308,6 +309,7 @@ jobs:
         with:
           go-version: '1.24'
           cache: true
+          cache-dependency-path: "**/*.sum"
 
       - name: Install Gosec
         env:
@@ -333,14 +335,14 @@ jobs:
         run: if [ ! -f worker/gosec-worker-results.sarif ]; then echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"Security Scanner","rules":[]}},"results":[]}]}' > worker/gosec-worker-results.sarif; fi
 
       - name: Upload API Gosec results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'api/gosec-api-results.sarif'
           category: 'gosec-api'
 
       - name: Upload Worker Gosec results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'worker/gosec-worker-results.sarif'
@@ -405,6 +407,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to Container Registry
         uses: docker/login-action@v3
