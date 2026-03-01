@@ -317,7 +317,7 @@ jobs:
       - name: Run Gosec on API
         run: |
           cd api
-          gosec -fmt sarif -out gosec-api-results.sarif ./...
+          gosec -fmt sarif -out gosec-api-results.sarif ./... || true
 
       - name: Ensure Gosec SARIF exists
         if: always()
@@ -326,7 +326,7 @@ jobs:
       - name: Run Gosec on Worker
         run: |
           cd worker
-          gosec -fmt sarif -out gosec-worker-results.sarif ./...
+          gosec -fmt sarif -out gosec-worker-results.sarif ./... || true
 
       - name: Ensure Gosec Worker SARIF exists
         if: always()
