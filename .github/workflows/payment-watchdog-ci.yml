@@ -423,15 +423,40 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
+      - name: Extract metadata for API
+        id: meta-api
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ github.repository }}/api
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
+            type=raw,value=${{ github.sha }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Extract metadata for Web
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/web
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=${{ github.sha }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Extract metadata for Worker
+        id: meta-worker
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/worker
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=${{ github.sha }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push API image
@@ -440,8 +465,8 @@ jobs:
           context: api
           file: api/Dockerfile.production
           push: true
-          tags: ${{ steps.meta.outputs.tags }}-api
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -451,8 +476,8 @@ jobs:
           context: web
           file: web/Dockerfile.production
           push: true
-          tags: ${{ steps.meta.outputs.tags }}-web
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -462,8 +487,8 @@ jobs:
           context: .
           file: worker/Dockerfile.production
           push: true
-          tags: ${{ steps.meta.outputs.tags }}-worker
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-worker.outputs.tags }}
+          labels: ${{ steps.meta-worker.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -481,75 +506,51 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-# ADD THIS AUTHENTICATION STEP ---
       - name: Set up Kubernetes Context
         uses: azure/k8s-set-context@v3
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
-      # SECURE: Handles Kubeconfig securely with proper decoding
-      - name: Set k8s context
-        run: |
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > /tmp/kubeconfig
-          export KUBECONFIG=/tmp/kubeconfig
-          
-          # Get available contexts and use the first one if no current context
-          CURRENT_CONTEXT=$(kubectl config current-context 2>/dev/null || echo "")
-          if [ -z "$CURRENT_CONTEXT" ]; then
-            AVAILABLE_CONTEXT=$(kubectl config get-contexts -o name | head -1)
-            kubectl config use-context "$AVAILABLE_CONTEXT"
-          fi
-          
-          kubectl config set-context --current --namespace=staging
-          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+
+      - name: Set namespace context
+        run: kubectl config set-context --current --namespace=staging
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
 
       - name: Update staging deployment
-        env:
-          KUBECONFIG: /tmp/kubeconfig
         run: |
           cd api/deployments/kubernetes
           
-          # Update image tags in kustomization
+          # Update image tags using kustomize
           IMAGE_TAG=${{ github.sha }}
           
-          # Update API image
-          sed -i "s|newName: ghcr.io/sambitmohanty1/payment-watchdog/api|newName: ghcr.io/sambitmohanty1/payment-watchdog/api|g" apps/payment-watchdog-api/kustomization.yaml
-          sed -i "s|newTag: latest|newTag: ${IMAGE_TAG}|g" apps/payment-watchdog-api/kustomization.yaml
+          cd apps/payment-watchdog-api
+          kustomize edit set image payment-watchdog-api=ghcr.io/${{ github.repository }}/api:${IMAGE_TAG}
+          cd ../..
           
-          # Update Web image
-          sed -i "s|newName: ghcr.io/sambitmohanty1/payment-watchdog/web|newName: ghcr.io/sambitmohanty1/payment-watchdog/web|g" apps/payment-watchdog-web/kustomization.yaml
-          sed -i "s|newTag: latest|newTag: ${IMAGE_TAG}|g" apps/payment-watchdog-web/kustomization.yaml
+          cd apps/payment-watchdog-web
+          kustomize edit set image payment-watchdog-web=ghcr.io/${{ github.repository }}/web:${IMAGE_TAG}
+          cd ../..
           
-          # Update Worker image (recovery-orchestration)
-          sed -i "s|newName: ghcr.io/sambitmohanty1/payment-watchdog/worker|newName: ghcr.io/sambitmohanty1/payment-watchdog/worker|g" apps/recovery-orchestration/kustomization.yaml
-          sed -i "s|newTag: latest|newTag: ${IMAGE_TAG}|g" apps/recovery-orchestration/kustomization.yaml
+          cd apps/recovery-orchestration
+          kustomize edit set image payment-watchdog/recovery-orchestration=ghcr.io/${{ github.repository }}/worker:${IMAGE_TAG}
+          cd ../..
           
           # Deploy to staging namespace
-          kubectl config set-context --current --namespace=staging
           kubectl apply -k .
 
       - name: Wait for rollout
-        env:
-          KUBECONFIG: /tmp/kubeconfig
         run: |
           kubectl rollout status deployment/payment-watchdog-api --timeout=300s
           kubectl rollout status deployment/payment-watchdog-ui --timeout=300s
           kubectl rollout status deployment/recovery-orchestration --timeout=300s
 
       - name: Run smoke tests
-        env:
-          KUBECONFIG: /tmp/kubeconfig
         run: |
-          # Wait for services to be ready
-          sleep 30
-
           # Test API health
-          kubectl exec deployment/payment-watchdog-api -- curl -f http://localhost:8080/health
+          kubectl exec deployment/payment-watchdog-api -- curl -s -f http://localhost:8080/health
 
           # Test web accessibility
           WEB_POD=$(kubectl get pods -l app=payment-watchdog,component=ui -o jsonpath='{.items[0].metadata.name}')
-          kubectl exec $WEB_POD -- curl -f http://localhost:3000
-
-          # Test worker service
-          WORKER_POD=$(kubectl get pods -l app.kubernetes.io/name=recovery-orchestration -o jsonpath='{.items[0].metadata.name}')
-          kubectl exec $WORKER_POD -- ps aux | grep payment-watchdog-worker
+          kubectl exec $WEB_POD -- curl -s -f http://localhost:3011
