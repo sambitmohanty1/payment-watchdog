@@ -219,7 +219,7 @@ jobs:
 
       # Trivy Security Scanning
       - name: Run Trivy vulnerability scanner in fs mode
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.24.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -246,7 +246,7 @@ jobs:
           docker build -t payment-watchdog-web:scan ./web
 
       - name: Run Trivy on API image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: 'payment-watchdog-api:scan'
           format: 'sarif'
@@ -258,7 +258,7 @@ jobs:
         run: if [ ! -f trivy-api-results.sarif ]; then echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"Security Scanner","rules":[]}},"results":[]}]}' > trivy-api-results.sarif; fi
 
       - name: Run Trivy on Worker image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: 'payment-watchdog-worker:scan'
           format: 'sarif'
@@ -266,7 +266,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Run Trivy on Web image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: 'payment-watchdog-web:scan'
           format: 'sarif'
