@@ -269,6 +269,111 @@ The application is designed to run in Docker containers with:
 
 ---
 
+## Code Snippets
+
+### RecoveryOrchestrationService
+
+The core service managing automated recovery workflows with concurrent execution and intelligent retry logic.
+
+```go
+type RecoveryOrchestrationService struct {
+	db                    *gorm.DB
+	retryService          *RetryService
+	communicationService  *CommunicationService
+	analyticsService      *AnalyticsService
+	stepExecutors         map[string]StepExecutor
+	tracer                trace.Tracer
+	logger                *zap.Logger
+	mu                    sync.RWMutex
+	activeExecutions      map[uuid.UUID]*WorkflowExecution
+	executionWorkers      int
+	workerPool            chan struct{}
+}
+
+type WorkflowExecution struct {
+	ID                uuid.UUID
+	WorkflowID        uuid.UUID
+	PaymentFailureID  uuid.UUID
+	CompanyID         uuid.UUID
+	Status            string
+	CurrentStepIndex  int
+	Context           map[string]interface{}
+	StartedAt         time.Time
+	CancelFunc        context.CancelFunc
+	mu                sync.RWMutex
+}
+```
+
+### AnalyticsEngine
+
+Advanced analytics engine for payment failure pattern detection, trend analysis, and failure prediction.
+
+```go
+type AnalyticsEngine struct {
+	patternDetector  PatternDetector
+	trendAnalyzer    TrendAnalyzer
+	failurePredictor FailurePredictor
+	metrics          *AnalyticsMetrics
+	logger           *zap.Logger
+	mutex            sync.RWMutex
+}
+
+type PatternDetector interface {
+	DetectPatterns(events []*architecture.PaymentFailure) []Pattern
+	DetectCustomerPatterns(customerID string, events []*architecture.PaymentFailure) []CustomerPattern
+	DetectTemporalPatterns(events []*architecture.PaymentFailure, timeRange time.Duration) []TemporalPattern
+	DetectBusinessPatterns(events []*architecture.PaymentFailure) []Pattern
+}
+
+type Pattern struct {
+	ID          string                 `json:"id"`
+	Type        PatternType            `json:"type"`
+	Confidence  float64                `json:"confidence"`
+	Description string                 `json:"description"`
+	Evidence    []string               `json:"evidence"`
+	CreatedAt   time.Time              `json:"created_at"`
+}
+```
+
+### BaseMediator
+
+Foundation for payment provider integrations with OAuth, API, webhook, and rate limiting support.
+
+```go
+type ProviderConfig struct {
+	ProviderID   string       `json:"provider_id"`
+	ProviderType ProviderType `json:"provider_type"`
+	CompanyID    string       `json:"company_id"`
+	
+	// OAuth configuration
+	OAuthConfig *OAuthConfig `json:"oauth_config,omitempty"`
+	
+	// API configuration
+	APIConfig *APIConfig `json:"api_config,omitempty"`
+	
+	// Webhook configuration
+	WebhookConfig *WebhookConfig `json:"webhook_config,omitempty"`
+	
+	// Sync configuration
+	SyncConfig *SyncConfig `json:"sync_config,omitempty"`
+	
+	// Rate limiting
+	RateLimitConfig *RateLimitConfig `json:"rate_limit_config,omitempty"`
+	
+	// Metadata
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+const (
+	ProviderTypeWebhook ProviderType = "webhook" // Stripe, PayPal
+	ProviderTypeOAuth   ProviderType = "oauth"   // Xero, QuickBooks
+	ProviderTypeAPI     ProviderType = "api"     // Bank APIs, CDR
+	ProviderTypeManual  ProviderType = "manual"  // CSV uploads, manual entry
+)
+```
+
+---
+
 ## Contributing
 
 1. Fork the repository
