@@ -219,7 +219,7 @@ jobs:
 
       # Trivy Security Scanning
       - name: Run Trivy vulnerability scanner in fs mode
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -229,7 +229,7 @@ jobs:
 
       - name: Ensure Trivy fs SARIF exists
         if: always()
-        run: if [ ! -f trivy-fs-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-fs-results.sarif; fi
+        run: if [ ! -f trivy-fs-results.sarif ]; then echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"Security Scanner","rules":[]}},"results":[]}]}' > trivy-fs-results.sarif; fi
 
       - name: Upload Trivy fs results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -246,7 +246,7 @@ jobs:
           docker build -t payment-watchdog-web:scan ./web
 
       - name: Run Trivy on API image
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: 'payment-watchdog-api:scan'
           format: 'sarif'
@@ -255,10 +255,10 @@ jobs:
 
       - name: Ensure Trivy API SARIF exists
         if: always()
-        run: if [ ! -f trivy-api-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-api-results.sarif; fi
+        run: if [ ! -f trivy-api-results.sarif ]; then echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"Security Scanner","rules":[]}},"results":[]}]}' > trivy-api-results.sarif; fi
 
       - name: Run Trivy on Worker image
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: 'payment-watchdog-worker:scan'
           format: 'sarif'
@@ -266,7 +266,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Run Trivy on Web image
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: 'payment-watchdog-web:scan'
           format: 'sarif'
@@ -275,11 +275,11 @@ jobs:
 
       - name: Ensure Trivy Web SARIF exists
         if: always()
-        run: if [ ! -f trivy-web-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-web-results.sarif; fi
+        run: if [ ! -f trivy-web-results.sarif ]; then echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"Security Scanner","rules":[]}},"results":[]}]}' > trivy-web-results.sarif; fi
 
       - name: Ensure Trivy Worker SARIF exists
         if: always()
-        run: if [ ! -f trivy-worker-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > trivy-worker-results.sarif; fi
+        run: if [ ! -f trivy-worker-results.sarif ]; then echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"Security Scanner","rules":[]}},"results":[]}]}' > trivy-worker-results.sarif; fi
 
       - name: Upload Trivy API results
         uses: github/codeql-action/upload-sarif@v3
@@ -321,7 +321,7 @@ jobs:
 
       - name: Ensure Gosec SARIF exists
         if: always()
-        run: if [ ! -f api/gosec-api-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > api/gosec-api-results.sarif; fi
+        run: if [ ! -f api/gosec-api-results.sarif ]; then echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"Security Scanner","rules":[]}},"results":[]}]}' > api/gosec-api-results.sarif; fi
 
       - name: Run Gosec on Worker
         run: |
@@ -330,7 +330,7 @@ jobs:
 
       - name: Ensure Gosec Worker SARIF exists
         if: always()
-        run: if [ ! -f worker/gosec-worker-results.sarif ]; then echo '{"version":"2.1.0","runs":[]}' > worker/gosec-worker-results.sarif; fi
+        run: if [ ! -f worker/gosec-worker-results.sarif ]; then echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[{"tool":{"driver":{"name":"Security Scanner","rules":[]}},"results":[]}]}' > worker/gosec-worker-results.sarif; fi
 
       - name: Upload API Gosec results
         uses: github/codeql-action/upload-sarif@v3
