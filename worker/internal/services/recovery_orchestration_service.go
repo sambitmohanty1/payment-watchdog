@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -20,31 +21,31 @@ import (
 
 // RecoveryOrchestrationService manages automated recovery workflows
 type RecoveryOrchestrationService struct {
-	db                    *gorm.DB
-	retryService          *RetryService
-	communicationService  *CommunicationService
-	analyticsService      *AnalyticsService
-	stepExecutors         map[string]StepExecutor
-	tracer                trace.Tracer
-	logger                *zap.Logger
-	mu                    sync.RWMutex
-	activeExecutions      map[uuid.UUID]*WorkflowExecution
-	executionWorkers      int
-	workerPool            chan struct{}
+	db                   *gorm.DB
+	retryService         *RetryService
+	communicationService *CommunicationService
+	analyticsService     *AnalyticsService
+	stepExecutors        map[string]StepExecutor
+	tracer               trace.Tracer
+	logger               *zap.Logger
+	redisClient          *redis.Client
+	mu                   sync.RWMutex // Local mutex for in-memory state
+	activeExecutions     map[uuid.UUID]*WorkflowExecution
+	executionWorkers     int
+	workerPool           chan struct{}
 }
 
 // WorkflowExecution represents an active workflow execution
 type WorkflowExecution struct {
-	ID                uuid.UUID
-	WorkflowID        uuid.UUID
-	PaymentFailureID  uuid.UUID
-	CompanyID         uuid.UUID
-	Status            string
-	CurrentStepIndex  int
-	Context           map[string]interface{}
-	StartedAt         time.Time
-	CancelFunc        context.CancelFunc
-	mu                sync.RWMutex
+	ID               uuid.UUID
+	WorkflowID       uuid.UUID
+	PaymentFailureID uuid.UUID
+	CompanyID        uuid.UUID
+	Status           string
+	CurrentStepIndex int
+	Context          map[string]interface{}
+	StartedAt        time.Time
+	CancelFunc       context.CancelFunc
 }
 
 // StepExecutor interface for different types of workflow steps
@@ -82,6 +83,7 @@ func NewRecoveryOrchestrationService(
 	retryService *RetryService,
 	communicationService *CommunicationService,
 	analyticsService *AnalyticsService,
+	redisClient *redis.Client,
 	logger *zap.Logger,
 ) *RecoveryOrchestrationService {
 	service := &RecoveryOrchestrationService{
@@ -94,6 +96,7 @@ func NewRecoveryOrchestrationService(
 		activeExecutions:     make(map[uuid.UUID]*WorkflowExecution),
 		executionWorkers:     10, // Configurable
 		workerPool:           make(chan struct{}, 10),
+		redisClient:          redisClient,
 	}
 
 	// Register default step executors
@@ -122,6 +125,24 @@ func (r *RecoveryOrchestrationService) TriggerWorkflowsForFailure(ctx context.Co
 		attribute.String("company_id", paymentFailure.CompanyID),
 	)
 
+	// --- DISTRIBUTED LOCK LOGIC START ---
+	lockKey := fmt.Sprintf("lock:payment_failure:%s", paymentFailure.ID.String())
+	lockTTL := 1 * time.Hour // Adjust TTL based on your max expected workflow duration
+
+	// Attempt to acquire lock
+	acquired, err := r.redisClient.SetNX(ctx, lockKey, "locked", lockTTL).Result()
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to interact with Redis for locking: %w", err)
+	}
+
+	if !acquired {
+		r.logger.Info("Payment failure is already being processed by another worker",
+			zap.String("payment_failure_id", paymentFailure.ID.String()))
+		return nil // Skip processing, another instance is handling it
+	}
+	// --- DISTRIBUTED LOCK LOGIC END ---
+
 	// Get active workflows for the company
 	var workflows []models.RecoveryWorkflow
 	if err := r.db.WithContext(ctx).
@@ -129,6 +150,8 @@ func (r *RecoveryOrchestrationService) TriggerWorkflowsForFailure(ctx context.Co
 		Order("priority DESC").
 		Preload("Steps", "is_active = ?", true).
 		Find(&workflows).Error; err != nil {
+		// Release lock immediately on early failure
+		r.redisClient.Del(ctx, lockKey)
 		span.RecordError(err)
 		return fmt.Errorf("failed to get workflows: %w", err)
 	}
@@ -142,6 +165,12 @@ func (r *RecoveryOrchestrationService) TriggerWorkflowsForFailure(ctx context.Co
 	}
 
 	span.SetAttributes(attribute.Int("matching_workflows", len(matchingWorkflows)))
+
+	// If no workflows matched, release the lock and return
+	if len(matchingWorkflows) == 0 {
+		r.redisClient.Del(ctx, lockKey)
+		return nil
+	}
 
 	// Execute matching workflows (highest priority first)
 	for _, workflow := range matchingWorkflows {
@@ -192,7 +221,7 @@ func (r *RecoveryOrchestrationService) StartWorkflowExecution(ctx context.Contex
 		CancelFunc: cancel,
 	}
 
-	// Store active execution
+	// Store active execution using local mutex
 	r.mu.Lock()
 	r.activeExecutions[execution.ID] = activeExecution
 	r.mu.Unlock()
@@ -227,8 +256,15 @@ func (r *RecoveryOrchestrationService) executeWorkflow(ctx context.Context, exec
 		return
 	}
 
-	// Ensure the execution is cleaned up when done
+	// Ensure the execution and distributed lock are cleaned up when done
 	defer func() {
+		// --- RELEASE DISTRIBUTED LOCK ---
+		lockKey := fmt.Sprintf("lock:payment_failure:%s", execution.PaymentFailureID.String())
+		if err := r.redisClient.Del(context.Background(), lockKey).Err(); err != nil {
+			logger.Error("Failed to release distributed lock", zap.Error(err))
+		}
+
+		// Remove from active executions using local mutex
 		r.mu.Lock()
 		delete(r.activeExecutions, execution.ID)
 		r.mu.Unlock()
@@ -240,8 +276,8 @@ func (r *RecoveryOrchestrationService) executeWorkflow(ctx context.Context, exec
 		}
 
 		if err := r.updateExecutionStatus(ctx, execution.ID, status); err != nil {
-			logger.Error("Failed to update execution status", 
-				zap.String("status", status), 
+			logger.Error("Failed to update execution status",
+				zap.String("status", status),
 				zap.Error(err))
 		}
 
@@ -253,11 +289,11 @@ func (r *RecoveryOrchestrationService) executeWorkflow(ctx context.Context, exec
 		// Log workflow completion
 		duration := time.Since(execution.StartedAt)
 		if execution.Status == "completed" {
-			logger.Info("Workflow execution completed successfully", 
+			logger.Info("Workflow execution completed successfully",
 				zap.Duration("duration", duration),
 				zap.Int("steps_completed", execution.CurrentStepIndex))
 		} else if execution.Status == "failed" {
-			logger.Error("Workflow execution failed", 
+			logger.Error("Workflow execution failed",
 				zap.Duration("duration", duration),
 				zap.Int("steps_completed", execution.CurrentStepIndex))
 		}
@@ -266,11 +302,11 @@ func (r *RecoveryOrchestrationService) executeWorkflow(ctx context.Context, exec
 	// Execute each step in sequence
 	for i := execution.CurrentStepIndex; i < len(workflow.Steps); i++ {
 		step := workflow.Steps[i]
-		
+
 		// Update current step
 		execution.CurrentStepIndex = i
 		if err := r.updateCurrentStep(ctx, execution.ID, &step.ID); err != nil {
-			logger.Error("Failed to update current step", 
+			logger.Error("Failed to update current step",
 				zap.String("step_id", step.ID.String()),
 				zap.Error(err))
 			execution.Status = "failed"
@@ -279,7 +315,7 @@ func (r *RecoveryOrchestrationService) executeWorkflow(ctx context.Context, exec
 
 		// Execute the step
 		if err := r.executeStep(ctx, execution, &step); err != nil {
-			logger.Error("Step execution failed", 
+			logger.Error("Step execution failed",
 				zap.String("step_id", step.ID.String()),
 				zap.String("step_type", step.StepType),
 				zap.Error(err))
@@ -301,75 +337,6 @@ func (r *RecoveryOrchestrationService) executeWorkflow(ctx context.Context, exec
 
 	// If we've reached here, all steps completed successfully
 	execution.Status = "completed"
-	ctx, span := r.tracer.Start(ctx, "execute_workflow")
-	defer span.End()
-
-	// Acquire worker slot
-	r.workerPool <- struct{}{}
-	defer func() { <-r.workerPool }()
-
-	defer func() {
-		// Clean up active execution
-		r.mu.Lock()
-		delete(r.activeExecutions, execution.ID)
-		r.mu.Unlock()
-	}()
-
-	// Update execution status
-	if err := r.updateExecutionStatus(ctx, execution.ID, "running"); err != nil {
-		log.Printf("Failed to update execution status: %v", err)
-		return
-	}
-
-	// Execute workflow steps
-	for i, step := range workflow.Steps {
-		if !step.IsActive {
-			continue
-		}
-
-		execution.mu.Lock()
-		execution.CurrentStepIndex = i
-		execution.mu.Unlock()
-
-		// Update current step in database
-		if err := r.updateCurrentStep(ctx, execution.ID, &step.ID); err != nil {
-			log.Printf("Failed to update current step: %v", err)
-		}
-
-		// Execute step with delay if specified
-		if step.DelayMinutes > 0 {
-			select {
-			case <-time.After(time.Duration(step.DelayMinutes) * time.Minute):
-			case <-ctx.Done():
-				r.updateExecutionStatus(ctx, execution.ID, "cancelled")
-				return
-			}
-		}
-
-		// Execute the step
-		if err := r.executeStep(ctx, execution, &step); err != nil {
-			log.Printf("Step execution failed: %v", err)
-			r.updateExecutionStatus(ctx, execution.ID, "failed")
-			return
-		}
-
-		// Check if execution was cancelled
-		select {
-		case <-ctx.Done():
-			r.updateExecutionStatus(ctx, execution.ID, "cancelled")
-			return
-		default:
-		}
-	}
-
-	// Mark execution as completed
-	r.updateExecutionStatus(ctx, execution.ID, "completed")
-	r.updateExecutionCompletedAt(ctx, execution.ID, time.Now())
-
-	span.SetAttributes(
-		attribute.String("execution_id", execution.ID.String()),
-		attribute.String("final_status", "completed"),
-	)
 }
 
 // executeStep executes a single workflow step
@@ -397,7 +364,7 @@ func (r *RecoveryOrchestrationService) executeStep(ctx context.Context, executio
 		return fmt.Errorf("failed to create step execution: %w", err)
 	}
 
-	// Get step executor
+	// Get step executor using local mutex
 	r.mu.RLock()
 	executor, exists := r.stepExecutors[step.StepType]
 	r.mu.RUnlock()
@@ -573,7 +540,7 @@ func toFloat64(v interface{}) float64 {
 }
 
 func contains(str, substr string) bool {
-	return len(str) >= len(substr) && (str == substr || len(substr) == 0 || 
+	return len(str) >= len(substr) && (str == substr || len(substr) == 0 ||
 		(len(substr) > 0 && findSubstring(str, substr)))
 }
 
@@ -729,19 +696,19 @@ func (r *RecoveryOrchestrationService) TriggerWorkflowManually(ctx context.Conte
 // GetRecoveryMetrics retrieves recovery performance metrics
 func (r *RecoveryOrchestrationService) GetRecoveryMetrics(ctx context.Context, companyID uuid.UUID, timeRange time.Duration) (*models.RecoveryMetrics, error) {
 	startTime := time.Now().Add(-timeRange)
-	
+
 	var metrics models.RecoveryMetrics
-	
+
 	// Get workflow execution metrics
 	var totalExecutions, successfulExecutions, failedExecutions int64
 	r.db.WithContext(ctx).Model(&models.RecoveryWorkflowExecution{}).
 		Where("company_id = ? AND created_at >= ?", companyID, startTime).
 		Count(&totalExecutions)
-	
+
 	r.db.WithContext(ctx).Model(&models.RecoveryWorkflowExecution{}).
 		Where("company_id = ? AND created_at >= ? AND status = ?", companyID, startTime, "completed").
 		Count(&successfulExecutions)
-	
+
 	r.db.WithContext(ctx).Model(&models.RecoveryWorkflowExecution{}).
 		Where("company_id = ? AND created_at >= ? AND status = ?", companyID, startTime, "failed").
 		Count(&failedExecutions)
@@ -751,7 +718,7 @@ func (r *RecoveryOrchestrationService) GetRecoveryMetrics(ctx context.Context, c
 	r.db.WithContext(ctx).Model(&models.RecoveryAction{}).
 		Where("company_id = ? AND created_at >= ?", companyID, startTime).
 		Count(&totalActions)
-	
+
 	r.db.WithContext(ctx).Model(&models.RecoveryAction{}).
 		Where("company_id = ? AND created_at >= ? AND status = ?", companyID, startTime, "completed").
 		Count(&successfulActions)
@@ -766,7 +733,7 @@ func (r *RecoveryOrchestrationService) GetRecoveryMetrics(ctx context.Context, c
 	metrics.FailedWorkflowExecutions = int(failedExecutions)
 	metrics.TotalRecoveryActions = int(totalActions)
 	metrics.SuccessfulRecoveryActions = int(successfulActions)
-	
+
 	if totalActions > 0 {
 		metrics.RecoverySuccessRate = float64(successfulActions) / float64(totalActions) * 100
 	}
@@ -811,7 +778,7 @@ func (r *RecoveryOrchestrationService) GetWorkflowExecutions(ctx context.Context
 }
 
 func (r *RecoveryOrchestrationService) PauseWorkflowExecution(ctx context.Context, executionID uuid.UUID) error {
-	// Cancel active execution
+	// Cancel active execution using local mutex
 	r.mu.Lock()
 	if activeExecution, exists := r.activeExecutions[executionID]; exists {
 		activeExecution.CancelFunc()
@@ -856,7 +823,7 @@ func (r *RecoveryOrchestrationService) ResumeWorkflowExecution(ctx context.Conte
 }
 
 func (r *RecoveryOrchestrationService) CancelWorkflowExecution(ctx context.Context, executionID uuid.UUID) error {
-	// Cancel active execution
+	// Cancel active execution using local mutex
 	r.mu.Lock()
 	if activeExecution, exists := r.activeExecutions[executionID]; exists {
 		activeExecution.CancelFunc()

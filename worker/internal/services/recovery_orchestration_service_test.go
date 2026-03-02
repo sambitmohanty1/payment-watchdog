@@ -7,7 +7,18 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap/zaptest"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/services"
+)
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -345,4 +356,155 @@ func TestWorkflowExecutionLifecycle(t *testing.T) {
 	db.Delete(workflow)
 	db.Delete(execution)
 	db.Delete(stepExecution)
+}
+
+// ===== HYBRID LOCKING TESTS =====
+
+// HybridLockingTestSuite tests the hybrid locking approach
+type HybridLockingTestSuite struct {
+	suite.Suite
+	db          *gorm.DB
+	redisClient *redis.Client
+	service     *services.RecoveryOrchestrationService
+	ctx         context.Context
+}
+
+// SetupSuite runs once before all tests
+func (suite *HybridLockingTestSuite) SetupSuite() {
+	suite.ctx = context.Background()
+	logger := zaptest.NewLogger(suite.T())
+
+	// Setup in-memory SQLite database
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(suite.T(), err)
+
+	// Auto-migrate models
+	err = db.AutoMigrate(
+		&models.PaymentFailureEvent{},
+		&models.RecoveryWorkflow{},
+		&models.RecoveryWorkflowStep{},
+		&models.RecoveryWorkflowExecution{},
+		&models.RecoveryStepExecution{},
+	)
+	require.NoError(suite.T(), err)
+
+	suite.db = db
+
+	// Setup Redis client (using test database)
+	suite.redisClient = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       2, // Use separate DB for tests
+	})
+
+	// Test Redis connection
+	err = suite.redisClient.Ping(suite.ctx).Err()
+	if err != nil {
+		suite.T().Skip("Redis not available for testing")
+	}
+
+	// Create service with mock dependencies
+	suite.service = &services.RecoveryOrchestrationService{
+		Db:               suite.db,
+		RedisClient:      suite.redisClient,
+		StepExecutors:    make(map[string]services.StepExecutor),
+		ActiveExecutions: make(map[uuid.UUID]*services.WorkflowExecution),
+		WorkerPool:       make(chan struct{}, 10),
+		Logger:           logger,
+	}
+}
+
+// TearDownSuite runs once after all tests
+func (suite *HybridLockingTestSuite) TearDownSuite() {
+	if suite.redisClient != nil {
+		suite.redisClient.FlushDB(suite.ctx)
+		suite.redisClient.Close()
+	}
+	if suite.db != nil {
+		sqlDB, _ := suite.db.DB()
+		sqlDB.Close()
+	}
+}
+
+// SetupTest runs before each test
+func (suite *HybridLockingTestSuite) SetupTest() {
+	// Clean up Redis
+	if suite.redisClient != nil {
+		suite.redisClient.FlushDB(suite.ctx)
+	}
+	
+	// Clean up database
+	suite.db.Exec("DELETE FROM recovery_step_executions")
+	suite.db.Exec("DELETE FROM recovery_workflow_executions")
+	suite.db.Exec("DELETE FROM recovery_workflow_steps")
+	suite.db.Exec("DELETE FROM recovery_workflows")
+	suite.db.Exec("DELETE FROM payment_failure_events")
+	
+	// Reset active executions
+	suite.service.Mu.Lock()
+	suite.service.ActiveExecutions = make(map[uuid.UUID]*services.WorkflowExecution)
+	suite.service.Mu.Unlock()
+}
+
+// TestPaymentFailureDistributedLock tests that only one worker can process a payment failure
+func (suite *HybridLockingTestSuite) TestPaymentFailureDistributedLock() {
+	// Create test payment failure
+	paymentFailure := &models.PaymentFailureEvent{
+		ID:            uuid.New(),
+		CompanyID:     uuid.New(),
+		AmountCents:   10000,
+		Currency:      "USD",
+		FailureReason: "insufficient_funds",
+		Provider:      "stripe",
+	}
+	err := suite.db.Create(paymentFailure).Error
+	require.NoError(suite.T(), err)
+
+	// Create test workflow
+	workflow := &models.RecoveryWorkflow{
+		ID:        uuid.New(),
+		CompanyID: paymentFailure.CompanyID,
+		Name:      "Test Workflow",
+		IsActive:  true,
+		Priority:  1,
+		Steps: []models.RecoveryWorkflowStep{
+			{
+				ID:        uuid.New(),
+				StepType:  "email",
+				StepName:  "Send Email",
+				IsActive:  true,
+				IsCritical: false,
+			},
+		},
+	}
+	err = suite.db.Create(workflow).Error
+	require.NoError(suite.T(), err)
+
+	// First attempt should succeed
+	err = suite.service.TriggerWorkflowsForFailure(suite.ctx, paymentFailure)
+	assert.NoError(suite.T(), err)
+
+	// Verify lock exists in Redis
+	lockKey := "lock:payment_failure:" + paymentFailure.ID.String()
+	exists := suite.redisClient.Exists(suite.ctx, lockKey).Val()
+	assert.Equal(suite.T(), int64(1), exists)
+
+	// Second attempt should fail (lock already held)
+	err = suite.service.TriggerWorkflowsForFailure(suite.ctx, paymentFailure)
+	assert.NoError(suite.T(), err) // Should return nil, not error
+
+	// Verify only one workflow execution was created
+	var executions []models.RecoveryWorkflowExecution
+	err = suite.db.Where("payment_failure_id = ?", paymentFailure.ID).Find(&executions).Error
+	assert.NoError(suite.T(), err)
+	assert.Len(suite.T(), executions, 1)
+}
+
+// TestHybridLockingIntegration runs the hybrid locking test suite
+func TestHybridLockingIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	
+	suite.Run(t, new(HybridLockingTestSuite))
 }

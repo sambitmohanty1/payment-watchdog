@@ -10,6 +10,8 @@ import (
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
+	Redis    RedisConfig    `mapstructure:"redis"`
+	Lock     LockConfig     `mapstructure:"lock"`
 	Stripe   StripeConfig   `mapstructure:"stripe"`
 	Xero     XeroConfig     `mapstructure:"xero"`
 	Email    EmailConfig    `mapstructure:"email"`
@@ -33,6 +35,22 @@ type DatabaseConfig struct {
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	SSLMode  string `mapstructure:"ssl_mode"`
+}
+
+// RedisConfig holds Redis configuration
+type RedisConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
+}
+
+// LockConfig holds distributed lock configuration
+type LockConfig struct {
+	DefaultTTL string `mapstructure:"default_ttl"` // Duration string (e.g., "30m")
+	RetryDelay string `mapstructure:"retry_delay"` // Duration string (e.g., "100ms")
+	MaxRetries int    `mapstructure:"max_retries"`
+	Prefix     string `mapstructure:"prefix"`
 }
 
 // StripeConfig holds Stripe configuration
@@ -81,6 +99,14 @@ func Load() error {
 	viper.SetDefault("database.user", "postgres")
 	viper.SetDefault("database.password", "password")
 	viper.SetDefault("database.ssl_mode", "disable")
+	viper.SetDefault("redis.host", "localhost")
+	viper.SetDefault("redis.port", 6379)
+	viper.SetDefault("redis.password", "")
+	viper.SetDefault("redis.db", 0)
+	viper.SetDefault("lock.default_ttl", "30m")
+	viper.SetDefault("lock.retry_delay", "100ms")
+	viper.SetDefault("lock.max_retries", 50)
+	viper.SetDefault("lock.prefix", "payment_watchdog:lock:")
 	viper.SetDefault("log.level", "info")
 
 	fmt.Println("🔍 CONFIG DEBUG: Defaults set")
@@ -149,6 +175,38 @@ func Load() error {
 	if err := viper.BindEnv("database.password", "DATABASE_PASSWORD"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_PASSWORD: %v\n", err)
 		return fmt.Errorf("failed to bind DATABASE_PASSWORD: %w", err)
+	}
+	if err := viper.BindEnv("redis.host", "REDIS_HOST"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind REDIS_HOST: %v\n", err)
+		return fmt.Errorf("failed to bind REDIS_HOST: %w", err)
+	}
+	if err := viper.BindEnv("redis.port", "REDIS_PORT"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind REDIS_PORT: %v\n", err)
+		return fmt.Errorf("failed to bind REDIS_PORT: %w", err)
+	}
+	if err := viper.BindEnv("redis.password", "REDIS_PASSWORD"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind REDIS_PASSWORD: %v\n", err)
+		return fmt.Errorf("failed to bind REDIS_PASSWORD: %w", err)
+	}
+	if err := viper.BindEnv("redis.db", "REDIS_DB"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind REDIS_DB: %v\n", err)
+		return fmt.Errorf("failed to bind REDIS_DB: %w", err)
+	}
+	if err := viper.BindEnv("lock.default_ttl", "LOCK_DEFAULT_TTL"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOCK_DEFAULT_TTL: %v\n", err)
+		return fmt.Errorf("failed to bind LOCK_DEFAULT_TTL: %w", err)
+	}
+	if err := viper.BindEnv("lock.retry_delay", "LOCK_RETRY_DELAY"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOCK_RETRY_DELAY: %v\n", err)
+		return fmt.Errorf("failed to bind LOCK_RETRY_DELAY: %w", err)
+	}
+	if err := viper.BindEnv("lock.max_retries", "LOCK_MAX_RETRIES"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOCK_MAX_RETRIES: %v\n", err)
+		return fmt.Errorf("failed to bind LOCK_MAX_RETRIES: %w", err)
+	}
+	if err := viper.BindEnv("lock.prefix", "LOCK_PREFIX"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOCK_PREFIX: %v\n", err)
+		return fmt.Errorf("failed to bind LOCK_PREFIX: %w", err)
 	}
 	if err := viper.BindEnv("stripe.secret_key", "STRIPE_SECRET_KEY"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind STRIPE_SECRET_KEY: %v\n", err)

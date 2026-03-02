@@ -1,0 +1,50 @@
+# Payment Watchdog Worker Configuration
+
+server:
+  port: "8085"
+  host: "0.0.0.0"
+  https: false
+  cert_file: "./certs/server.crt"
+  key_file: "./certs/server.key"
+
+database:
+  host: "localhost"
+  port: 5432
+  name: "payment_watchdog"
+  user: "postgres"
+  password: "password"
+  ssl_mode: "disable"
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
+lock:
+  default_ttl: "30m"      # Default lock TTL (30 minutes)
+  retry_delay: "100ms"   # Delay between retry attempts
+  max_retries: 50        # Maximum number of retry attempts
+  prefix: "payment_watchdog:lock:"  # Lock key prefix
+
+stripe:
+  secret_key: ""
+  webhook_secret: ""
+  publishable_key: ""
+
+xero:
+  client_id: ""
+  client_secret: ""
+  redirect_uri: ""
+
+email:
+  provider: "smtp"
+  host: "localhost"
+  port: 1025
+  username: ""
+  password: ""
+  from_email: "noreply@paymentwatchdog.com"
+  from_name: "Payment Watchdog"
+
+log:
+  level: "info"
