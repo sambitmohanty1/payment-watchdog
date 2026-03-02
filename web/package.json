@@ -104,7 +104,7 @@
     "@storybook/addon-links": "8.1.6",
     "@storybook/blocks": "8.1.6",
     "@storybook/nextjs": "8.1.6",
-    "@storybook/react": "8.1.6",
+    "@storybook/react": "10.2.13",
     "@storybook/test": "8.1.6",
     "storybook": "8.1.6",
     "prettier": "3.2.5",
