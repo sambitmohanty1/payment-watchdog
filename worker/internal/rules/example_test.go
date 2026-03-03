@@ -15,7 +15,7 @@ func TestRuleEngine(t *testing.T) {
 	defer logger.Sync()
 
 	// Create rule engine factory
-	factory := NewRuleEngineFactory(logger)
+	factory := NewRuleEngineFactory(logger, nil)
 
 	// Create payment failure rule engine
 	engine := factory.CreateBasicRuleEngine()
@@ -51,7 +51,7 @@ func TestRuleEngine(t *testing.T) {
 		// Check if high-value alert rule was executed
 		highValueAlertExecuted := false
 		for _, result := range results {
-			if result.RuleName == "high_value_alert" && result.Success {
+			if result.RuleName == "high_value_immediate_alert" && result.Success {
 				highValueAlertExecuted = true
 				break
 			}
@@ -114,12 +114,12 @@ func TestRuleEngineStats(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	defer logger.Sync()
 
-	factory := NewRuleEngineFactory(logger)
+	factory := NewRuleEngineFactory(logger, nil)
 	engine := factory.CreateBasicRuleEngine()
 
 	stats := engine.GetStats()
 
-	expectedRules := 3 // Update to match actual number of default rules
+	expectedRules := 11 // Update to match actual number of default rules
 	if stats["total_rules"] != expectedRules {
 		t.Errorf("Expected %d total rules, got %v", expectedRules, stats["total_rules"])
 	}
@@ -137,15 +137,15 @@ func TestRuleEngineEnableDisable(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	defer logger.Sync()
 
-	factory := NewRuleEngineFactory(logger)
+	factory := NewRuleEngineFactory(logger, nil)
 	engine := factory.CreateBasicRuleEngine()
 
 	// Disable a rule
-	engine.DisableRule("high_value_alert")
+	engine.DisableRule("high_value_immediate_alert")
 
 	// Check stats
 	stats := engine.GetStats()
-	if stats["enabled_rules"] != 2 { // 3 - 1 = 2
+	if stats["enabled_rules"] != 10 { // 3 - 1 = 2
 		t.Errorf("Expected 2 enabled rules after disabling one, got %v", stats["enabled_rules"])
 	}
 
@@ -154,11 +154,11 @@ func TestRuleEngineEnableDisable(t *testing.T) {
 	}
 
 	// Re-enable the rule
-	engine.EnableRule("high_value_alert")
+	engine.EnableRule("high_value_immediate_alert")
 
 	// Check stats again
 	stats = engine.GetStats()
-	if stats["enabled_rules"] != 3 {
+	if stats["enabled_rules"] != 11 {
 		t.Errorf("Expected 3 enabled rules after re-enabling, got %v", stats["enabled_rules"])
 	}
 	if stats["disabled_rules"] != 0 {
