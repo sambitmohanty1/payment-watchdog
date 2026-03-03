@@ -2,17 +2,20 @@ package rules
 
 import (
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // RuleEngineFactory creates and configures rule engines
 type RuleEngineFactory struct {
 	logger *zap.Logger
+	db     *gorm.DB
 }
 
 // NewRuleEngineFactory creates a new rule engine factory
-func NewRuleEngineFactory(logger *zap.Logger) *RuleEngineFactory {
+func NewRuleEngineFactory(logger *zap.Logger, db *gorm.DB) *RuleEngineFactory {
 	return &RuleEngineFactory{
 		logger: logger,
+		db:     db,
 	}
 }
 
@@ -22,7 +25,7 @@ func (f *RuleEngineFactory) CreateComprehensiveRuleEngine() RuleEngine {
 	engine := NewBasicRuleEngine(f.logger)
 
 	// Create comprehensive payment failure rules
-	comprehensiveRules := NewComprehensivePaymentFailureRules(f.logger)
+	comprehensiveRules := NewComprehensivePaymentFailureRules(f.logger, f.db)
 
 	// Add all comprehensive rules
 	for _, rule := range comprehensiveRules.GetComprehensiveRules() {
@@ -41,7 +44,7 @@ func (f *RuleEngineFactory) CreateBasicRuleEngine() RuleEngine {
 	engine := NewBasicRuleEngine(f.logger)
 
 	// Add essential payment failure rules for Sprint 3
-	paymentFailureRules := NewComprehensivePaymentFailureRules(f.logger)
+	paymentFailureRules := NewComprehensivePaymentFailureRules(f.logger, f.db)
 
 	for _, rule := range paymentFailureRules.GetComprehensiveRules() {
 		engine.AddRule(rule)

@@ -3,6 +3,9 @@ package rules
 import (
 	"time"
 
+	"gorm.io/gorm"
+
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 	"go.uber.org/zap"
 )
@@ -10,12 +13,14 @@ import (
 // ComprehensivePaymentFailureRules contains all business rules based on industry research
 type ComprehensivePaymentFailureRules struct {
 	logger *zap.Logger
+	db     *gorm.DB
 }
 
 // NewComprehensivePaymentFailureRules creates comprehensive payment failure rules
-func NewComprehensivePaymentFailureRules(logger *zap.Logger) *ComprehensivePaymentFailureRules {
+func NewComprehensivePaymentFailureRules(logger *zap.Logger, db *gorm.DB) *ComprehensivePaymentFailureRules {
 	return &ComprehensivePaymentFailureRules{
 		logger: logger,
+		db:     db,
 	}
 }
 
@@ -432,7 +437,24 @@ func (cpr *ComprehensivePaymentFailureRules) isRecurringPayment(event *models.Pa
 }
 
 func (cpr *ComprehensivePaymentFailureRules) isVIPCustomer(customerID string) bool {
-	// TODO: Check customer database for VIP status
+	if cpr.db == nil || customerID == "" {
+		return false
+	}
+
+	var customer architecture.Customer
+	if err := cpr.db.Where("provider_customer_id = ?", customerID).First(&customer).Error; err != nil {
+		if err != gorm.ErrRecordNotFound {
+			cpr.logger.Error("Failed to query customer for VIP status", zap.Error(err), zap.String("customer_id", customerID))
+		}
+		return false
+	}
+
+	// VIP is defined as having total paid over $10,000 or a specific risk category
+	// This implements the business rule for VIP status
+	if customer.TotalPaid >= 10000.0 || customer.RiskCategory == "low_risk" {
+		return true
+	}
+
 	return false
 }
 

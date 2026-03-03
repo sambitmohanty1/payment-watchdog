@@ -30,7 +30,9 @@ func main() {
 			config.Load,
 			initLogger,
 			initDatabase,
-			rules.NewRuleEngineFactory,
+			func(logger *zap.Logger, db *gorm.DB) *rules.RuleEngineFactory {
+				return rules.NewRuleEngineFactory(logger, db)
+			},
 			func(ref rules.RuleEngineFactory) rules.RuleEngine {
 				return ref.CreateComprehensiveRuleEngine()
 			},
