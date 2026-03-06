@@ -7,16 +7,16 @@ import (
 
 // RateLimiter provides rate limiting functionality
 type RateLimiter struct {
-	provider         string
+	provider          string
 	requestsPerMinute int
 	burstSize         int
 	retryAfter        time.Duration
-	
+
 	// Token bucket implementation
-	tokens           int
-	lastRefill       time.Time
-	refillRate       float64
-	mutex            sync.Mutex
+	tokens     int
+	lastRefill time.Time
+	refillRate float64
+	mutex      sync.Mutex
 }
 
 // NewRateLimiter creates a new rate limiter
@@ -28,17 +28,17 @@ func NewRateLimiter(config *RateLimitConfig) *RateLimiter {
 			RetryAfter:        1 * time.Minute,
 		}
 	}
-	
+
 	limiter := &RateLimiter{
-		provider:         "unknown",
+		provider:          "unknown",
 		requestsPerMinute: config.RequestsPerMinute,
 		burstSize:         config.BurstSize,
 		retryAfter:        config.RetryAfter,
-		tokens:           config.BurstSize,
-		lastRefill:       time.Now(),
-		refillRate:       float64(config.RequestsPerMinute) / 60.0, // tokens per second
+		tokens:            config.BurstSize,
+		lastRefill:        time.Now(),
+		refillRate:        float64(config.RequestsPerMinute) / 60.0, // tokens per second
 	}
-	
+
 	return limiter
 }
 
@@ -46,10 +46,10 @@ func NewRateLimiter(config *RateLimitConfig) *RateLimiter {
 func (r *RateLimiter) Wait() {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	
+
 	// Refill tokens based on time elapsed
 	r.refillTokens()
-	
+
 	// If no tokens available, wait
 	if r.tokens <= 0 {
 		// Calculate wait time
@@ -59,7 +59,7 @@ func (r *RateLimiter) Wait() {
 		r.mutex.Lock()
 		r.refillTokens()
 	}
-	
+
 	// Consume token
 	r.tokens--
 }
@@ -68,14 +68,14 @@ func (r *RateLimiter) Wait() {
 func (r *RateLimiter) TryAcquire() bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	
+
 	r.refillTokens()
-	
+
 	if r.tokens > 0 {
 		r.tokens--
 		return true
 	}
-	
+
 	return false
 }
 
@@ -83,10 +83,10 @@ func (r *RateLimiter) TryAcquire() bool {
 func (r *RateLimiter) refillTokens() {
 	now := time.Now()
 	elapsed := now.Sub(r.lastRefill)
-	
+
 	// Calculate tokens to add
 	tokensToAdd := int(elapsed.Seconds() * r.refillRate)
-	
+
 	if tokensToAdd > 0 {
 		r.tokens = min(r.tokens+tokensToAdd, r.burstSize)
 		r.lastRefill = now
@@ -97,16 +97,16 @@ func (r *RateLimiter) refillTokens() {
 func (r *RateLimiter) GetRateLimitInfo() map[string]interface{} {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	
+
 	r.refillTokens()
-	
+
 	// Calculate reset time
 	timeToNextToken := time.Duration(float64(time.Second) / r.refillRate)
 	resetTime := time.Now().Add(timeToNextToken)
-	
+
 	return map[string]interface{}{
-		"provider_id":         r.provider,
-		"requests_remaining":  r.tokens,
+		"provider_id":        r.provider,
+		"requests_remaining": r.tokens,
 		"reset_time":         resetTime,
 		"limit":              r.burstSize,
 	}
@@ -121,12 +121,12 @@ func (r *RateLimiter) SetProvider(provider string) {
 func (r *RateLimiter) UpdateConfig(config *RateLimitConfig) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	
+
 	r.requestsPerMinute = config.RequestsPerMinute
 	r.burstSize = config.BurstSize
 	r.retryAfter = config.RetryAfter
 	r.refillRate = float64(config.RequestsPerMinute) / 60.0
-	
+
 	// Reset tokens to burst size
 	r.tokens = r.burstSize
 	r.lastRefill = time.Now()

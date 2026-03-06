@@ -104,6 +104,7 @@ func NewRecoveryOrchestrationService(
 	service.RegisterStepExecutor(&EmailExecutor{service: service})
 	service.RegisterStepExecutor(&SMSExecutor{service: service})
 	service.RegisterStepExecutor(&WaitExecutor{service: service})
+	service.RegisterStepExecutor(&PayToExecutor{service: service})
 
 	return service
 }
@@ -833,4 +834,60 @@ func (r *RecoveryOrchestrationService) CancelWorkflowExecution(ctx context.Conte
 
 	// Update database status
 	return r.updateExecutionStatus(ctx, executionID, "cancelled")
+}
+
+// HandleCrossMethodReconciliation handles cross-method reconciliation triggers (PW-102)
+func (r *RecoveryOrchestrationService) HandleCrossMethodReconciliation(ctx context.Context, companyID uuid.UUID, invoiceID string, amountCents int64, reference string) error {
+	ctx, span := r.tracer.Start(ctx, "handle_cross_method_reconciliation")
+	defer span.End()
+
+	// Find the associated active payment failure based on Invoice ID and amount
+	var paymentFailure models.PaymentFailureEvent
+	if err := r.db.WithContext(ctx).
+		Where("company_id = ? AND transaction_id = ? AND amount_cents = ? AND status IN ('pending', 'in_progress')", companyID, invoiceID, amountCents).
+		First(&paymentFailure).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// Not a payment failure we are tracking
+			return nil
+		}
+		span.RecordError(err)
+		return fmt.Errorf("failed to find associated payment failure: %w", err)
+	}
+
+	// Update the payment failure status to resolved
+	updates := map[string]interface{}{
+		"status":               "resolved",
+		"resolved_at":          time.Now(),
+		"resolution_reason":    "cross_method_reconciliation",
+		"resolution_reference": reference,
+	}
+
+	if err := r.db.WithContext(ctx).Model(&paymentFailure).Updates(updates).Error; err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to update payment failure status: %w", err)
+	}
+
+	// Cancel any active workflow executions for this payment failure
+	var executions []models.RecoveryWorkflowExecution
+	if err := r.db.WithContext(ctx).
+		Where("company_id = ? AND payment_failure_id = ? AND status IN ('running', 'paused', 'pending')", companyID, paymentFailure.ID).
+		Find(&executions).Error; err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to find active workflow executions: %w", err)
+	}
+
+	for _, execution := range executions {
+		if err := r.CancelWorkflowExecution(ctx, execution.ID); err != nil {
+			span.RecordError(err)
+			// Continue attempting to cancel others
+		}
+	}
+
+	r.logger.Info("Successfully handled cross-method reconciliation",
+		zap.String("payment_failure_id", paymentFailure.ID.String()),
+		zap.String("invoice_id", invoiceID),
+		zap.String("reference", reference),
+	)
+
+	return nil
 }

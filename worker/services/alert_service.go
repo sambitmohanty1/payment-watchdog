@@ -27,7 +27,7 @@ func NewAlertService(db *gorm.DB, logger *zap.Logger) *AlertService {
 // ProcessNewPaymentFailures processes new payment failures and generates alerts
 func (s *AlertService) ProcessNewPaymentFailures(ctx context.Context) error {
 	var failures []models.PaymentFailureEvent
-	
+
 	// Find unprocessed payment failures
 	if err := s.db.Where("status = ? AND alerted_at IS NULL", "received").
 		Find(&failures).Error; err != nil {
@@ -38,7 +38,7 @@ func (s *AlertService) ProcessNewPaymentFailures(ctx context.Context) error {
 
 	for _, failure := range failures {
 		if err := s.generateAlert(ctx, &failure); err != nil {
-			s.logger.Error("Failed to generate alert", 
+			s.logger.Error("Failed to generate alert",
 				zap.String("failure_id", failure.ID.String()),
 				zap.Error(err))
 			continue
@@ -46,9 +46,9 @@ func (s *AlertService) ProcessNewPaymentFailures(ctx context.Context) error {
 
 		// Mark as alerted
 		if err := s.db.Model(&failure).Updates(map[string]interface{}{
-			"status":      "alerted",
-			"alerted_at":  time.Now(),
-			"updated_at":  time.Now(),
+			"status":     "alerted",
+			"alerted_at": time.Now(),
+			"updated_at": time.Now(),
 		}).Error; err != nil {
 			s.logger.Error("Failed to update failure status", zap.Error(err))
 		}
@@ -83,14 +83,14 @@ func (s *AlertService) generateAlert(ctx context.Context, failure *models.Paymen
 
 	// Update status to sent
 	if err := s.db.Model(alert).Updates(map[string]interface{}{
-		"status":   "sent",
-		"sent_at":  time.Now(),
+		"status":     "sent",
+		"sent_at":    time.Now(),
 		"updated_at": time.Now(),
 	}).Error; err != nil {
 		s.logger.Error("Failed to update alert status", zap.Error(err))
 	}
 
-	s.logger.Info("Alert sent successfully", 
+	s.logger.Info("Alert sent successfully",
 		zap.String("alert_id", alert.ID.String()),
 		zap.String("customer_email", failure.CustomerEmail))
 
@@ -114,8 +114,8 @@ Details:
 Please review your payment method and update if necessary.
 
 This is an automated alert from your payment intelligence system.
-	`, 
-		failure.Currency, 
+	`,
+		failure.Currency,
 		fmt.Sprintf("%.2f", failure.Amount),
 		failure.CustomerEmail,
 		failure.FailureReason,
@@ -126,18 +126,18 @@ This is an automated alert from your payment intelligence system.
 func (s *AlertService) sendAlert(alert *models.CustomerCommunication) error {
 	// TODO: Implement actual email/SMS sending
 	// For MVP, just log the alert
-	s.logger.Info("Alert generated", 
+	s.logger.Info("Alert generated",
 		zap.String("alert_id", alert.ID.String()),
 		zap.String("channel", alert.Channel),
 		zap.String("subject", alert.Subject))
-	
+
 	return nil
 }
 
 // GetAlertStats returns alert statistics
 func (s *AlertService) GetAlertStats(ctx context.Context, companyID string) (map[string]interface{}, error) {
 	var stats = make(map[string]interface{})
-	
+
 	// Total alerts
 	var totalAlerts int64
 	if err := s.db.Model(&models.CustomerCommunication{}).
@@ -145,13 +145,13 @@ func (s *AlertService) GetAlertStats(ctx context.Context, companyID string) (map
 		return nil, err
 	}
 	stats["total_alerts"] = totalAlerts
-	
+
 	// Alerts by status
 	var statusStats []struct {
 		Status string `json:"status"`
 		Count  int64  `json:"count"`
 	}
-	
+
 	if err := s.db.Model(&models.CustomerCommunication{}).
 		Select("status, count(*) as count").
 		Where("company_id = ?", companyID).
@@ -160,13 +160,13 @@ func (s *AlertService) GetAlertStats(ctx context.Context, companyID string) (map
 		return nil, err
 	}
 	stats["status_breakdown"] = statusStats
-	
+
 	// Alerts by channel
 	var channelStats []struct {
 		Channel string `json:"channel"`
 		Count   int64  `json:"count"`
 	}
-	
+
 	if err := s.db.Model(&models.CustomerCommunication{}).
 		Select("channel, count(*) as count").
 		Where("company_id = ?", companyID).
@@ -175,6 +175,6 @@ func (s *AlertService) GetAlertStats(ctx context.Context, companyID string) (map
 		return nil, err
 	}
 	stats["channel_breakdown"] = channelStats
-	
+
 	return stats, nil
 }

@@ -9,9 +9,9 @@ import (
 
 	"encoding/json"
 
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 	"github.com/stripe/stripe-go/v74"
 	"github.com/stripe/stripe-go/v74/webhook"
 	"golang.org/x/time/rate"

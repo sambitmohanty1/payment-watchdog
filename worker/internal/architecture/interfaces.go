@@ -10,10 +10,10 @@ import (
 
 // PaymentRetryConfig represents configuration for payment retry
 type PaymentRetryConfig struct {
-	NewAmount    *float64 `json:"new_amount,omitempty"`
-	PaymentMethod string  `json:"payment_method,omitempty"`
-	RetryReason  string   `json:"retry_reason,omitempty"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	NewAmount     *float64               `json:"new_amount,omitempty"`
+	PaymentMethod string                 `json:"payment_method,omitempty"`
+	RetryReason   string                 `json:"retry_reason,omitempty"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // PaymentProvider defines the core interface for all payment providers
@@ -118,11 +118,11 @@ type OAuthConfig struct {
 
 // API configuration
 type APIConfig struct {
-	BaseURL     string            `json:"base_url"`
-	APIKey      string            `json:"api_key"`
-	Headers     map[string]string `json:"headers"`
-	Timeout     time.Duration     `json:"timeout"`
-	RetryConfig *PaymentRetryConfig      `json:"retry_config"`
+	BaseURL     string              `json:"base_url"`
+	APIKey      string              `json:"api_key"`
+	Headers     map[string]string   `json:"headers"`
+	Timeout     time.Duration       `json:"timeout"`
+	RetryConfig *PaymentRetryConfig `json:"retry_config"`
 }
 
 // Webhook configuration
