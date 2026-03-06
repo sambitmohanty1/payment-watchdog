@@ -60,11 +60,11 @@ type OAuthConfig struct {
 
 // API configuration
 type APIConfig struct {
-	BaseURL     string            `json:"base_url"`
-	APIKey      string            `json:"api_key"`
-	Headers     map[string]string `json:"headers"`
-	Timeout     time.Duration     `json:"timeout"`
-	RetryConfig *PaymentRetryConfig      `json:"retry_config"`
+	BaseURL     string              `json:"base_url"`
+	APIKey      string              `json:"api_key"`
+	Headers     map[string]string   `json:"headers"`
+	Timeout     time.Duration       `json:"timeout"`
+	RetryConfig *PaymentRetryConfig `json:"retry_config"`
 }
 
 // Webhook configuration

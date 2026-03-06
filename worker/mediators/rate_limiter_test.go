@@ -17,7 +17,7 @@ func TestNewRateLimiter(t *testing.T) {
 	limiter := NewRateLimiter(config)
 
 	assert.NotNil(t, limiter)
-	
+
 	// Test that the rate limiter is working by checking its behavior
 	info := limiter.GetRateLimitInfo()
 	assert.NotNil(t, info)
@@ -93,7 +93,7 @@ func TestRateLimiter_TryAcquire(t *testing.T) {
 	// First two attempts should succeed
 	assert.True(t, limiter.TryAcquire())
 	assert.True(t, limiter.TryAcquire())
-	
+
 	// Third attempt should fail
 	assert.False(t, limiter.TryAcquire())
 }
@@ -106,10 +106,10 @@ func TestRateLimiter_SetProvider(t *testing.T) {
 	}
 
 	limiter := NewRateLimiter(config)
-	
+
 	// Set provider
 	limiter.SetProvider("stripe")
-	
+
 	// Check that provider was set
 	info := limiter.GetRateLimitInfo()
 	assert.Equal(t, "stripe", info["provider_id"])
@@ -123,16 +123,16 @@ func TestRateLimiter_UpdateConfig(t *testing.T) {
 	}
 
 	limiter := NewRateLimiter(config)
-	
+
 	// Update config
 	newConfig := &RateLimitConfig{
 		RequestsPerMinute: 120,
 		BurstSize:         20,
 		RetryAfter:        2 * time.Second,
 	}
-	
+
 	limiter.UpdateConfig(newConfig)
-	
+
 	// Check that config was updated
 	info := limiter.GetRateLimitInfo()
 	assert.Equal(t, 20, info["limit"])

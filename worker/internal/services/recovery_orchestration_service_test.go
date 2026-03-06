@@ -1,24 +1,15 @@
 package services_test
 
 import (
-	"context"
-	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/go-redis/redis/v8"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 	svc "github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 )
 

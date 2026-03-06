@@ -25,11 +25,11 @@ func TestQuickBooksOAuthFlow(t *testing.T) {
 			// Simulate QuickBooks authorization endpoint
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			
+
 			// Return authorization code
 			response := map[string]interface{}{
-				"code":  "test-auth-code",
-				"state": r.URL.Query().Get("state"),
+				"code":    "test-auth-code",
+				"state":   r.URL.Query().Get("state"),
 				"realmId": "test-realm-id",
 			}
 			json.NewEncoder(w).Encode(response)
@@ -38,7 +38,7 @@ func TestQuickBooksOAuthFlow(t *testing.T) {
 			// Simulate token exchange endpoint
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			
+
 			// Return access tokens
 			response := map[string]interface{}{
 				"access_token":  "test-access-token",
@@ -153,7 +153,7 @@ func TestQuickBooksOAuthTokenValidation(t *testing.T) {
 			RefreshToken: "valid-refresh-token",
 			ExpiresAt:    time.Now().Add(time.Hour),
 		}
-		
+
 		isValid := mediator.ValidateTokens(tokens)
 		assert.True(t, isValid)
 	})
@@ -165,7 +165,7 @@ func TestQuickBooksOAuthTokenValidation(t *testing.T) {
 			RefreshToken: "valid-refresh-token",
 			ExpiresAt:    time.Now().Add(-time.Hour),
 		}
-		
+
 		isValid := mediator.ValidateTokens(tokens)
 		assert.False(t, isValid)
 	})
@@ -176,7 +176,7 @@ func TestQuickBooksOAuthTokenValidation(t *testing.T) {
 			RefreshToken: "valid-refresh-token",
 			ExpiresAt:    time.Now().Add(time.Hour),
 		}
-		
+
 		isValid := mediator.ValidateTokens(tokens)
 		assert.False(t, isValid)
 	})
@@ -187,7 +187,7 @@ func TestQuickBooksOAuthTokenValidation(t *testing.T) {
 			AccessToken: "valid-access-token",
 			ExpiresAt:   time.Now().Add(time.Hour),
 		}
-		
+
 		isValid := mediator.ValidateTokens(tokens)
 		assert.False(t, isValid)
 	})
@@ -219,7 +219,7 @@ func TestQuickBooksOAuthScopes(t *testing.T) {
 		// Test with missing required scopes
 		config.OAuthConfig.Scopes = []string{"com.intuit.quickbooks.payment"}
 		mediator := NewQuickBooksMediator(config, eventBus, logger)
-		
+
 		hasRequired := mediator.HasRequiredScopes()
 		assert.False(t, hasRequired)
 	})
@@ -237,7 +237,7 @@ func TestQuickBooksOAuthScopes(t *testing.T) {
 			},
 		}
 		mediatorWithConfig := NewQuickBooksMediator(freshConfig, eventBus, logger)
-		
+
 		validScopes := []string{"com.intuit.quickbooks.accounting"}
 		isValid := mediatorWithConfig.ValidateScopes(validScopes)
 		assert.True(t, isValid)
@@ -265,7 +265,7 @@ func TestQuickBooksOAuthSecurity(t *testing.T) {
 		// Test state parameter generation
 		state1 := mediator.GenerateStateParameter()
 		state2 := mediator.GenerateStateParameter()
-		
+
 		assert.NotEmpty(t, state1)
 		assert.NotEmpty(t, state2)
 		assert.NotEqual(t, state1, state2)
@@ -292,7 +292,7 @@ func TestQuickBooksOAuthSecurity(t *testing.T) {
 		// Test PKCE code challenge generation
 		verifier := mediator.GeneratePKCECodeVerifier()
 		challenge := mediator.GeneratePKCECodeChallenge(verifier)
-		
+
 		assert.NotEmpty(t, challenge)
 		assert.NotEqual(t, verifier, challenge)
 	})
@@ -326,7 +326,7 @@ func TestQuickBooksOAuthRateLimiting(t *testing.T) {
 
 		// Record a request
 		mediator.RecordOAuthRequest()
-		
+
 		// Should still be able to make requests within limits
 		canMakeRequest = mediator.CanMakeOAuthRequest()
 		assert.True(t, canMakeRequest)
@@ -353,7 +353,7 @@ func TestQuickBooksOAuthTokenStorage(t *testing.T) {
 			RefreshToken: "test-refresh-token",
 			ExpiresAt:    time.Now().Add(time.Hour),
 		}
-		
+
 		err := mediator.StoreTokens(tokens)
 		require.NoError(t, err)
 
@@ -367,7 +367,7 @@ func TestQuickBooksOAuthTokenStorage(t *testing.T) {
 	t.Run("Token Retrieval Non-Existent", func(t *testing.T) {
 		// Test token retrieval when none exist
 		mediator.DeleteTokens()
-		
+
 		tokens := mediator.RetrieveTokens()
 		assert.Nil(t, tokens)
 	})
@@ -379,7 +379,7 @@ func TestQuickBooksOAuthTokenStorage(t *testing.T) {
 			RefreshToken: "test-refresh-token",
 			ExpiresAt:    time.Now().Add(time.Hour),
 		}
-		
+
 		err := mediator.StoreTokens(tokens)
 		require.NoError(t, err)
 

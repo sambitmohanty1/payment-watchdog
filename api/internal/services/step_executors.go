@@ -53,6 +53,16 @@ func (e *PaymentRetryExecutor) Execute(ctx context.Context, execution *WorkflowE
 		return nil, err
 	}
 
+	// PW-103: Micro-Transaction Cost Logic
+	// Disable high-fee international retries for transactions under $100 and use local BECS/NPP rails
+	if paymentFailure.AmountCents < 10000 && (config.Provider == "stripe" || config.Provider == "international_card") {
+		span.AddEvent("micro_transaction_cost_logic_applied", trace.WithAttributes(
+			attribute.String("original_provider", config.Provider),
+			attribute.String("new_provider", "becs"),
+		))
+		config.Provider = "becs"
+	}
+
 	span.SetAttributes(
 		attribute.String("provider", config.Provider),
 		attribute.String("payment_failure_id", paymentFailure.ID.String()),
@@ -613,4 +623,98 @@ func (e *ConditionalExecutor) evaluateCondition(paymentFailure *models.PaymentFa
 	}
 
 	return false
+}
+
+// PayToExecutor handles PayTo agreement requests for failed payments (PW-101)
+type PayToExecutor struct {
+	service *RecoveryOrchestrationService
+	tracer  trace.Tracer
+}
+
+func (e *PayToExecutor) GetStepType() string {
+	return "payto_agreement"
+}
+
+func (e *PayToExecutor) Execute(ctx context.Context, execution *WorkflowExecution, step *models.RecoveryWorkflowStep) (*StepResult, error) {
+	if e.tracer == nil {
+		e.tracer = otel.Tracer("payto-executor")
+	}
+
+	ctx, span := e.tracer.Start(ctx, "execute_payto_agreement")
+	defer span.End()
+
+	// Get payment failure from execution context
+	paymentFailure, ok := execution.Context["payment_failure"].(*models.PaymentFailureEvent)
+	if !ok {
+		err := fmt.Errorf("payment failure not found in execution context")
+		span.RecordError(err)
+		return nil, err
+	}
+
+	span.SetAttributes(
+		attribute.String("payment_failure_id", paymentFailure.ID.String()),
+		attribute.Int64("original_amount_cents", paymentFailure.AmountCents),
+		attribute.String("failure_reason", paymentFailure.FailureReason),
+	)
+
+	// Ensure we only trigger PayTo for insufficient funds
+	if paymentFailure.FailureReason != "insufficient_funds" && paymentFailure.FailureReason != "card_declined" {
+		return &StepResult{
+			Success: true,
+			Data: map[string]interface{}{
+				"skipped": true,
+				"reason":  "failure reason is not insufficient_funds or card_declined",
+			},
+		}, nil
+	}
+
+	// Submit PayTo job
+	jobData := map[string]interface{}{
+		"payment_failure_id":    paymentFailure.ID.String(),
+		"provider":              "payto",
+		"amount":                paymentFailure.AmountCents,
+		"reason":                "payto_failover",
+		"workflow_execution_id": execution.ID.String(),
+		"step_id":               step.ID.String(),
+	}
+
+	// Submit to retry service or equivalent to handle the PayTo agreement
+	job, err := e.service.retryService.SubmitJob(ctx, "payto_agreement_request", execution.CompanyID.String(), jobData)
+	if err != nil {
+		span.RecordError(err)
+		return &StepResult{
+			Success:      false,
+			ErrorMessage: fmt.Sprintf("Failed to submit PayTo agreement job: %v", err),
+			ShouldRetry:  true,
+		}, nil
+	}
+
+	// Create recovery action record
+	recoveryAction := &models.RecoveryAction{
+		CompanyID:           execution.CompanyID,
+		PaymentFailureID:    paymentFailure.ID,
+		WorkflowExecutionID: &execution.ID,
+		ActionType:          "payto_agreement_requested",
+		ActionData:          step.Config,
+		Status:              "pending",
+		Provider:            "payto",
+		ExternalID:          job.ID,
+		ScheduledAt:         &time.Time{},
+	}
+	*recoveryAction.ScheduledAt = time.Now()
+
+	if err := e.service.db.WithContext(ctx).Create(recoveryAction).Error; err != nil {
+		span.RecordError(err)
+	}
+
+	return &StepResult{
+		Success:    true,
+		ExternalID: job.ID,
+		Data: map[string]interface{}{
+			"job_id":             job.ID,
+			"provider":           "payto",
+			"scheduled_at":       time.Now(),
+			"recovery_action_id": recoveryAction.ID.String(),
+		},
+	}, nil
 }

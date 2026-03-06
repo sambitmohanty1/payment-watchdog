@@ -27,16 +27,16 @@ func (e *PaymentRetryExecutor) Execute(ctx context.Context, execution *WorkflowE
 	if e.tracer == nil {
 		e.tracer = otel.Tracer("payment-retry-executor")
 	}
-	
+
 	ctx, span := e.tracer.Start(ctx, "execute_payment_retry")
 	defer span.End()
 
 	// Parse step configuration
 	var config struct {
-		Provider     string `json:"provider"`
-		MaxRetries   int    `json:"max_retries"`
-		RetryDelay   int    `json:"retry_delay_minutes"`
-		UpdateAmount bool   `json:"update_amount"`
+		Provider     string   `json:"provider"`
+		MaxRetries   int      `json:"max_retries"`
+		RetryDelay   int      `json:"retry_delay_minutes"`
+		UpdateAmount bool     `json:"update_amount"`
 		NewAmount    *float64 `json:"new_amount,omitempty"`
 	}
 
@@ -53,6 +53,16 @@ func (e *PaymentRetryExecutor) Execute(ctx context.Context, execution *WorkflowE
 		return nil, err
 	}
 
+	// PW-103: Micro-Transaction Cost Logic
+	// Disable high-fee international retries for transactions under $100 and use local BECS/NPP rails
+	if paymentFailure.AmountCents < 10000 && (config.Provider == "stripe" || config.Provider == "international_card") {
+		span.AddEvent("micro_transaction_cost_logic_applied", trace.WithAttributes(
+			attribute.String("original_provider", config.Provider),
+			attribute.String("new_provider", "becs"),
+		))
+		config.Provider = "becs"
+	}
+
 	span.SetAttributes(
 		attribute.String("provider", config.Provider),
 		attribute.String("payment_failure_id", paymentFailure.ID.String()),
@@ -61,12 +71,12 @@ func (e *PaymentRetryExecutor) Execute(ctx context.Context, execution *WorkflowE
 
 	// Submit retry job to retry service
 	retryData := map[string]interface{}{
-		"payment_failure_id": paymentFailure.ID.String(),
-		"provider":          config.Provider,
-		"original_amount":   paymentFailure.Amount,
-		"retry_reason":      "workflow_retry",
+		"payment_failure_id":    paymentFailure.ID.String(),
+		"provider":              config.Provider,
+		"original_amount":       paymentFailure.Amount,
+		"retry_reason":          "workflow_retry",
 		"workflow_execution_id": execution.ID.String(),
-		"step_id":          step.ID.String(),
+		"step_id":               step.ID.String(),
 	}
 
 	if config.UpdateAmount && config.NewAmount != nil {
@@ -108,9 +118,9 @@ func (e *PaymentRetryExecutor) Execute(ctx context.Context, execution *WorkflowE
 		Success:    true,
 		ExternalID: retryJob.ID,
 		Data: map[string]interface{}{
-			"retry_job_id":     retryJob.ID,
-			"provider":         config.Provider,
-			"scheduled_at":     time.Now(),
+			"retry_job_id":       retryJob.ID,
+			"provider":           config.Provider,
+			"scheduled_at":       time.Now(),
 			"recovery_action_id": recoveryAction.ID.String(),
 		},
 	}, nil
@@ -130,7 +140,7 @@ func (e *EmailExecutor) Execute(ctx context.Context, execution *WorkflowExecutio
 	if e.tracer == nil {
 		e.tracer = otel.Tracer("email-executor")
 	}
-	
+
 	ctx, span := e.tracer.Start(ctx, "execute_send_email")
 	defer span.End()
 
@@ -193,7 +203,7 @@ func (e *EmailExecutor) Execute(ctx context.Context, execution *WorkflowExecutio
 		Context: map[string]interface{}{
 			"payment_failure_id":    paymentFailure.ID.String(),
 			"workflow_execution_id": execution.ID.String(),
-			"step_id":              step.ID.String(),
+			"step_id":               step.ID.String(),
 		},
 	})
 
@@ -234,7 +244,7 @@ func (e *EmailExecutor) Execute(ctx context.Context, execution *WorkflowExecutio
 			"message_id":         emailResult.MessageID,
 			"recipient":          recipientEmail,
 			"template_used":      emailResult.TemplateUsed,
-			"sent_at":           now,
+			"sent_at":            now,
 			"recovery_action_id": recoveryAction.ID.String(),
 		},
 	}, nil
@@ -254,7 +264,7 @@ func (e *SMSExecutor) Execute(ctx context.Context, execution *WorkflowExecution,
 	if e.tracer == nil {
 		e.tracer = otel.Tracer("sms-executor")
 	}
-	
+
 	ctx, span := e.tracer.Start(ctx, "execute_send_sms")
 	defer span.End()
 
@@ -322,7 +332,7 @@ func (e *SMSExecutor) Execute(ctx context.Context, execution *WorkflowExecution,
 		Context: map[string]interface{}{
 			"payment_failure_id":    paymentFailure.ID.String(),
 			"workflow_execution_id": execution.ID.String(),
-			"step_id":              step.ID.String(),
+			"step_id":               step.ID.String(),
 		},
 	})
 
@@ -363,7 +373,7 @@ func (e *SMSExecutor) Execute(ctx context.Context, execution *WorkflowExecution,
 			"message_id":         smsResult.MessageID,
 			"recipient":          recipientPhone,
 			"template_used":      smsResult.TemplateUsed,
-			"sent_at":           now,
+			"sent_at":            now,
 			"recovery_action_id": recoveryAction.ID.String(),
 		},
 	}, nil
@@ -383,7 +393,7 @@ func (e *WaitExecutor) Execute(ctx context.Context, execution *WorkflowExecution
 	if e.tracer == nil {
 		e.tracer = otel.Tracer("wait-executor")
 	}
-	
+
 	ctx, span := e.tracer.Start(ctx, "execute_wait")
 	defer span.End()
 
@@ -421,8 +431,8 @@ func (e *WaitExecutor) Execute(ctx context.Context, execution *WorkflowExecution
 			Success: true,
 			Data: map[string]interface{}{
 				"wait_duration_minutes": totalMinutes,
-				"reason":               config.Reason,
-				"completed_at":         time.Now(),
+				"reason":                config.Reason,
+				"completed_at":          time.Now(),
 			},
 		}, nil
 	case <-ctx.Done():
@@ -449,7 +459,7 @@ func (e *ConditionalExecutor) Execute(ctx context.Context, execution *WorkflowEx
 	if e.tracer == nil {
 		e.tracer = otel.Tracer("conditional-executor")
 	}
-	
+
 	ctx, span := e.tracer.Start(ctx, "execute_conditional")
 	defer span.End()
 
@@ -460,10 +470,10 @@ func (e *ConditionalExecutor) Execute(ctx context.Context, execution *WorkflowEx
 			Operator string      `json:"operator"`
 			Value    interface{} `json:"value"`
 		} `json:"conditions"`
-		Logic      string `json:"logic"` // "AND" or "OR"
-		OnTrue     string `json:"on_true"`   // Action if condition is true
-		OnFalse    string `json:"on_false"`  // Action if condition is false
-		SkipSteps  int    `json:"skip_steps"` // Number of steps to skip
+		Logic     string `json:"logic"`      // "AND" or "OR"
+		OnTrue    string `json:"on_true"`    // Action if condition is true
+		OnFalse   string `json:"on_false"`   // Action if condition is false
+		SkipSteps int    `json:"skip_steps"` // Number of steps to skip
 	}
 
 	if err := json.Unmarshal(step.Config, &config); err != nil {
@@ -520,10 +530,10 @@ func (e *ConditionalExecutor) Execute(ctx context.Context, execution *WorkflowEx
 	}
 
 	resultData := map[string]interface{}{
-		"condition_result":    finalResult,
-		"action_taken":       action,
+		"condition_result":     finalResult,
+		"action_taken":         action,
 		"conditions_evaluated": len(config.Conditions),
-		"logic_used":         config.Logic,
+		"logic_used":           config.Logic,
 	}
 
 	// Handle specific actions
@@ -613,4 +623,98 @@ func (e *ConditionalExecutor) evaluateCondition(paymentFailure *models.PaymentFa
 	}
 
 	return false
+}
+
+// PayToExecutor handles PayTo agreement requests for failed payments (PW-101)
+type PayToExecutor struct {
+	service *RecoveryOrchestrationService
+	tracer  trace.Tracer
+}
+
+func (e *PayToExecutor) GetStepType() string {
+	return "payto_agreement"
+}
+
+func (e *PayToExecutor) Execute(ctx context.Context, execution *WorkflowExecution, step *models.RecoveryWorkflowStep) (*StepResult, error) {
+	if e.tracer == nil {
+		e.tracer = otel.Tracer("payto-executor")
+	}
+
+	ctx, span := e.tracer.Start(ctx, "execute_payto_agreement")
+	defer span.End()
+
+	// Get payment failure from execution context
+	paymentFailure, ok := execution.Context["payment_failure"].(*models.PaymentFailureEvent)
+	if !ok {
+		err := fmt.Errorf("payment failure not found in execution context")
+		span.RecordError(err)
+		return nil, err
+	}
+
+	span.SetAttributes(
+		attribute.String("payment_failure_id", paymentFailure.ID.String()),
+		attribute.Int64("original_amount_cents", paymentFailure.AmountCents),
+		attribute.String("failure_reason", paymentFailure.FailureReason),
+	)
+
+	// Ensure we only trigger PayTo for insufficient funds
+	if paymentFailure.FailureReason != "insufficient_funds" && paymentFailure.FailureReason != "card_declined" {
+		return &StepResult{
+			Success: true,
+			Data: map[string]interface{}{
+				"skipped": true,
+				"reason":  "failure reason is not insufficient_funds or card_declined",
+			},
+		}, nil
+	}
+
+	// Submit PayTo job
+	jobData := map[string]interface{}{
+		"payment_failure_id":    paymentFailure.ID.String(),
+		"provider":              "payto",
+		"amount":                paymentFailure.AmountCents,
+		"reason":                "payto_failover",
+		"workflow_execution_id": execution.ID.String(),
+		"step_id":               step.ID.String(),
+	}
+
+	// Submit to retry service or equivalent to handle the PayTo agreement
+	job, err := e.service.retryService.SubmitJob(ctx, "payto_agreement_request", execution.CompanyID.String(), jobData)
+	if err != nil {
+		span.RecordError(err)
+		return &StepResult{
+			Success:      false,
+			ErrorMessage: fmt.Sprintf("Failed to submit PayTo agreement job: %v", err),
+			ShouldRetry:  true,
+		}, nil
+	}
+
+	// Create recovery action record
+	recoveryAction := &models.RecoveryAction{
+		CompanyID:           execution.CompanyID,
+		PaymentFailureID:    paymentFailure.ID,
+		WorkflowExecutionID: &execution.ID,
+		ActionType:          "payto_agreement_requested",
+		ActionData:          step.Config,
+		Status:              "pending",
+		Provider:            "payto",
+		ExternalID:          job.ID,
+		ScheduledAt:         &time.Time{},
+	}
+	*recoveryAction.ScheduledAt = time.Now()
+
+	if err := e.service.db.WithContext(ctx).Create(recoveryAction).Error; err != nil {
+		span.RecordError(err)
+	}
+
+	return &StepResult{
+		Success:    true,
+		ExternalID: job.ID,
+		Data: map[string]interface{}{
+			"job_id":             job.ID,
+			"provider":           "payto",
+			"scheduled_at":       time.Now(),
+			"recovery_action_id": recoveryAction.ID.String(),
+		},
+	}, nil
 }
