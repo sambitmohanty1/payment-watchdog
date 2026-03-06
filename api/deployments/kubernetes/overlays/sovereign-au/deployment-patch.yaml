@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-watchdog-api
+  namespace: lexure
+spec:
+  template:
+    spec:
+      containers:
+      - name: api
+        env:
+        - name: SOVEREIGN_MODE
+          value: "true"
+        - name: REDIS_HOST
+          value: "redis-service.payment-watchdog.svc.cluster.local"

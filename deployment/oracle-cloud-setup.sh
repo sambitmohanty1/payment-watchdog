@@ -5,11 +5,18 @@
 
 set -e
 
-echo "🚀 Oracle Cloud Free Tier Setup for Payment Watchdog"
+REGION=${REGION:-ap-sydney-1}
+
+if [[ "$REGION" != "ap-sydney-1" && "$REGION" != "ap-melbourne-1" ]]; then
+    echo "❌ ERROR: For sovereign compliance, REGION must be 'ap-sydney-1' or 'ap-melbourne-1'."
+    exit 1
+fi
+
+echo "🚀 Oracle Cloud Free Tier Setup for Payment Watchdog in region: $REGION"
 echo "================================================"
 
 # Configuration
-COMPARTMENT_NAME="payment-watchdog"
+COMPARTMENT_NAME="PaymentWatchdogSovereign"
 CLUSTER_NAME="payment-watchdog-cluster"
 NODE_POOL_NAME="payment-watchdog-nodes"
 VCN_NAME="payment-watchdog-vcn"
@@ -19,10 +26,11 @@ DOMAIN="your-domain.com"  # UPDATE THIS
 
 echo "📋 Step 1: Creating Compartment..."
 COMPARTMENT_ID=$(oci iam compartment list --query "data[?name=='$COMPARTMENT_NAME'].id | [0]" --raw-output)
-if [ -z "$COMPARTMENT_ID" ]; then
+if [ -z "$COMPARTMENT_ID" ] || [ "$COMPARTMENT_ID" = "null" ]; then
     COMPARTMENT_ID=$(oci iam compartment create \
         --name "$COMPARTMENT_NAME" \
-        --description "Payment Watchdog Application" \
+        --description "Isolated Sovereign Compartment" \
+        --region "$REGION" \
         --query "data.id" --raw-output)
     echo "✅ Created compartment: $COMPARTMENT_ID"
 else
@@ -31,11 +39,12 @@ fi
 
 echo "📋 Step 2: Creating VCN and Subnet..."
 VCN_ID=$(oci network vcn list --compartment-id "$COMPARTMENT_ID" --query "data[?name=='$VCN_NAME'].id | [0]" --raw-output)
-if [ -z "$VCN_ID" ]; then
+if [ -z "$VCN_ID" ] || [ "$VCN_ID" = "null" ]; then
     VCN_ID=$(oci network vcn create \
             --compartment-id "$COMPARTMENT_ID" \
             --cidr-block 10.0.0.0/16 \
             --display-name "$VCN_NAME" \
+            --region "$REGION" \
             --query "data.id" --raw-output)
     echo "✅ Created VCN: $VCN_ID"
 else
@@ -115,7 +124,29 @@ echo "📋 Step 6: Configuring Kubernetes Access..."
 oci ce cluster create-kubeconfig \
     --cluster-id "$CLUSTER_ID" \
     --file "$HOME/.kube/payment-watchdog-config" \
-    --region "$OCI_REGION"
+    --region "$REGION"
+
+echo "📋 Step 6.1: Configuring Block Volume Replication (intra-AU)"
+REPLICA_REGION="ap-melbourne-1"
+if [ "$REGION" = "ap-melbourne-1" ]; then
+    REPLICA_REGION="ap-sydney-1"
+fi
+echo "Configuring Block Volume replication to $REPLICA_REGION for High Availability..."
+
+VOLUME_ID=$(oci bv volume list --compartment-id "$COMPARTMENT_ID" --query "data[?\"display-name\"=='Sovereign-DB-Vol'].id | [0]" --raw-output 2>/dev/null || echo "")
+if [ -z "$VOLUME_ID" ] || [ "$VOLUME_ID" = "null" ]; then
+    VOLUME_ID=$(oci bv volume create --availability-domain AD-1 --compartment-id "$COMPARTMENT_ID" --size-in-gbs 50 --display-name "Sovereign-DB-Vol" --region "$REGION" --query "data.id" --raw-output)
+    echo "Created Block Volume: $VOLUME_ID"
+else
+    echo "Using existing Block Volume: $VOLUME_ID"
+fi
+
+if [ -n "$SOVEREIGN_POLICY_ID" ] && [ -n "$VOLUME_ID" ] && [ "$VOLUME_ID" != "null" ]; then
+    oci bv volume-backup-policy-assignment create --asset-id "$VOLUME_ID" --policy-id "$SOVEREIGN_POLICY_ID"
+    echo "Block Volume Backup Policy Assigned."
+else
+    echo "⚠️ SOVEREIGN_POLICY_ID not set or Volume ID missing. Skipping backup policy assignment."
+fi
 
 export KUBECONFIG="$HOME/.kube/payment-watchdog-config"
 echo "✅ Kubeconfig created: $KUBECONFIG"

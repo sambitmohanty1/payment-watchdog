@@ -28,6 +28,11 @@ func main() {
 	}
 	cfg := config.Get()
 
+	// AC 1.3: Validate Sovereign Data Infrastructure Hardening
+	if !cfg.IsSovereignCompliant() {
+		logger.Fatal("Sovereign Compliance Check Failed. System configured with non-AU endpoints.", zap.String("db_host", cfg.Database.Host))
+	}
+
 	// Database connection
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
 		cfg.Database.Host, cfg.Database.User, cfg.Database.Password, cfg.Database.Name, cfg.Database.Port)
