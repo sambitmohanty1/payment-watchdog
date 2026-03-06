@@ -4,9 +4,6 @@
 [![Go Version](https://img.shields.io/badge/Go-1.24-blue.svg)](https://golang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Security Scan](https://img.shields.io/badge/Security-Phase%201%20Implemented-brightgreen.svg)](#security)
-[![CodeQL](https://img.shields.io/badge/CodeQL-Enabled-blue.svg)](https://github.com/features/security)
-[![Dependabot](https://img.shields.io/badge/Dependabot-Enabled-blue.svg)](https://dependabot.com/)
 
 ---
 
@@ -14,14 +11,13 @@
 
 Payment Watchdog is a payment recovery management platform designed to help SaaS companies handle payment failures through automated detection and recovery workflows.
 
-### Features
-- Payment failure detection and monitoring
-- Advanced recovery workflows with exponential backoff and dead letter queues
-- Analytics dashboard with failure prediction and metrics
-- REST API for integration with comprehensive error handling
-- Web interface for management and monitoring
-- **Enterprise-grade security scanning** (Phase 1 implemented)
-- **Comprehensive CI/CD pipeline** with security gates and automated deployment
+### Current Features
+- Payment failure detection via webhooks (Stripe)
+- Basic retry mechanisms with exponential backoff
+- Simple analytics dashboard
+- REST API for integration
+- Web interface for monitoring
+- Docker-based deployment
 
 ---
 
@@ -31,15 +27,13 @@ Payment Watchdog is a payment recovery management platform designed to help SaaS
 - **Backend**: Go 1.24, Gin, GORM, PostgreSQL, Redis
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS
 - **Infrastructure**: Docker, Docker Compose
-- **Database**: PostgreSQL with Redis for caching
 
 ### Services
-- **API Service**: REST API with Go + Gin framework, comprehensive error handling
-- **Worker Service**: Background processing with failure prediction and retry orchestration
-- **Web Interface**: Next.js dashboard with real-time monitoring
-- **Database**: PostgreSQL with optimized query patterns
-- **Cache**: Redis for event processing and session management
-- **Security**: Multi-layered scanning with SARIF integration
+- **API Service**: REST API with Go + Gin framework
+- **Worker Service**: Background processing and retry orchestration
+- **Web Interface**: Next.js dashboard
+- **Database**: PostgreSQL
+- **Cache**: Redis for event processing
 
 ---
 
@@ -91,45 +85,51 @@ go test ./... -cover
 
 ---
 
-## 🛡️ Security
+## 🚀 Local Deployment (Isolated Environment)
 
-Payment Watchdog implements enterprise-grade security scanning using Phase 1 free tools to ensure the security and integrity of our payment processing platform.
+For isolated local testing and development, separate from CI/CD flows:
 
-### **Security Scanning Tools**
-- **GitHub CodeQL v3** - Native SAST for Go and JavaScript code analysis
-- **OWASP Dependency Check** - Open source vulnerability detection
-- **Trivy v0.24.0** - Container and file system security scanning
-- **Gosec v2** - Go-specific security analysis with SARIF output
-- **npm audit** - Node.js dependency vulnerability scanning
-- **GitHub Dependabot** - Automated dependency monitoring
-- **Security Gates** - Critical findings block deployment to production
+### Quick Start
+```bash
+# Start isolated local deployment
+make local-start
+# Or
+./scripts/local-deploy.sh start
 
-### **Security Features**
-- ✅ **Automated Scanning** - Runs on every push/PR + daily schedule
-- ✅ **Security Gates** - Critical findings block deployment
-- ✅ **Centralized Results** - GitHub Security tab integration
-- ✅ **Zero Cost** - All tools are free tier
-- ✅ **Comprehensive Coverage** - All services and dependencies
-
-### **Security Pipeline**
-```
-Unit Tests → Security Scan (CodeQL, Trivy, Gosec, OWASP) → Build Images → Deploy to Staging → Production
-                ↓
-         Critical Issues Block Deployment
-         ↓
-    Automated Security Reports & Artifacts
+# Access services
+# Web Interface: http://localhost:3016
+# API Endpoint: http://localhost:8096
+# MailHog: http://localhost:8041
 ```
 
-### **Viewing Security Results**
-- **GitHub Security Tab**: See SARIF findings from CodeQL, Trivy, Gosec
-- **Actions Artifacts**: Download detailed HTML and JSON reports
-- **Pull Request Comments**: Security scan summaries
-- **CI/CD Logs**: Real-time scan progress
+### Management Commands
+```bash
+# Stop services
+make local-stop
 
-### **Security Configuration**
-- **Security Workflow**: `.github/workflows/security-scan.yml`
-- **Dependabot Config**: `.github/dependabot.yml`
-- **CI/CD Integration**: Security scans required before deployment
+# Restart services  
+make local-restart
+
+# Check status
+make local-status
+
+# View logs
+make local-logs
+
+# Run health checks
+make local-health
+
+# Clean all data (WARNING: destroys database)
+make local-clean
+```
+
+### Port Configuration
+| Service | Development | Local |
+|---------|-------------|-------|
+| API | 8080 | 8096 |
+| Web | 4896 | 3016 |
+| PostgreSQL | 5432 | 5448 |
+| Redis | 6379 | 6395 |
 
 ---
 
@@ -182,9 +182,7 @@ kubectl apply -f api/deployments/kubernetes/
 
 ---
 
-## Solution Design
-
-### Architecture Overview
+## Architecture Overview
 
 Payment Watchdog follows a microservices architecture with the following components:
 
@@ -216,161 +214,30 @@ graph TB
     WORKER --> MAILHOG
 ```
 
-### Data Flow
-
-1. **Payment Events**: Webhooks and API calls enter through API service
-2. **Processing**: Background worker processes payment failures with intelligent retry logic
-3. **Analytics**: Failure prediction engine analyzes patterns and suggests optimizations
-4. **Storage**: Payment data and metrics stored in PostgreSQL with optimized indexing
-5. **Caching**: Redis used for session management, rate limiting, and temporary data
-6. **Notifications**: Multi-channel notifications (email, SMS, webhook) for critical failures
-7. **Monitoring**: Real-time dashboards and alerting system
-
 ### Service Responsibilities
 
 #### API Service (Port 8080)
 - RESTful API endpoints
-- Request validation and routing
-- Database connection management
+- Webhook ingestion (Stripe)
+- Payment failure processing
 - Health checks and metrics
 
 #### Worker Service
-- Background job processing with priority queues
-- Payment failure detection and classification
-- Intelligent retry logic with exponential backoff
-- Dead letter queue handling for failed retries
-- Failure prediction and analytics processing
-- Multi-channel notification dispatch
+- Background job processing
+- Retry logic with exponential backoff
+- Payment failure detection
+- Analytics processing
 
 #### Web Interface (Port 4896)
-- Real-time payment metrics dashboard
-- Configuration management for recovery workflows
-- Failure pattern analysis and prediction
-- Alert management and notification preferences
-- System health monitoring and performance metrics
+- Payment metrics dashboard
+- Recovery workflow monitoring
+- Configuration management
 
 ### Database Schema
-
-The system uses PostgreSQL with optimized schema including:
-- `payments`: Payment transaction records with indexes
-- `payment_failures`: Failed payment attempts with classification
-- `recovery_attempts`: Retry execution logs with success/failure tracking
-- `users`: System user accounts with role-based access
-- `analytics`: Failure patterns and prediction data
-- `notifications`: Multi-channel notification logs
-
-### Deployment Architecture
-
-The application is designed to run in Docker containers with:
-- Stateless services for horizontal scaling
-- External database for data persistence
-- Redis for caching and session management
-- Environment-based configuration
-
----
-
-## Code Snippets
-
-### RecoveryOrchestrationService
-
-The core service managing automated recovery workflows with concurrent execution and intelligent retry logic.
-
-```go
-type RecoveryOrchestrationService struct {
-	db                    *gorm.DB
-	retryService          *RetryService
-	communicationService  *CommunicationService
-	analyticsService      *AnalyticsService
-	stepExecutors         map[string]StepExecutor
-	tracer                trace.Tracer
-	logger                *zap.Logger
-	mu                    sync.RWMutex
-	activeExecutions      map[uuid.UUID]*WorkflowExecution
-	executionWorkers      int
-	workerPool            chan struct{}
-}
-
-type WorkflowExecution struct {
-	ID                uuid.UUID
-	WorkflowID        uuid.UUID
-	PaymentFailureID  uuid.UUID
-	CompanyID         uuid.UUID
-	Status            string
-	CurrentStepIndex  int
-	Context           map[string]interface{}
-	StartedAt         time.Time
-	CancelFunc        context.CancelFunc
-	mu                sync.RWMutex
-}
-```
-
-### AnalyticsEngine
-
-Advanced analytics engine for payment failure pattern detection, trend analysis, and failure prediction.
-
-```go
-type AnalyticsEngine struct {
-	patternDetector  PatternDetector
-	trendAnalyzer    TrendAnalyzer
-	failurePredictor FailurePredictor
-	metrics          *AnalyticsMetrics
-	logger           *zap.Logger
-	mutex            sync.RWMutex
-}
-
-type PatternDetector interface {
-	DetectPatterns(events []*architecture.PaymentFailure) []Pattern
-	DetectCustomerPatterns(customerID string, events []*architecture.PaymentFailure) []CustomerPattern
-	DetectTemporalPatterns(events []*architecture.PaymentFailure, timeRange time.Duration) []TemporalPattern
-	DetectBusinessPatterns(events []*architecture.PaymentFailure) []Pattern
-}
-
-type Pattern struct {
-	ID          string                 `json:"id"`
-	Type        PatternType            `json:"type"`
-	Confidence  float64                `json:"confidence"`
-	Description string                 `json:"description"`
-	Evidence    []string               `json:"evidence"`
-	CreatedAt   time.Time              `json:"created_at"`
-}
-```
-
-### BaseMediator
-
-Foundation for payment provider integrations with OAuth, API, webhook, and rate limiting support.
-
-```go
-type ProviderConfig struct {
-	ProviderID   string       `json:"provider_id"`
-	ProviderType ProviderType `json:"provider_type"`
-	CompanyID    string       `json:"company_id"`
-	
-	// OAuth configuration
-	OAuthConfig *OAuthConfig `json:"oauth_config,omitempty"`
-	
-	// API configuration
-	APIConfig *APIConfig `json:"api_config,omitempty"`
-	
-	// Webhook configuration
-	WebhookConfig *WebhookConfig `json:"webhook_config,omitempty"`
-	
-	// Sync configuration
-	SyncConfig *SyncConfig `json:"sync_config,omitempty"`
-	
-	// Rate limiting
-	RateLimitConfig *RateLimitConfig `json:"rate_limit_config,omitempty"`
-	
-	// Metadata
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
-}
-
-const (
-	ProviderTypeWebhook ProviderType = "webhook" // Stripe, PayPal
-	ProviderTypeOAuth   ProviderType = "oauth"   // Xero, QuickBooks
-	ProviderTypeAPI     ProviderType = "api"     // Bank APIs, CDR
-	ProviderTypeManual  ProviderType = "manual"  // CSV uploads, manual entry
-)
-```
+- `payment_failures`: Failed payment attempts
+- `recovery_attempts`: Retry execution logs
+- `analytics`: Failure patterns and metrics
+- `users`: System user accounts
 
 ---
 
@@ -399,5 +266,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 For support, please open an issue on GitHub.
-
-Payment Watchdog - Payment Recovery Management

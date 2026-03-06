@@ -89,3 +89,8 @@ TEST_SETUP.md
 setup-*.sh
 docker-compose.*.yml
 !docker-compose.yml
+!docker-compose.local.yml
+
+# Local deployment volumes and data
+payment-watchdog-local-*/
+docker-compose.local.override.yml

@@ -1,6 +1,6 @@
 # Payment Watchdog Development Makefile
 
-.PHONY: help start stop restart logs clean build test lint format deps update
+.PHONY: help start stop restart logs clean build test lint format deps update local-start local-stop local-restart local-logs local-clean local-status local-health local-urls
 
 # Default target
 help: ## Show this help message
@@ -130,3 +130,28 @@ ci: ## Run full CI pipeline locally
 	make test
 	make build
 	@echo "CI pipeline completed successfully!"
+
+# Local deployment environment (separate from CI/CD)
+local-start: ## Start local deployment services
+	./scripts/local-deploy.sh start
+
+local-stop: ## Stop local deployment services
+	./scripts/local-deploy.sh stop
+
+local-restart: ## Restart local deployment services
+	./scripts/local-deploy.sh restart
+
+local-clean: ## Clean local deployment (removes data)
+	./scripts/local-deploy.sh clean
+
+local-status: ## Show local deployment status
+	./scripts/local-deploy.sh status
+
+local-logs: ## Show local deployment logs
+	./scripts/local-deploy.sh logs
+
+local-health: ## Run local deployment health checks
+	./scripts/local-deploy.sh health
+
+local-urls: ## Show local deployment access URLs
+	./scripts/local-deploy.sh urls
