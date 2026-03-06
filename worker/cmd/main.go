@@ -130,6 +130,13 @@ func initDatabase(logger *zap.Logger) (*gorm.DB, error) {
 }
 
 func startWorker(lc fx.Lifecycle, processor *services.EventProcessorService, logger *zap.Logger) {
+	// AC 1.3: Validate Sovereign Data Infrastructure Hardening
+	// The configuration is loaded on start, so we check compliance by calling the config package.
+	cfg := config.Get()
+	if !cfg.IsSovereignCompliant() {
+		logger.Fatal("Sovereign Compliance Check Failed. System configured with non-AU endpoints.", zap.String("db_host", cfg.Database.Host))
+	}
+
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting Payment Watchdog Worker...")

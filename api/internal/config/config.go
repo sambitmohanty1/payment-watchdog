@@ -2,18 +2,39 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/viper"
 )
 
 // Config holds all configuration for the service
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Stripe   StripeConfig   `mapstructure:"stripe"`
-	Xero     XeroConfig     `mapstructure:"xero"`
-	Email    EmailConfig    `mapstructure:"email"`
-	Log      LogConfig      `mapstructure:"log"`
+	Server        ServerConfig   `mapstructure:"server"`
+	Database      DatabaseConfig `mapstructure:"database"`
+	Stripe        StripeConfig   `mapstructure:"stripe"`
+	Xero          XeroConfig     `mapstructure:"xero"`
+	Email         EmailConfig    `mapstructure:"email"`
+	Log           LogConfig      `mapstructure:"log"`
+	SovereignMode bool           `mapstructure:"sovereign_mode"`
+}
+
+// isLocal checks if the host is a local loopback or standard internal network
+func isLocal(host string) bool {
+	return host == "localhost" || host == "127.0.0.1" || strings.Contains(host, "lexure-mvp-postgres") || strings.Contains(host, "svc.cluster.local")
+}
+
+// IsSovereignCompliant checks if the infrastructure dependencies comply with AU residency laws.
+func (c *Config) IsSovereignCompliant() bool {
+	if !c.SovereignMode {
+		return true
+	}
+	// GCP: .australia-southeast1, .australia-southeast2
+	// AWS: .ap-southeast-2
+	// OCI: .ap-sydney-1, .ap-melbourne-1
+	// Azure: .australiaeast, .australiasoutheast
+	host := c.Database.Host
+	isAUCloud := strings.Contains(host, ".au") || strings.Contains(host, "ap-southeast-2") || strings.Contains(host, "ap-sydney-1") || strings.Contains(host, "ap-melbourne-1") || strings.Contains(host, "australia-southeast1") || strings.Contains(host, "australia-southeast2") || strings.Contains(host, "australiaeast") || strings.Contains(host, "australiasoutheast")
+	return isAUCloud || isLocal(host)
 }
 
 // ServerConfig holds server configuration
@@ -82,6 +103,7 @@ func Load() error {
 	viper.SetDefault("database.password", "password")
 	viper.SetDefault("database.ssl_mode", "disable")
 	viper.SetDefault("log.level", "info")
+	viper.SetDefault("sovereign_mode", false)
 
 	fmt.Println("🔍 CONFIG DEBUG: Defaults set")
 
@@ -178,6 +200,10 @@ func Load() error {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOG_LEVEL: %v\n", err)
 		return fmt.Errorf("failed to bind LOG_LEVEL: %v", err)
 	}
+	if err := viper.BindEnv("sovereign_mode", "SOVEREIGN_MODE"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SOVEREIGN_MODE: %v\n", err)
+		return fmt.Errorf("failed to bind SOVEREIGN_MODE: %v", err)
+	}
 
 	fmt.Println("🔍 CONFIG DEBUG: All environment variables bound")
 
@@ -193,6 +219,7 @@ func Load() error {
 	fmt.Printf("  database.name: %s\n", viper.GetString("database.name"))
 	fmt.Printf("  database.user: %s\n", viper.GetString("database.user"))
 	fmt.Printf("  database.ssl_mode: %s\n", viper.GetString("database.ssl_mode"))
+	fmt.Printf("  sovereign_mode: %t\n", viper.GetBool("sovereign_mode"))
 
 	fmt.Println("🔍 CONFIG DEBUG: Configuration loading completed successfully")
 	return nil

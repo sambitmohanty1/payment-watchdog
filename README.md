@@ -133,6 +133,31 @@ make local-clean
 
 ---
 
+## 🛡️ Sovereign Data Compliance
+
+Payment Watchdog supports "Sovereign Mode" to ensure all application data and telemetry remain strictly within isolated Australian cloud regions (AWS, GCP, OCI, Azure) to comply with data residency laws.
+
+### Enabling Sovereign Mode
+To enable, set `SOVEREIGN_MODE=true` as an environment variable in both the `api` and `worker` services. The application will actively validate its database connection string upon startup and **abort** if a non-AU endpoint is detected.
+
+### Sovereign Kubernetes Deployment
+A Kustomize overlay is provided to enforce "Air-Gapped" network policies and use local cluster resources (like Prometheus and Redis) instead of global ones.
+
+```bash
+# Apply Sovereign Kubernetes configuration
+kubectl apply -k api/deployments/kubernetes/overlays/sovereign-au
+```
+
+### Infrastructure Auditing
+You can generate a Residency Report during deployments or manually run the manifest auditor to ensure no US-based or global external resources are hardcoded:
+
+```bash
+# Run the manifest auditor
+./scripts/AUDIT_SOVEREIGNTY.sh
+```
+
+---
+
 ## API Documentation
 
 ### Base URLs

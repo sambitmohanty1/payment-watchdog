@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -34,6 +35,26 @@ type Lock struct {
 
 // NewDistributedLockService creates a new distributed lock service
 func NewDistributedLockService(redisClient *redis.Client, logger *zap.Logger) *DistributedLockService {
+	// AC 3.2: Configure distributed_lock_service to use local Redis in sovereign mode
+	if os.Getenv("SOVEREIGN_MODE") == "true" {
+		localRedisHost := os.Getenv("REDIS_HOST")
+		if localRedisHost != "" {
+			redisPort := os.Getenv("REDIS_PORT")
+			if redisPort == "" {
+				redisPort = "6379"
+			}
+			redisPassword := os.Getenv("REDIS_PASSWORD")
+			logger.Info("Sovereign Mode active: configuring DistributedLockService to use local Redis", zap.String("host", localRedisHost))
+
+			// Replace the injected redis client with a local one
+			redisClient = redis.NewClient(&redis.Options{
+				Addr:     fmt.Sprintf("%s:%s", localRedisHost, redisPort),
+				Password: redisPassword,
+				DB:       0,
+			})
+		}
+	}
+
 	return &DistributedLockService{
 		redisClient: redisClient,
 		logger:      logger,

@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lexure-mvp-config
+  namespace: lexure-mvp
+data:
+  config.yaml: |
+    server:
+      port: "8085"
+      host: "0.0.0.0"
+      https: false
+      cert_file: "/app/certs/tls.crt"
+      key_file: "/app/certs/tls.key"
+
+    database:
+      host: "lexure-mvp-postgres.lexure.svc.cluster.local"
+      port: 5432
+      name: "lexure_intelligence_mvp"
+      user: "postgres"
+      password: ""
+      ssl_mode: "disable"
+
+    stripe:
+      secret_key: ""
+      webhook_secret: ""
+      publishable_key: ""
+
+    xero:
+      client_id: ""
+      client_secret: ""
+      redirect_uri: "http://localhost:8085/api/v1/xero/auth/callback"
+
+    email:
+      provider: "smtp"
+      host: "localhost"
+      port: 587
+      username: ""
+      password: ""
+      from_email: "noreply@payment-watchdog.com"
+      from_name: "Lexure Intelligence"
+
+    log:
+      level: "info"
