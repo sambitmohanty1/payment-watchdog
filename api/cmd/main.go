@@ -16,17 +16,32 @@ import (
 
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/database"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/logging"
 )
 
 func main() {
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-
-	// Load configuration
+	// Load configuration first
 	if err := config.Load(); err != nil {
-		logger.Fatal("Failed to load config", zap.Error(err))
+		fmt.Printf("Failed to load config: %v\n", err)
+		os.Exit(1)
 	}
 	cfg := config.Get()
+
+	// Initialize logger with configuration
+	logConfig := logging.Config{
+		Level:  cfg.Log.Level,
+		Format: "json",
+		Output: "stdout",
+	}
+	logger, err := logging.NewLogger(logConfig)
+	if err != nil {
+		fmt.Printf("Failed to create logger: %v\n", err)
+		os.Exit(1)
+	}
+	defer logger.Sync()
+
+	// Add service context
+	logger = logging.WithServiceContext(logger, "payment-watchdog-api", "1.0.0")
 
 	// AC 1.3: Validate Sovereign Data Infrastructure Hardening
 	if !cfg.IsSovereignCompliant() {

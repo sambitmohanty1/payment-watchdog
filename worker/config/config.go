@@ -2,8 +2,11 @@ package config
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/logging"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 // Config holds all configuration for the service
@@ -85,7 +88,16 @@ type LogConfig struct {
 
 // Load loads configuration from file and environment variables
 func Load() error {
-	fmt.Println("🔍 CONFIG DEBUG: Starting configuration loading...")
+	// Create logger for configuration loading
+	logger, err := logging.NewDevelopmentLogger()
+	if err != nil {
+		return fmt.Errorf("failed to create config logger: %w", err)
+	}
+	defer logger.Sync()
+
+	logger.Info("Starting configuration loading",
+		zap.String("component", "config-loader"),
+		zap.Time("started_at", time.Now()))
 
 	// Set defaults to match Kubernetes service configuration
 	viper.SetDefault("server.port", "8085")
@@ -109,7 +121,10 @@ func Load() error {
 	viper.SetDefault("lock.prefix", "payment_watchdog:lock:")
 	viper.SetDefault("log.level", "info")
 
-	fmt.Println("🔍 CONFIG DEBUG: Defaults set")
+	logger.Debug("Configuration defaults set",
+		zap.String("component", "config-loader"),
+		zap.String("server_port", viper.GetString("server.port")),
+		zap.String("database_host", viper.GetString("database.host")))
 
 	// Set config file
 	viper.SetConfigName("config")
@@ -118,141 +133,83 @@ func Load() error {
 	viper.AddConfigPath("/app/config") // Kubernetes ConfigMap mount path
 	viper.AddConfigPath(".")
 
-	fmt.Println("🔍 CONFIG DEBUG: Config paths set")
+	logger.Debug("Configuration paths set",
+		zap.String("component", "config-loader"),
+		zap.Strings("paths", []string{"./config", "/app/config", "."}))
 
 	// Read config file
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			fmt.Printf("🔍 CONFIG DEBUG: Failed to read config file: %v\n", err)
+			logger.Error("Failed to read config file",
+				zap.String("component", "config-loader"),
+				zap.Error(err))
 			return fmt.Errorf("failed to read config file: %w", err)
 		}
-		fmt.Println("🔍 CONFIG DEBUG: No config file found, using defaults and environment")
+		logger.Info("No config file found, using defaults and environment",
+			zap.String("component", "config-loader"))
 	} else {
-		fmt.Println("🔍 CONFIG DEBUG: Config file read successfully")
+		logger.Info("Config file read successfully",
+			zap.String("component", "config-loader"),
+			zap.String("config_file", viper.ConfigFileUsed()))
 	}
 
 	// Enable automatic environment variable loading
 	viper.AutomaticEnv()
-	fmt.Println("🔍 CONFIG DEBUG: Automatic environment loading enabled")
+	logger.Debug("Automatic environment loading enabled",
+		zap.String("component", "config-loader"))
 
 	// Bind specific environment variables with proper error handling
-	if err := viper.BindEnv("server.port", "SERVER_PORT"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SERVER_PORT: %v\n", err)
-		return fmt.Errorf("failed to bind SERVER_PORT: %w", err)
-	}
-	if err := viper.BindEnv("server.host", "SERVER_HOST"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SERVER_HOST: %v\n", err)
-		return fmt.Errorf("failed to bind SERVER_HOST: %w", err)
-	}
-	if err := viper.BindEnv("server.https", "SERVER_HTTPS"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SERVER_HTTPS: %v\n", err)
-		return fmt.Errorf("failed to bind SERVER_HTTPS: %w", err)
-	}
-	if err := viper.BindEnv("server.cert_file", "SERVER_CERT_FILE"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SERVER_CERT_FILE: %v\n", err)
-		return fmt.Errorf("failed to bind SERVER_CERT_FILE: %w", err)
-	}
-	if err := viper.BindEnv("server.key_file", "SERVER_KEY_FILE"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SERVER_KEY_FILE: %v\n", err)
-		return fmt.Errorf("failed to bind SERVER_KEY_FILE: %w", err)
-	}
-	if err := viper.BindEnv("database.host", "DATABASE_HOST"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_HOST: %v\n", err)
-		return fmt.Errorf("failed to bind DATABASE_HOST: %w", err)
-	}
-	if err := viper.BindEnv("database.port", "DATABASE_PORT"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_PORT: %v\n", err)
-		return fmt.Errorf("failed to bind DATABASE_PORT: %v", err)
-	}
-	if err := viper.BindEnv("database.name", "DATABASE_NAME"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_NAME: %v\n", err)
-		return fmt.Errorf("failed to bind DATABASE_NAME: %w", err)
-	}
-	if err := viper.BindEnv("database.user", "DATABASE_USER"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_USER: %v\n", err)
-		return fmt.Errorf("failed to bind DATABASE_USER: %w", err)
-	}
-	if err := viper.BindEnv("database.password", "DATABASE_PASSWORD"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_PASSWORD: %v\n", err)
-		return fmt.Errorf("failed to bind DATABASE_PASSWORD: %w", err)
-	}
-	if err := viper.BindEnv("redis.host", "REDIS_HOST"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind REDIS_HOST: %v\n", err)
-		return fmt.Errorf("failed to bind REDIS_HOST: %w", err)
-	}
-	if err := viper.BindEnv("redis.port", "REDIS_PORT"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind REDIS_PORT: %v\n", err)
-		return fmt.Errorf("failed to bind REDIS_PORT: %w", err)
-	}
-	if err := viper.BindEnv("redis.password", "REDIS_PASSWORD"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind REDIS_PASSWORD: %v\n", err)
-		return fmt.Errorf("failed to bind REDIS_PASSWORD: %w", err)
-	}
-	if err := viper.BindEnv("redis.db", "REDIS_DB"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind REDIS_DB: %v\n", err)
-		return fmt.Errorf("failed to bind REDIS_DB: %w", err)
-	}
-	if err := viper.BindEnv("lock.default_ttl", "LOCK_DEFAULT_TTL"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOCK_DEFAULT_TTL: %v\n", err)
-		return fmt.Errorf("failed to bind LOCK_DEFAULT_TTL: %w", err)
-	}
-	if err := viper.BindEnv("lock.retry_delay", "LOCK_RETRY_DELAY"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOCK_RETRY_DELAY: %v\n", err)
-		return fmt.Errorf("failed to bind LOCK_RETRY_DELAY: %w", err)
-	}
-	if err := viper.BindEnv("lock.max_retries", "LOCK_MAX_RETRIES"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOCK_MAX_RETRIES: %v\n", err)
-		return fmt.Errorf("failed to bind LOCK_MAX_RETRIES: %w", err)
-	}
-	if err := viper.BindEnv("lock.prefix", "LOCK_PREFIX"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOCK_PREFIX: %v\n", err)
-		return fmt.Errorf("failed to bind LOCK_PREFIX: %w", err)
-	}
-	if err := viper.BindEnv("stripe.secret_key", "STRIPE_SECRET_KEY"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind STRIPE_SECRET_KEY: %v\n", err)
-		return fmt.Errorf("failed to bind STRIPE_SECRET_KEY: %w", err)
-	}
-	if err := viper.BindEnv("stripe.webhook_secret", "STRIPE_WEBHOOK_SECRET"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind STRIPE_WEBHOOK_SECRET: %v\n", err)
-		return fmt.Errorf("failed to bind STRIPE_WEBHOOK_SECRET: %w", err)
-	}
-	if err := viper.BindEnv("email.host", "EMAIL_HOST"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind EMAIL_HOST: %v\n", err)
-		return fmt.Errorf("failed to bind EMAIL_HOST: %v", err)
-	}
-	if err := viper.BindEnv("email.port", "EMAIL_PORT"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind EMAIL_PORT: %v\n", err)
-		return fmt.Errorf("failed to bind EMAIL_PORT: %v", err)
-	}
-	if err := viper.BindEnv("email.username", "EMAIL_USERNAME"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind EMAIL_USERNAME: %v\n", err)
-		return fmt.Errorf("failed to bind EMAIL_USERNAME: %v", err)
-	}
-	if err := viper.BindEnv("email.password", "EMAIL_PASSWORD"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind EMAIL_PASSWORD: %v\n", err)
-		return fmt.Errorf("failed to bind EMAIL_PASSWORD: %v", err)
-	}
-	if err := viper.BindEnv("log.level", "LOG_LEVEL"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOG_LEVEL: %v\n", err)
-		return fmt.Errorf("failed to bind LOG_LEVEL: %v", err)
+	envVars := []struct {
+		key, env string
+	}{
+		{"server.port", "SERVER_PORT"},
+		{"server.host", "SERVER_HOST"},
+		{"server.https", "SERVER_HTTPS"},
+		{"server.cert_file", "SERVER_CERT_FILE"},
+		{"server.key_file", "SERVER_KEY_FILE"},
+		{"database.host", "DATABASE_HOST"},
+		{"database.port", "DATABASE_PORT"},
+		{"database.name", "DATABASE_NAME"},
+		{"database.user", "DATABASE_USER"},
+		{"database.password", "DATABASE_PASSWORD"},
+		{"redis.host", "REDIS_HOST"},
+		{"redis.port", "REDIS_PORT"},
+		{"redis.password", "REDIS_PASSWORD"},
+		{"redis.db", "REDIS_DB"},
+		{"lock.default_ttl", "LOCK_DEFAULT_TTL"},
+		{"lock.retry_delay", "LOCK_RETRY_DELAY"},
+		{"lock.max_retries", "LOCK_MAX_RETRIES"},
+		{"lock.prefix", "LOCK_PREFIX"},
+		{"stripe.secret_key", "STRIPE_SECRET_KEY"},
+		{"stripe.webhook_secret", "STRIPE_WEBHOOK_SECRET"},
+		{"email.host", "EMAIL_HOST"},
+		{"email.port", "EMAIL_PORT"},
+		{"email.username", "EMAIL_USERNAME"},
+		{"email.password", "EMAIL_PASSWORD"},
+		{"log.level", "LOG_LEVEL"},
 	}
 
-	fmt.Println("🔍 CONFIG DEBUG: All environment variables bound")
+	for _, envVar := range envVars {
+		if err := viper.BindEnv(envVar.key, envVar.env); err != nil {
+			logger.Error("Failed to bind environment variable",
+				zap.String("component", "config-loader"),
+				zap.String("key", envVar.key),
+				zap.String("env", envVar.env),
+				zap.Error(err))
+			return fmt.Errorf("failed to bind %s: %w", envVar.env, err)
+		}
+	}
 
-	// Log final configuration values
-	fmt.Printf("🔍 CONFIG DEBUG: Final configuration values:\n")
-	fmt.Printf("  server.port: %s\n", viper.GetString("server.port"))
-	fmt.Printf("  server.host: %s\n", viper.GetString("server.host"))
-	fmt.Printf("  server.https: %t\n", viper.GetBool("server.https"))
-	fmt.Printf("  server.cert_file: %s\n", viper.GetString("server.cert_file"))
-	fmt.Printf("  server.key_file: %s\n", viper.GetString("server.key_file"))
-	fmt.Printf("  database.host: %s\n", viper.GetString("database.host"))
-	fmt.Printf("  database.port: %d\n", viper.GetInt("database.port"))
-	fmt.Printf("  database.name: %s\n", viper.GetString("database.name"))
-	fmt.Printf("  database.user: %s\n", viper.GetString("database.user"))
-	fmt.Printf("  database.ssl_mode: %s\n", viper.GetString("database.ssl_mode"))
+	logger.Debug("All environment variables bound",
+		zap.String("component", "config-loader"),
+		zap.Int("bound_vars", len(envVars)))
 
-	fmt.Println("🔍 CONFIG DEBUG: Configuration loading completed successfully")
+	logger.Info("Configuration loading completed successfully",
+		zap.String("component", "config-loader"),
+		zap.String("server_port", viper.GetString("server.port")),
+		zap.String("database_host", viper.GetString("database.host")),
+		zap.String("database_name", viper.GetString("database.name")))
+
 	return nil
 }
 

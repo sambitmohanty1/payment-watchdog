@@ -22,13 +22,24 @@ import (
 )
 
 func main() {
+	// Initialize logger
+	logger, err := zap.NewProduction()
+	if err != nil {
+		fmt.Printf("Failed to create logger: %v\n", err)
+		os.Exit(1)
+	}
+	defer logger.Sync()
+
+	// Add service context
+	logger = logger.With(zap.String("service", "payment-watchdog-worker"), zap.String("version", "1.0.0"))
+
 	app := fx.New(
 		fx.WithLogger(func() fxevent.Logger {
-			return &fxevent.ZapLogger{Logger: zap.NewNop()}
+			return &fxevent.ZapLogger{Logger: logger}
 		}),
 		fx.Provide(
+			func() *zap.Logger { return logger },
 			config.Load,
-			initLogger,
 			initDatabase,
 			func(logger *zap.Logger, db *gorm.DB) *rules.RuleEngineFactory {
 				return rules.NewRuleEngineFactory(logger, db)

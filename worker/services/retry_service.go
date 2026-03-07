@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -20,6 +21,7 @@ type RetryService struct {
 	workers         int
 	mu              sync.RWMutex
 	activeJobs      map[string]*RetryJob
+	logger          *zap.Logger
 }
 
 // RetryJob represents a job that needs to be retried
@@ -51,11 +53,14 @@ type RetryJobResult struct {
 }
 
 // NewRetryService creates a new retry service
-func NewRetryService(db *gorm.DB, maxRetries int, baseDelay, maxDelay time.Duration, workers int) *RetryService {
+func NewRetryService(db *gorm.DB, maxRetries int, baseDelay, maxDelay time.Duration, workers int, logger *zap.Logger) *RetryService {
 	// Safety check: ensure we have a valid database connection
 	if db == nil {
 		panic("RetryService requires a valid database connection")
 	}
+
+	// Add service context to logger
+	serviceLogger := logger.With(zap.String("service", "retry-service"), zap.String("version", "1.0.0"))
 
 	service := &RetryService{
 		db:              db,
@@ -65,7 +70,15 @@ func NewRetryService(db *gorm.DB, maxRetries int, baseDelay, maxDelay time.Durat
 		deadLetterQueue: make(chan RetryJob, 1000),
 		workers:         workers,
 		activeJobs:      make(map[string]*RetryJob),
+		logger:          serviceLogger,
 	}
+
+	serviceLogger.Info("Retry service initialized",
+		zap.Int("max_retries", maxRetries),
+		zap.Duration("base_delay", baseDelay),
+		zap.Duration("max_delay", maxDelay),
+		zap.Int("workers", workers),
+		zap.Int("dead_letter_queue_size", 1000))
 
 	// Start worker goroutines
 	for i := 0; i < workers; i++ {
@@ -227,7 +240,11 @@ func (r *RetryService) scheduleRetry(job *RetryJob, err error) {
 
 	// Update database
 	if updateErr := r.db.Save(job).Error; updateErr != nil {
-		fmt.Printf("Failed to update retry job: %v\n", updateErr)
+		r.logger.Error("Failed to update retry job",
+			zap.String("job_id", job.ID),
+			zap.String("job_type", job.JobType),
+			zap.String("company_id", job.CompanyID),
+			zap.Error(updateErr))
 		return
 	}
 
@@ -254,7 +271,11 @@ func (r *RetryService) completeJob(job *RetryJob, result interface{}) {
 
 	// Update database
 	if err := r.db.Save(job).Error; err != nil {
-		fmt.Printf("Failed to update completed job: %v\n", err)
+		r.logger.Error("Failed to update completed job",
+			zap.String("job_id", job.ID),
+			zap.String("job_type", job.JobType),
+			zap.String("company_id", job.CompanyID),
+			zap.Error(err))
 	}
 
 	// Remove from active jobs
@@ -270,7 +291,11 @@ func (r *RetryService) sendToDeadLetterQueue(job *RetryJob, err error) {
 
 	// Update database
 	if updateErr := r.db.Save(job).Error; updateErr != nil {
-		fmt.Printf("Failed to update dead letter job: %v\n", updateErr)
+		r.logger.Error("Failed to update dead letter job",
+			zap.String("job_id", job.ID),
+			zap.String("job_type", job.JobType),
+			zap.String("company_id", job.CompanyID),
+			zap.Error(updateErr))
 	}
 
 	// Send to dead letter queue
@@ -279,7 +304,11 @@ func (r *RetryService) sendToDeadLetterQueue(job *RetryJob, err error) {
 		// Successfully queued
 	default:
 		// Queue is full, log error
-		fmt.Printf("Dead letter queue full, dropping job: %s\n", job.ID)
+		r.logger.Error("Dead letter queue full, dropping job",
+			zap.String("job_id", job.ID),
+			zap.String("job_type", job.JobType),
+			zap.String("company_id", job.CompanyID),
+			zap.Int("queue_size", len(r.deadLetterQueue)))
 	}
 
 	// Remove from active jobs
@@ -310,7 +339,8 @@ func (r *RetryService) processScheduledJobs() {
 	// Check if the retry_jobs table exists first
 	var tableExists bool
 	if err := r.db.Raw("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'retry_jobs')").Scan(&tableExists).Error; err != nil {
-		fmt.Printf("Failed to check if retry_jobs table exists: %v\n", err)
+		r.logger.Error("Failed to check if retry_jobs table exists",
+			zap.Error(err))
 		return
 	}
 
@@ -321,7 +351,8 @@ func (r *RetryService) processScheduledJobs() {
 
 	var scheduledJobs []RetryJob
 	if err := r.db.Where("status = ? AND next_retry_at <= ?", "scheduled", time.Now()).Find(&scheduledJobs).Error; err != nil {
-		fmt.Printf("Failed to get scheduled jobs: %v\n", err)
+		r.logger.Error("Failed to get scheduled jobs",
+			zap.Error(err))
 		return
 	}
 
@@ -345,8 +376,12 @@ func (r *RetryService) processScheduledJobs() {
 func (r *RetryService) processDeadLetterQueue() {
 	for job := range r.deadLetterQueue {
 		// Log dead letter job
-		fmt.Printf("Dead letter job: %s (Type: %s, Company: %s, Error: %s)\n",
-			job.ID, job.JobType, job.CompanyID, job.Error)
+		r.logger.Error("Dead letter job detected",
+			zap.String("job_id", job.ID),
+			zap.String("job_type", job.JobType),
+			zap.String("company_id", job.CompanyID),
+			zap.String("error", job.Error),
+			zap.String("retry_count", fmt.Sprintf("%d", job.RetryCount)))
 
 		// In a real implementation, this would:
 		// 1. Send alerts to administrators
