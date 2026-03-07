@@ -64,6 +64,9 @@ coverage/
 *.crt
 *.pem
 
+# OCI configuration and credentials
+oci config/
+
 # Logs
 logs
 *.log
