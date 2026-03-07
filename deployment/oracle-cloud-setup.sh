@@ -22,14 +22,16 @@ NODE_POOL_NAME="payment-watchdog-nodes"
 VCN_NAME="payment-watchdog-vcn"
 SUBNET_NAME="payment-watchdog-subnet"
 IGW_NAME="payment-watchdog-igw"
-DOMAIN="your-domain.com"  # UPDATE THIS
+DOMAIN=${DOMAIN:-""}  # Optional - leave empty for IP-based access
+TENANCY_ID="ocid1.tenancy.oc1..aaaaaaaaitfhbb6ix7yqiavspixzepzm4babf6qjonzom5pe4lvqzxvp2xla"
 
 echo "📋 Step 1: Creating Compartment..."
-COMPARTMENT_ID=$(oci iam compartment list --query "data[?name=='$COMPARTMENT_NAME'].id | [0]" --raw-output)
+COMPARTMENT_ID=$(oci iam compartment list --compartment-id "$TENANCY_ID" --query "data[?name=='$COMPARTMENT_NAME'].id | [0]" --raw-output)
 if [ -z "$COMPARTMENT_ID" ] || [ "$COMPARTMENT_ID" = "null" ]; then
     COMPARTMENT_ID=$(oci iam compartment create \
         --name "$COMPARTMENT_NAME" \
         --description "Isolated Sovereign Compartment" \
+        --compartment-id "$TENANCY_ID" \
         --region "$REGION" \
         --query "data.id" --raw-output)
     echo "✅ Created compartment: $COMPARTMENT_ID"
@@ -51,7 +53,7 @@ else
     echo "✅ Using existing VCN: $VCN_ID"
 fi
 
-SUBNET_ID=$(oci network subnet list --vcn-id "$VCN_ID" --query "data[?name=='$SUBNET_NAME'].id | [0]" --raw-output)
+SUBNET_ID=$(oci network subnet list --compartment-id "$COMPARTMENT_ID" --vcn-id "$VCN_ID" --query "data[?name=='$SUBNET_NAME'].id | [0]" --raw-output)
 if [ -z "$SUBNET_ID" ]; then
     SUBNET_ID=$(oci network subnet create \
                 --compartment-id "$COMPARTMENT_ID" \
@@ -65,21 +67,37 @@ else
 fi
 
 echo "📋 Step 3: Creating Internet Gateway..."
-IGW_ID=$(oci network internet-gateway list --vcn-id "$VCN_ID" --query "data[?name=='$IGW_NAME'].id | [0]" --raw-output)
+IGW_ID=$(oci network internet-gateway list --compartment-id "$COMPARTMENT_ID" --vcn-id "$VCN_ID" --query "data[?name=='$IGW_NAME'].id | [0]" --raw-output)
 if [ -z "$IGW_ID" ]; then
     IGW_ID=$(oci network internet-gateway create \
                 --compartment-id "$COMPARTMENT_ID" \
                 --vcn-id "$VCN_ID" \
                 --display-name "$IGW_NAME" \
+                --is-enabled true \
                 --query "data.id" --raw-output)
     echo "✅ Created Internet Gateway: $IGW_ID"
     
     # Get route table ID and add route
-    RT_ID=$(oci network vcn get --vcn-id "$VCN_ID" --query "data.default_route_table_id" --raw-output)
+    # Get the correct VCN ID from the internet gateway
+    CORRECT_VCN_ID=$(oci network internet-gateway get --ig-id "$IGW_ID" --query 'data."vcn-id"' --raw-output)
+    
+    RT_ID=$(oci network route-table list --compartment-id "$COMPARTMENT_ID" --vcn-id "$CORRECT_VCN_ID" --query "data[0].id" --raw-output)
+    
+    # Create route rule file
+    cat > /tmp/route_rule.json << EOF
+[
+  {
+    "cidrBlock": "0.0.0.0/0",
+    "networkEntityId": "$IGW_ID"
+  }
+]
+EOF
+    
     oci network route-table update \
         --rt-id "$RT_ID" \
-        --route-rules '[{"cidr":"0.0.0.0/0","networkEntityId":"'"$IGW_ID"'","networkEntityType":"InternetGateway"}]'
+        --route-rules file:///tmp/route_rule.json
     echo "✅ Updated route table with internet gateway route"
+    rm -f /tmp/route_rule.json
 else
     echo "✅ Using existing Internet Gateway: $IGW_ID"
 fi
@@ -182,11 +200,18 @@ if [ -z "$EXTERNAL_IP" ]; then
 fi
 
 echo "📋 Step 8: Updating Configuration..."
-# Update domain in ingress
-sed -i "s/lexure-mvp.local/$DOMAIN/g" api/deployments/kubernetes/base/components/ingress/ingress.yaml
-
-# Update GitHub environment URL
-sed -i "s/staging.payment-watchdog.example.com/https:\/\/$DOMAIN/g" .github/workflows/payment-watchdog-ci.yml
+if [ -n "$DOMAIN" ]; then
+    echo "🌐 Updating configuration for domain: $DOMAIN"
+    # Update domain in ingress
+    sed -i '' "s/payment-watchdog\.local/$DOMAIN/g" api/deployments/kubernetes/base/components/ingress/ingress.yaml
+    
+    # Update GitHub environment URL
+    sed -i '' "s/staging\.payment-watchdog\.example\.com/https:\/\/$DOMAIN/g" .github/workflows/payment-watchdog-ci.yml
+    echo "✅ Domain configuration updated"
+else
+    echo "🌐 No domain provided - will use IP-based access"
+    echo "   You can access services via: http://$EXTERNAL_IP"
+fi
 
 echo "📋 Step 9: Creating Staging Namespace..."
 kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -
@@ -194,10 +219,19 @@ kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -
 echo "🎉 Oracle Cloud Setup Complete!"
 echo "=================================="
 echo "External IP: $EXTERNAL_IP"
-echo "Domain: $DOMAIN"
-echo "Next Steps:"
-echo "1. Point your domain DNS to: $EXTERNAL_IP"
-echo "2. Run: kubectl apply -f api/deployments/kubernetes"
-echo "3. Update GitHub KUBE_CONFIG secret with:"
-echo "   cat $KUBECONFIG | base64 -w 0"
+if [ -n "$DOMAIN" ]; then
+    echo "Domain: $DOMAIN"
+    echo "Next Steps:"
+    echo "1. Point your domain DNS to: $EXTERNAL_IP"
+    echo "2. Run: kubectl apply -f api/deployments/kubernetes"
+    echo "3. Update GitHub KUBE_CONFIG secret with:"
+    echo "   cat $KUBECONFIG | base64 -w 0"
+else
+    echo "Access Method: IP-based (no domain required)"
+    echo "Next Steps:"
+    echo "1. Run: kubectl apply -f api/deployments/kubernetes"
+    echo "2. Access services via: http://$EXTERNAL_IP"
+    echo "3. Update GitHub KUBE_CONFIG secret with:"
+    echo "   cat $KUBECONFIG | base64 -w 0"
+fi
 echo "=================================="

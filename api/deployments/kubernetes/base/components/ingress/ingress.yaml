@@ -10,28 +10,28 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   rules:
-  - host: lexure-mvp.local
+  - host: payment-watchdog.local
     http:
       paths:
       - path: /api
         pathType: Prefix
         backend:
           service:
-            name: payment-watchdog-mvp
+            name: payment-watchdog-api
             port:
               number: 80
       - path: /health
         pathType: Prefix
         backend:
           service:
-            name: payment-watchdog-mvp
+            name: payment-watchdog-api
             port:
               number: 80
       - path: /metrics
         pathType: Prefix
         backend:
           service:
-            name: payment-watchdog-mvp
+            name: payment-watchdog-api
             port:
               number: 80
       - path: /
