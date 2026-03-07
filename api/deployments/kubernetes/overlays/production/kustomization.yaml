@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Import base components and applications for Oracle Cloud production
+resources:
+  - ../../base/components/postgres
+  - ../../base/components/redis
+  - ../../base/components/ingress
+  - ../../base/components/monitoring
+  - ../../apps/payment-watchdog-api
+  - ../../apps/payment-watchdog-web
+  - ../../apps/recovery-orchestration
+  - namespace.yaml
+
+# Production namespace for Oracle Cloud
+namespace: production
+
+# Configure name prefix and suffix for production
+namePrefix: ""
+nameSuffix: "-prod"
+
+# Common labels for all resources
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: payment-watchdog
+      environment: production
+      cloud: oracle-cloud
+      region: ap-sydney-1
+    includeSelectors: true
+    includeTemplates: true
+
+# Configure image overrides for production
+# These will be dynamically updated by the deployment workflow to match CI builds
+images:
+  - name: payment-watchdog-api
+    newName: ghcr.io/sambitmohanty1/payment-watchdog/api
+    newTag: latest
+  - name: payment-watchdog-ui
+    newName: ghcr.io/sambitmohanty1/payment-watchdog/web
+    newTag: latest
+  - name: payment-watchdog-recovery-orchestration
+    newName: ghcr.io/sambitmohanty1/payment-watchdog/worker
+    newTag: latest

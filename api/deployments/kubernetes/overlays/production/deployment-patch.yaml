@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-watchdog-api
+spec:
+  template:
+    spec:
+      containers:
+      - name: payment-watchdog-api
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: DATABASE_HOST
+          value: "payment-watchdog-postgres.production.svc.cluster.local"
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_NAME
+          value: "payment_watchdog_production"
+        - name: REDIS_URL
+          value: "redis://payment-watchdog-redis.production.svc.cluster.local:6379"
+        - name: ORACLE_REGION
+          value: "ap-sydney-1"
+        - name: ORACLE_COMPARTMENT
+          value: "PaymentWatchdogSovereign"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-watchdog-ui
+spec:
+  template:
+    spec:
+      containers:
+      - name: payment-watchdog-ui
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: API_BASE_URL
+          value: "https://payment-watchdog.example.com"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recovery-orchestration
+spec:
+  template:
+    spec:
+      containers:
+      - name: recovery-orchestration
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: DATABASE_HOST
+          value: "payment-watchdog-postgres.production.svc.cluster.local"
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_NAME
+          value: "payment_watchdog_production"
+        - name: REDIS_URL
+          value: "redis://payment-watchdog-redis.production.svc.cluster.local:6379"
+        - name: ORACLE_REGION
+          value: "ap-sydney-1"
