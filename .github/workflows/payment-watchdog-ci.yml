@@ -6,6 +6,15 @@ on:
   pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Custom image tag (e.g., v1.0.0, latest). If not provided, uses commit SHA.'
+        required: false
+        type: string
+      build_reason:
+        description: 'Reason for manual build (e.g., hotfix, release)'
+        required: false
+        type: string
 
 # 🛑 SECURITY: Restrict permissions for GITHUB_TOKEN
 permissions:
@@ -435,6 +444,7 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=${{ github.sha }}
             type=raw,value=latest,enable={{is_default_branch}}
+            ${{ github.event.inputs.image_tag && format('type=raw,value={0}', github.event.inputs.image_tag) || '' }}
 
       - name: Extract metadata for Web
         id: meta-web
@@ -447,6 +457,7 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=${{ github.sha }}
             type=raw,value=latest,enable={{is_default_branch}}
+            ${{ github.event.inputs.image_tag && format('type=raw,value={0}', github.event.inputs.image_tag) || '' }}
 
       - name: Extract metadata for Worker
         id: meta-worker
@@ -459,6 +470,7 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=${{ github.sha }}
             type=raw,value=latest,enable={{is_default_branch}}
+            ${{ github.event.inputs.image_tag && format('type=raw,value={0}', github.event.inputs.image_tag) || '' }}
 
       - name: Build and push API image
         uses: docker/build-push-action@v6
