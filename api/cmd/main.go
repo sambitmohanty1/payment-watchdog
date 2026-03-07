@@ -1,136 +1,71 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+    "context"
+    "fmt"
+    "net/http"
+    "os"
+    "os/signal"
+    "syscall"
+    "time"
 
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+    "github.com/gin-gonic/gin"
+    "github.com/prometheus/client_golang/prometheus/promhttp"
+    "go.uber.org/zap"
+    "gorm.io/driver/postgres"
+    "gorm.io/gorm"
 
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/database"
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/logging"
+    "github.com/sambitmohanty1/payment-watchdog/api/internal/api"
+    "github.com/sambitmohanty1/payment-watchdog/api/internal/config"
+    "github.com/sambitmohanty1/payment-watchdog/api/internal/database"
 )
 
 func main() {
-	// Load configuration first
-	if err := config.Load(); err != nil {
-		fmt.Printf("Failed to load config: %v\n", err)
-		os.Exit(1)
-	}
-	cfg := config.Get()
+    logger, _ := zap.NewProduction()
+    defer logger.Sync()
 
-	// Initialize logger with configuration
-	logConfig := logging.Config{
-		Level:  cfg.Log.Level,
-		Format: "json",
-		Output: "stdout",
-	}
-	logger, err := logging.NewLogger(logConfig)
-	if err != nil {
-		fmt.Printf("Failed to create logger: %v\n", err)
-		os.Exit(1)
-	}
-	defer logger.Sync()
+    cfg, err := config.LoadConfig()
+    if err != nil {
+        logger.Fatal("Failed to load config", zap.Error(err))
+    }
 
-	// Add service context
-	logger = logging.WithServiceContext(logger, "payment-watchdog-api", "1.0.0")
+    dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+        cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort)
+    db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+    if err != nil {
+        logger.Fatal("Failed to connect to database", zap.Error(err))
+    }
 
-	// AC 1.3: Validate Sovereign Data Infrastructure Hardening
-	if !cfg.IsSovereignCompliant() {
-		logger.Fatal("Sovereign Compliance Check Failed. System configured with non-AU endpoints.", zap.String("db_host", cfg.Database.Host))
-	}
+    if err := database.Migrate(db); err != nil {
+        logger.Fatal("Failed to run migrations", zap.Error(err))
+    }
 
-	// Database connection
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
-		cfg.Database.Host, cfg.Database.User, cfg.Database.Password, cfg.Database.Name, cfg.Database.Port)
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		logger.Fatal("Failed to connect to database", zap.Error(err))
-	}
+    // 1. OBSERVABILITY: Metrics Server
+    go func() {
+        http.Handle("/metrics", promhttp.Handler())
+        logger.Info("Starting metrics server on :9090")
+        http.ListenAndServe(":9090", nil)
+    }()
 
-	// Run database migrations
-	if err := database.RunMigrations(db); err != nil {
-		logger.Fatal("Failed to run migrations", zap.Error(err))
-	}
+    r := gin.Default()
+    api.SetupRoutes(r, db, logger)
 
-	// Simple metrics server
-	go func() {
-		logger.Info("Starting metrics server on :9090")
-		http.ListenAndServe(":9090", nil)
-	}()
+    srv := &http.Server{
+        Addr:    ":" + cfg.Port,
+        Handler: r,
+    }
 
-	// Setup basic routes
-	router := setupBasicRoutes(db, logger)
+    go func() {
+        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            logger.Fatal("listen: %s\n", zap.Error(err))
+        }
+    }()
 
-	srv := &http.Server{
-		Addr:    ":" + cfg.Server.Port,
-		Handler: router,
-	}
+    quit := make(chan os.Signal, 1)
+    signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+    <-quit
 
-	go func() {
-		logger.Info("Starting HTTP server", zap.String("port", cfg.Server.Port))
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("listen: %s\n", zap.Error(err))
-		}
-	}()
-
-	// Graceful shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	logger.Info("Shutting down server...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Error("Server forced to shutdown", zap.Error(err))
-	}
-
-	logger.Info("Server exited")
-}
-
-// setupBasicRoutes creates minimal working routes
-func setupBasicRoutes(db *gorm.DB, logger *zap.Logger) *gin.Engine {
-	router := gin.New()
-
-	// Health check endpoint
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":    "healthy",
-			"timestamp": time.Now(),
-			"version":   "1.0.0",
-		})
-	})
-
-	// Metrics endpoint
-	router.GET("/metrics", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"uptime": time.Since(time.Now()),
-			"status": "running",
-		})
-	})
-
-	// Basic API v1 routes
-	v1 := router.Group("/api/v1")
-	{
-		v1.GET("/status", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message":  "Payment Watchdog API is running",
-				"version":  "1.0.0",
-				"database": "connected",
-			})
-		})
-	}
-
-	return router
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+    srv.Shutdown(ctx)
 }
