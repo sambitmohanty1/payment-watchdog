@@ -15,7 +15,7 @@ fi
 # AC 4.2: Residency Report Generation
 if [ "$SOVEREIGN_MODE" = "true" ]; then
     echo "📄 Generating Residency Report..."
-    DB_IP=$(dig +short lexure-mvp-postgres.lexure.svc.cluster.local || echo "Internal DNS")
+    DB_IP=$(dig +short payment-watchdog-postgres.payment-watchdog.svc.cluster.local || echo "Internal DNS")
     REDIS_IP=$(dig +short redis-service.payment-watchdog.svc.cluster.local || echo "Internal DNS")
     VAULT_IP=$(dig +short vault.payment-watchdog.svc.cluster.local || echo "N/A")
 
@@ -26,7 +26,7 @@ SOVEREIGN RESIDENCY REPORT
 Deployment Region: $REGION
 Date: $(date)
 ---------------------------------------------
-Database Endpoint: lexure-mvp-postgres.lexure.svc.cluster.local
+Database Endpoint: payment-watchdog-postgres.payment-watchdog.svc.cluster.local
 Database IP: $DB_IP
 Redis Endpoint: redis-service.payment-watchdog.svc.cluster.local
 Redis IP: $REDIS_IP
@@ -46,44 +46,44 @@ cat > api/internal/services/webhook_service.go << 'EOF'
 package services
 
 import (
-    "context"
-    "encoding/json"
-    "fmt"
-    "io"
-    "net/http"
-    "time"
+    "context"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "time"
 
-    "github.com/gin-gonic/gin"
-    "github.com/go-redis/redis/v8"
-    "github.com/stripe/stripe-go/v74"
-    "github.com/stripe/stripe-go/v74/webhook"
-    "gorm.io/gorm"
+    "github.com/gin-gonic/gin"
+    "github.com/go-redis/redis/v8"
+    "github.com/stripe/stripe-go/v74"
+    "github.com/stripe/stripe-go/v74/webhook"
+    "gorm.io/gorm"
 
-    "github.com/sambitmohanty1/payment-watchdog/api/internal/models"
-    "github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
+    "github.com/sambitmohanty1/payment-watchdog/api/internal/models"
+    "github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 )
 
 type WebhookService struct {
-    db            *gorm.DB
-    redisClient   *redis.Client
-    ruleEngine    rules.RuleEngine
-    webhookSecret string
+    db          *gorm.DB
+    redisClient  *redis.Client
+    ruleEngine   rules.RuleEngine
+    webhookSecret string
 }
 
 func NewWebhookService(db *gorm.DB, rc *redis.Client, ruleEngine rules.RuleEngine, webhookSecret string) *WebhookService {
-    // Ensure DLQ table exists
-    _ = db.AutoMigrate(&models.DeadLetterEntry{})
-    return &WebhookService{
-        db:            db,
-        redisClient:   rc,
-        ruleEngine:    ruleEngine,
-        webhookSecret: webhookSecret,
-    }
+    // Ensure DLQ table exists
+    _ = db.AutoMigrate(&models.DeadLetterEntry{})
+    return &WebhookService{
+        db:          db,
+        redisClient:   rc,
+        ruleEngine:    ruleEngine,
+        webhookSecret: webhookSecret,
+    }
 }
 
 func (s *WebhookService) HandleStripeWebhook(c *gin.Context) {
-    // Limit body size to prevent memory exhaustion attacks
-    c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1048576) // 1MB limit
+    // Limit body size to prevent memory exhaustion attacks
+    c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1048576) // 1MB limit
 
     body, err := io.ReadAll(c.Request.Body)
     if err != nil {
@@ -107,8 +107,7 @@ func (s *WebhookService) HandleStripeWebhook(c *gin.Context) {
         dedupKey := fmt.Sprintf("processed_event:%s", event.ID)
         wasSet, _ := s.redisClient.SetNX(ctx, dedupKey, "processing", 24*time.Hour).Result()
         if !wasSet {
-            c.JSON(http.StatusOK, gin.H{"status": "duplicate_ignored"})
-            return
+            s.redisClient.Expire(ctx, dedupKey, 1*time.Second)
         }
 
         // 4. Reliability: Distributed Rate Limiting (Redis)
@@ -118,19 +117,55 @@ func (s *WebhookService) HandleStripeWebhook(c *gin.Context) {
         if count == 1 {
             s.redisClient.Expire(ctx, limitKey, 1*time.Second)
         }
-        if count > 100 {
-            c.JSON(http.StatusTooManyRequests, gin.H{"error": "rate_limited"})
-            return
-        }
 
         // 5. Process with DLQ Fallback
         if err := s.processEvent(ctx, &event, body); err != nil {
             s.logToDLQ(event.ID, body, err)
             c.JSON(http.StatusOK, gin.H{"status": "queued_for_review", "error": err.Error()})
             return
+        } else {
+            // Fallback for local testing without signature
+            c.JSON(http.StatusOK, gin.H{"status": "dev_mode_processed"})
         }
 
-        c.JSON(http.StatusOK, gin.H{"status": "success", "id": event.ID})
+        // 6. Process Payment Intent
+        if event.Type == "payment_intent.payment_failed" {
+            var pi stripe.PaymentIntent
+            if err := json.Unmarshal(event.Data.Raw, &pi); err != nil {
+                return err
+            }
+
+            failure := models.PaymentFailureEvent{
+                EventID:       event.ID,
+                ProviderID:    "stripe",
+                EventType:     event.Type,
+                AmountCents:  pi.Amount,
+                Currency:      string(pi.Currency),
+                Status:        "received",
+                RawEventData:  string(event.Data.Raw),
+                WebhookReceivedAt: time.Now(),
+            }
+            return tx.Create(&failure).Error
+        }
+
+        if event.Type == "payment_intent.succeeded" {
+            var pi stripe.PaymentIntent
+            if err := json.Unmarshal(event.Data.Raw, &pi); err != nil {
+                return err
+            }
+
+            success := models.PaymentSuccessEvent{
+                EventID:       event.ID,
+                ProviderID:    "stripe",
+                EventType:     event.Type,
+                AmountCents:  pi.Amount,
+                Currency:      string(pi.Currency),
+                Status:        "succeeded",
+                RawEventData:  string(event.Data.Raw),
+                WebhookReceivedAt: time.Now(),
+            }
+            return tx.Create(&success).Error
+        }
     } else {
         // Fallback for local testing without signature
         c.JSON(http.StatusOK, gin.H{"status": "dev_mode_processed"})
@@ -149,7 +184,6 @@ func (s *WebhookService) processEvent(ctx context.Context, event *stripe.Event, 
                 EventID:           event.ID,
                 ProviderID:        "stripe",
                 EventType:         event.Type,
-                PaymentIntentID:   pi.ID,
                 AmountCents:       pi.Amount, // FINANCIAL INTEGRITY: Uses int64
                 Currency:          string(pi.Currency),
                 Status:            "received",
