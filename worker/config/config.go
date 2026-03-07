@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/logging"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/logging"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
