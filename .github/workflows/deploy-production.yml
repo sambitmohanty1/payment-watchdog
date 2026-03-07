@@ -1,4 +1,4 @@
-name: Deploy to Staging
+name: Deploy to Production
 
 on:
   workflow_dispatch:
@@ -9,13 +9,13 @@ on:
         type: string
 
 jobs:
-  deploy-staging:
-    name: Deploy to Staging
+  deploy-production:
+    name: Deploy to Production
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     environment:
-      name: staging
-      url: https://staging.payment-watchdog.example.com  # Update with your actual staging URL
+      name: production
+      url: https://payment-watchdog.example.com  # Update with your actual production URL
 
     steps:
       - name: Checkout code
@@ -44,7 +44,8 @@ jobs:
           kubeconfig: ${{ steps.decode.outputs.kubeconfig }}
 
       - name: Set namespace context
-        run: kubectl config set-context --current --namespace=staging
+        run: |
+          kubectl config set-context --current --namespace=production
 
       - name: Setup Kustomize
         uses: imranismail/setup-kustomize@v2
@@ -60,7 +61,7 @@ jobs:
             echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update staging deployment
+      - name: Update production deployment
         run: |
           cd api/deployments/kubernetes
 
@@ -69,17 +70,18 @@ jobs:
 
           cd apps/payment-watchdog-api
           kustomize edit set image payment-watchdog-api=ghcr.io/${{ github.repository }}/api:${IMAGE_TAG}
-          cd ../..
 
+          cd ../..
           cd apps/payment-watchdog-web
           kustomize edit set image payment-watchdog-ui=ghcr.io/${{ github.repository }}/web:${IMAGE_TAG}
-          cd ../..
 
+          cd ../..
           cd apps/recovery-orchestration
-          kustomize edit set image payment-watchdog/recovery-orchestration=ghcr.io/${{ github.repository }}/worker:${IMAGE_TAG}
+          kustomize edit set image payment-watchdog-recovery-orchestration=ghcr.io/${{ github.repository }}/worker:${IMAGE_TAG}
+
           cd ../..
 
-          # Deploy to staging namespace (skip validation to avoid local API dependency)
+          # Deploy to production namespace
           kubectl apply -k --validate=false .
 
       - name: Wait for rollout
@@ -96,3 +98,11 @@ jobs:
           # Test web accessibility
           WEB_POD=$(kubectl get pods -l app=payment-watchdog,component=ui -o jsonpath='{.items[0].metadata.name}')
           kubectl exec $WEB_POD -- curl -s -f http://localhost:3011
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+            echo "🚨 Deployment failed - initiating rollback"
+            kubectl rollout undo deployment/payment-watchdog-api
+            kubectl rollout undo deployment/payment-watchdog-ui
+            kubectl rollout undo deployment/recovery-orchestration
