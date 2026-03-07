@@ -16,7 +16,8 @@ Payment Watchdog is a payment recovery management platform designed to help SaaS
 - Advanced workflow orchestration with smart retry logic
 - VIP customer detection and prioritized recovery
 - Cross-method reconciliation (Stripe ↔ Xero)
-- Micro-transaction cost optimization (<$100 transactions)
+- PayTo failover for insufficient funds (PW-101)
+- Micro-transaction cost optimization < $100 (PW-103)
 - AI-powered failure pattern detection and prediction
 - Advanced analytics with trend analysis
 - Sovereign data compliance (AU-only infrastructure)
@@ -143,7 +144,41 @@ make local-clean
 
 ---
 
-## 🛡️ Sovereign Data Compliance
+## � AU/NZ Rail Orchestrator
+
+### PW-101: PayTo Failover Mediator
+**Technical Implementation**: `PayToExecutor` in `step_executors.go`
+- **Trigger**: Payment failures with reason `insufficient_funds` or `card_declined`
+- **Action**: Submits PayTo agreement request job via retry service
+- **Flow**: 
+  1. Validate failure reason
+  2. Create recovery action record with type `payto_agreement_requested`
+  3. Submit job to retry service with PayTo provider
+  4. Track execution via workflow context
+
+### PW-102: Cross-Method Xero Reconciliation  
+**Technical Implementation**: `HandleCrossMethodReconciliation` in `recovery_orchestration_service.go`
+- **Trigger**: Manual bank transfer detection in Xero
+- **Action**: Finds matching payment failures and resolves them
+- **Flow**:
+  1. Query payment failures by invoice ID, amount, and company
+  2. Update status to `resolved` with reason `cross_method_reconciliation`
+  3. Cancel all active workflow executions for the payment failure
+  4. Log reconciliation reference
+
+### PW-103: Micro-Transaction Cost Logic
+**Technical Implementation**: Cost-aware routing in `PaymentRetryExecutor`
+- **Trigger**: Transactions < 10,000 cents ($100) on high-fee providers
+- **Action**: Switch provider to `becs` before retry execution
+- **Flow**:
+  1. Check if `amount_cents < 10000` and provider is `stripe` or `international_card`
+  2. Override `config.Provider = "becs"`
+  3. Execute retry with local BECS rails
+  4. Log cost optimization event
+
+---
+
+## �️ Sovereign Data Compliance
 
 Payment Watchdog supports "Sovereign Mode" to ensure all application data and telemetry remain strictly within isolated Australian cloud regions (AWS, GCP, OCI, Azure) to comply with data residency laws.
 
@@ -268,11 +303,14 @@ graph TB
 - Payment failure processing
 - Advanced workflow orchestration
 - VIP customer detection
+- PayTo failover execution
+- Cross-method reconciliation handling
 - Health checks and metrics
 
 #### Worker Service
 - Background job processing
 - Smart retry logic with cost optimization
+- BECS rail routing for micro-transactions
 - Cross-method reconciliation
 - AI-powered pattern detection
 - Advanced analytics processing
@@ -334,6 +372,20 @@ classDiagram
         +GetEstimatedTime() time.Duration
     }
 
+    class PayToExecutor {
+        -service: *RecoveryOrchestrationService
+        -tracer: trace.Tracer
+        +GetStepType() string
+        +Execute(ctx, execution, step) (*StepResult, error)
+    }
+
+    class PaymentRetryExecutor {
+        -service: *RecoveryOrchestrationService
+        -tracer: trace.Tracer
+        +GetStepType() string
+        +Execute(ctx, execution, step) (*StepResult, error)
+    }
+
     class PaymentFailureService {
         -db: *gorm.DB
         -logger: *zap.Logger
@@ -346,6 +398,10 @@ classDiagram
     RecoveryOrchestrationService --> WorkflowExecution : manages
     RecoveryOrchestrationService --> StepExecutor : uses
     RecoveryOrchestrationService --> PaymentFailureService : queries
+    RecoveryOrchestrationService --> PayToExecutor : registers
+    RecoveryOrchestrationService --> PaymentRetryExecutor : registers
+    PayToExecutor --|> StepExecutor : implements
+    PaymentRetryExecutor --|> StepExecutor : implements
 ```
 
 ### Webhook Processing Flow
@@ -820,6 +876,60 @@ sequenceDiagram
         WP->>WP: ProcessRetryEvent()
         WP->>WP: ProcessWebhook(retry_event)
     end
+```
+
+### PayTo Failover Sequence (PW-101)
+
+```mermaid
+sequenceDiagram
+    participant Stripe as Stripe Webhook
+    participant API as API Gateway
+    participant ROS as RecoveryOrchestrationService
+    participant PayTo as PayToExecutor
+    participant Retry as RetryService
+    participant DB as Database
+
+    Stripe->>API: POST /webhook/stripe (insufficient_funds)
+    API->>ROS: ExecuteWorkflow(workflowID, failureID)
+    ROS->>ROS: CreateWorkflowExecution()
+    ROS->>PayTo: Execute("payto_agreement")
+    
+    PayTo->>PayTo: ValidateFailureReason()
+    alt failure_reason is insufficient_funds or card_declined
+        PayTo->>PayTo: CreateRecoveryAction(type: "payto_agreement_requested")
+        PayTo->>DB: INSERT recovery_actions
+        PayTo->>Retry: SubmitJob("payto_agreement_request", jobData)
+        Retry-->>PayTo: Job ID
+        PayTo-->>ROS: StepResult(Success: true, ExternalID: jobID)
+    else other failure reason
+        PayTo-->>ROS: StepResult(Success: true, Skipped: true)
+    end
+    
+    ROS->>DB: UPDATE workflow_executions
+    ROS-->>API: Workflow status
+```
+
+### Micro-Transaction Cost Optimization (PW-103)
+
+```mermaid
+sequenceDiagram
+    participant Worker as WorkerService
+    participant Retry as PaymentRetryExecutor
+    participant DB as Database
+
+    Worker->>Retry: Execute(paymentFailure, retryConfig)
+    
+    Retry->>Retry: CheckAmountAndProvider()
+    alt amount_cents < 10000 AND provider in ["stripe", "international_card"]
+        Retry->>Retry: ApplyCostLogic()
+        Note over Retry: Override config.Provider = "becs"
+        Retry->>DB: Log cost optimization event
+        Retry->>Retry: ExecuteWithBECS()
+    else amount >= 10000 OR provider is low-cost
+        Retry->>Retry: ExecuteStandardRetry()
+    end
+    
+    Retry-->>Worker: StepResult with provider used
 ```
 
 ### Multi-Service Recovery Orchestration
