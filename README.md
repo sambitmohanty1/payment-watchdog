@@ -293,6 +293,589 @@ graph TB
 
 ---
 
+## 📊 Class Diagrams
+
+### Payment Recovery Orchestration Flow
+
+```mermaid
+classDiagram
+    class RecoveryOrchestrationService {
+        -db: *gorm.DB
+        -retryService: *RetryService
+        -communicationService: *CommunicationService
+        -analyticsService: *AnalyticsService
+        -stepExecutors: map[string]StepExecutor
+        -tracer: trace.Tracer
+        -logger: *zap.Logger
+        -redisClient: *redis.Client
+        -activeExecutions: map[uuid.UUID]*WorkflowExecution
+        +ExecuteWorkflow(ctx, workflowID, paymentFailureID) error
+        +CancelWorkflow(executionID) error
+        +GetExecutionStatus(executionID) (*WorkflowExecution, error)
+        +ProcessWorkflowStep(execution *WorkflowExecution) error
+    }
+
+    class WorkflowExecution {
+        +ID: uuid.UUID
+        +WorkflowID: uuid.UUID
+        +PaymentFailureID: uuid.UUID
+        +CompanyID: uuid.UUID
+        +Status: string
+        +CurrentStepIndex: int
+        +Context: map[string]interface{}
+        +StartedAt: time.Time
+        +CancelFunc: context.CancelFunc
+    }
+
+    class StepExecutor {
+        <<interface>>
+        +Execute(ctx, step) error
+        +Validate(step) error
+        +GetEstimatedTime() time.Duration
+    }
+
+    class PaymentFailureService {
+        -db: *gorm.DB
+        -logger: *zap.Logger
+        +GetPaymentFailures(ctx, companyID, filters, page, limit) ([]PaymentFailureEvent, int64, error)
+        +CreatePaymentFailure(ctx, failure) error
+        +UpdatePaymentFailure(ctx, id, updates) error
+        +GetFailureByID(ctx, id) (*PaymentFailureEvent, error)
+    }
+
+    RecoveryOrchestrationService --> WorkflowExecution : manages
+    RecoveryOrchestrationService --> StepExecutor : uses
+    RecoveryOrchestrationService --> PaymentFailureService : queries
+```
+
+### Webhook Processing Flow
+
+```mermaid
+classDiagram
+    class WebhookProcessor {
+        -MaxRetries: int
+        -RetryDelay: time.Duration
+        -DeadLetterQueue: chan WebhookEvent
+        -RateLimiter: *rate.Limiter
+        +ProcessWebhook(ctx, event) error
+        +ValidateWebhook(event) error
+        +RetryFailedEvent(event) error
+        +SendToDeadLetterQueue(event) error
+    }
+
+    class WebhookEvent {
+        +CompanyID: string
+        +Event: *stripe.Event
+        +RawBody: []byte
+        +Headers: http.Header
+        +Timestamp: time.Time
+    }
+
+    class WebhookError {
+        +Type: string
+        +Severity: string
+        +Message: string
+        +Retryable: bool
+        +CompanyID: string
+        +EventID: string
+        +Timestamp: time.Time
+        +RetryCount: int
+    }
+
+    class WebhookMetrics {
+        +ProcessedCount: int64
+        +FailedCount: int64
+        +RetryCount: int64
+        +AverageProcessingTime: time.Duration
+        +LastProcessedAt: time.Time
+    }
+
+    WebhookProcessor --> WebhookEvent : processes
+    WebhookProcessor --> WebhookError : generates
+    WebhookProcessor --> WebhookMetrics : tracks
+```
+
+### Analytics Engine Flow
+
+```mermaid
+classDiagram
+    class AnalyticsService {
+        -db: *gorm.DB
+        -analyticsEngine: *AnalyticsEngine
+        -patternDetector: PatternDetector
+        -trendAnalyzer: TrendAnalyzer
+        -failurePredictor: FailurePredictor
+        -logger: *zap.Logger
+        +GenerateFailureReport(ctx, companyID, timeRange) (*FailureReport, error)
+        +DetectPatterns(ctx, companyID) ([]Pattern, error)
+        +PredictFailures(ctx, companyID) (*FailurePrediction, error)
+        +AnalyzeTrends(ctx, companyID, period) (*TrendAnalysis, error)
+    }
+
+    class AnalyticsEngine {
+        -patternDetector: PatternDetector
+        -trendAnalyzer: TrendAnalyzer
+        -failurePredictor: FailurePredictor
+        -logger: *zap.Logger
+        +ProcessAnalytics(ctx, request) (*AnalyticsResult, error)
+        +AggregateMetrics(ctx, metrics) (*AggregatedMetrics, error)
+        +GenerateInsights(ctx, data) ([]Insight, error)
+    }
+
+    class PatternDetector {
+        <<interface>>
+        +DetectPatterns(ctx, data) ([]Pattern, error)
+        +ValidatePattern(pattern) error
+        +GetPatternConfidence(pattern) float64
+    }
+
+    class TrendAnalyzer {
+        <<interface>>
+        +AnalyzeTrend(ctx, data, period) (*Trend, error)
+        +PredictNextPeriod(ctx, trend) (*Prediction, error)
+        +CalculateTrendStrength(trend) float64
+    }
+
+    class FailurePredictor {
+        <<interface>>
+        +PredictFailure(ctx, customer, history) (*FailureRisk, error)
+        +GetRiskFactors(ctx, customer) ([]RiskFactor, error)
+        +UpdateModel(ctx, trainingData) error
+    }
+
+    AnalyticsService --> AnalyticsEngine : uses
+    AnalyticsEngine --> PatternDetector : delegates
+    AnalyticsEngine --> TrendAnalyzer : delegates
+    AnalyticsEngine --> FailurePredictor : delegates
+```
+
+### Distributed Locking Flow
+
+```mermaid
+classDiagram
+    class DistributedLockService {
+        -redisClient: *redis.Client
+        -logger: *zap.Logger
+        -prefix: string
+        -defaultTTL: time.Duration
+        -retryDelay: time.Duration
+        -maxRetries: int
+        +AcquireLock(ctx, resourceKey) (*Lock, error)
+        +ReleaseLock(lock) error
+        +ExtendLock(ctx, lock, duration) error
+        +IsLocked(ctx, resourceKey) (bool, error)
+    }
+
+    class Lock {
+        -key: string
+        -value: string
+        -acquiredAt: time.Time
+        -ttl: time.Duration
+        -service: *DistributedLockService
+        +Extend(ctx, duration) error
+        +Release() error
+        +IsValid() bool
+        +GetRemainingTTL() time.Duration
+    }
+
+    class LockManager {
+        -lockService: *DistributedLockService
+        -activeLocks: map[string]*Lock
+        -mu: sync.RWMutex
+        +AcquireResourceLock(ctx, resource) (*Lock, error)
+        +ReleaseResourceLock(resource) error
+        +GetActiveLocks() map[string]*Lock
+        +CleanupExpiredLocks() error
+    }
+
+    DistributedLockService --> Lock : creates
+    DistributedLockService --> Lock : manages
+    LockManager --> DistributedLockService : uses
+    LockManager --> Lock : tracks
+```
+
+### Xero Mediator Flow
+
+```mermaid
+classDiagram
+    class XeroMediator {
+        -oauthClient: *http.Client
+        -apiClient: *XeroAPIClient
+        -oauthConfig: *OAuthConfig
+        +Authenticate(ctx) (*OAuthTokens, error)
+        +GetInvoice(ctx, invoiceID) (*XeroInvoice, error)
+        +CreatePayment(ctx, payment) (*XeroPayment, error)
+        +GetBankTransactions(ctx, since) ([]XeroBankTransaction, error)
+        +ReconcilePayment(ctx, invoiceID, paymentID) error
+    }
+
+    class XeroAPIClient {
+        -httpClient: *http.Client
+        -baseURL: string
+        -logger: *zap.Logger
+        +Get(ctx, endpoint) (*http.Response, error)
+        +Post(ctx, endpoint, body) (*http.Response, error)
+        +Put(ctx, endpoint, body) (*http.Response, error)
+        +RefreshToken(ctx) error
+    }
+
+    class OAuthTokens {
+        +AccessToken: string
+        +RefreshToken: string
+        +TokenType: string
+        +ExpiresIn: int64
+        +Scope: string
+        +ExpiresAt: time.Time
+        +IsExpired() bool
+        +RefreshIfNeeded(ctx) error
+    }
+
+    class XeroInvoice {
+        +ID: string
+        +InvoiceNumber: string
+        +Contact: XeroContact
+        +LineItems: []XeroLineItem
+        +Status: string
+        +AmountDue: float64
+        +Date: time.Time
+    }
+
+    class XeroBankTransaction {
+        +ID: string
+        +Type: string
+        +Contact: XeroContact
+        +LineItems: []XeroLineItem
+        +Amount: float64
+        +Date: time.Time
+        +Reference: string
+    }
+
+    XeroMediator --> XeroAPIClient : uses
+    XeroMediator --> OAuthTokens : manages
+    XeroAPIClient --> OAuthTokens : authenticates
+    XeroMediator --> XeroInvoice : retrieves
+    XeroMediator --> XeroBankTransaction : retrieves
+```
+
+### Service Integration Flow
+
+```mermaid
+classDiagram
+    class APIGateway {
+        -recoveryService: *RecoveryOrchestrationService
+        -failureService: *PaymentFailureService
+        -analyticsService: *AnalyticsService
+        -webhookProcessor: *WebhookProcessor
+        +HandleWebhook(ctx, request) error
+        +GetRecoveryStatus(ctx, id) (*RecoveryStatus, error)
+        +GetAnalytics(ctx, companyID) (*AnalyticsData, error)
+    }
+
+    class WorkerService {
+        -orchestrationService: *RecoveryOrchestrationService
+        -lockService: *DistributedLockService
+        -analyticsService: *AnalyticsService
+        -mediator: PaymentProvider
+        +ProcessRecoveryWorkflow(ctx, workflow) error
+        +ExecuteRetryLogic(ctx, payment) error
+        +UpdateAnalytics(ctx, event) error
+    }
+
+    class DatabaseLayer {
+        -postgres: *gorm.DB
+        -redis: *redis.Client
+        +SavePaymentFailure(ctx, failure) error
+        +GetRecoveryAttempts(ctx, paymentID) ([]RecoveryAttempt, error)
+        +CacheAnalytics(ctx, data) error
+        +GetCachedData(ctx, key) (interface{}, error)
+    }
+
+    APIGateway --> RecoveryOrchestrationService : delegates
+    APIGateway --> PaymentFailureService : queries
+    APIGateway --> AnalyticsService : requests
+    APIGateway --> WebhookProcessor : processes
+    WorkerService --> RecoveryOrchestrationService : executes
+    WorkerService --> DistributedLockService : coordinates
+    WorkerService --> AnalyticsService : updates
+    RecoveryOrchestrationService --> DatabaseLayer : persists
+    AnalyticsService --> DatabaseLayer : queries
+    DistributedLockService --> DatabaseLayer : locks
+```
+
+---
+
+## 🔄 Sequence Diagrams
+
+### Payment Failure Recovery Workflow
+
+```mermaid
+sequenceDiagram
+    participant Stripe as Stripe Webhook
+    participant API as API Gateway
+    participant WP as WebhookProcessor
+    participant PFS as PaymentFailureService
+    participant ROS as RecoveryOrchestrationService
+    participant DLS as DistributedLockService
+    participant Worker as WorkerService
+    participant Xero as XeroMediator
+    participant DB as Database
+    participant Analytics as AnalyticsService
+
+    Stripe->>API: POST /webhook/stripe
+    API->>WP: ProcessWebhook(event)
+    WP->>WP: ValidateWebhook()
+    WP->>PFS: CreatePaymentFailure(failure)
+    PFS->>DB: INSERT payment_failures
+    PFS-->>WP: PaymentFailure created
+    WP->>ROS: ExecuteWorkflow(workflowID, failureID)
+    ROS->>DLS: AcquireLock("recovery_" + failureID)
+    DLS->>DB: SET redis lock
+    DLS-->>ROS: Lock acquired
+    ROS->>Worker: ProcessRecoveryWorkflow(workflow)
+    
+    Worker->>Xero: GetBankTransactions()
+    Xero->>Xero: Authenticate()
+    Xero-->>Worker: BankTransactions
+    Worker->>Worker: ReconcilePayment()
+    
+    alt Payment Found
+        Worker->>PFS: UpdatePaymentFailure(status: "recovered")
+        PFS->>DB: UPDATE payment_failures
+        Worker->>Analytics: UpdateAnalytics(recovery)
+        Analytics->>DB: INSERT analytics
+    else No Payment Found
+        Worker->>ROS: ExecuteRetryLogic()
+        ROS->>ROS: ScheduleRetry()
+    end
+    
+    Worker-->>ROS: Workflow completed
+    ROS->>DLS: ReleaseLock()
+    DLS->>DB: DELETE redis lock
+    ROS-->>API: Recovery status
+    API-->>Stripe: 200 OK
+```
+
+### Analytics Processing Flow
+
+```mermaid
+sequenceDiagram
+    participant UI as Web Interface
+    participant API as API Gateway
+    participant AS as AnalyticsService
+    participant AE as AnalyticsEngine
+    participant PD as PatternDetector
+    participant TA as TrendAnalyzer
+    participant FP as FailurePredictor
+    participant DB as Database
+
+    UI->>API: GET /analytics/failure-report
+    API->>AS: GenerateFailureReport(companyID, timeRange)
+    AS->>DB: Query payment_failures
+    DB-->>AS: Failure data
+    AS->>AE: ProcessAnalytics(request)
+    
+    par Pattern Detection
+        AE->>PD: DetectPatterns(data)
+        PD->>PD: AnalyzeFailurePatterns()
+        PD-->>AE: Patterns found
+    and Trend Analysis
+        AE->>TA: AnalyzeTrend(data, period)
+        TA->>TA: CalculateTrends()
+        TA-->>AE: Trend analysis
+    and Failure Prediction
+        AE->>FP: PredictFailures(data)
+        FP->>FP: ApplyMLModel()
+        FP-->>AE: Risk predictions
+    end
+    
+    AE-->>AS: Aggregated insights
+    AS->>DB: Cache analytics results
+    AS-->>API: FailureReport
+    API-->>UI: JSON response
+```
+
+### Distributed Locking Coordination
+
+```mermaid
+sequenceDiagram
+    participant W1 as Worker 1
+    participant W2 as Worker 2
+    participant DLS as DistributedLockService
+    participant Redis as Redis
+    participant DB as PostgreSQL
+
+    W1->>DLS: AcquireLock("payment_123")
+    DLS->>Redis: SETNX lock_key_123
+    Redis-->>DLS: 1 (success)
+    DLS->>Redis: EXPIRE lock_key_123 30
+    DLS-->>W1: Lock acquired
+    
+    Note over W1,W2: Concurrent processing attempt
+    W2->>DLS: AcquireLock("payment_123")
+    DLS->>Redis: SETNX lock_key_123
+    Redis-->>DLS: 0 (already locked)
+    DLS->>W2: Lock denied
+    
+    W1->>DB: BEGIN TRANSACTION
+    W1->>DB: UPDATE payment_failures
+    W1->>DB: COMMIT
+    W1->>DLS: ReleaseLock(lock)
+    DLS->>Redis: DELETE lock_key_123
+    DLS-->>W1: Lock released
+    
+    W2->>DLS: AcquireLock("payment_123")
+    DLS->>Redis: SETNX lock_key_123
+    Redis-->>DLS: 1 (success)
+    DLS-->>W2: Lock acquired
+    W2->>DB: Process payment
+```
+
+### Xero Integration Flow
+
+```mermaid
+sequenceDiagram
+    participant Worker as WorkerService
+    participant XM as XeroMediator
+    participant XAC as XeroAPIClient
+    participant OAuth as OAuthTokens
+    participant Xero as Xero API
+    participant DB as Database
+
+    Worker->>XM: ReconcilePayment(invoiceID, paymentID)
+    XM->>OAuth: IsExpired()
+    alt Token Expired
+        XM->>XAC: RefreshToken()
+        XAC->>Xero: POST /oauth2/token
+        Xero-->>XAC: New tokens
+        XAC-->>OAuth: Updated tokens
+    end
+    
+    XM->>XAC: GetInvoice(invoiceID)
+    XAC->>OAuth: GetAccessToken()
+    OAuth-->>XAC: Bearer token
+    XAC->>Xero: GET /invoices/{id}
+    Xero-->>XAC: Invoice data
+    XAC-->>XM: XeroInvoice
+    
+    XM->>XAC: GetBankTransactions(since)
+    XAC->>Xero: GET /banktransactions
+    Xero-->>XAC: Transactions
+    XAC-->>XM: BankTransactions
+    
+    XM->>XM: MatchPaymentToInvoice()
+    alt Match Found
+        XM->>XAC: CreatePayment(payment)
+        XAC->>Xero: POST /payments
+        Xero-->>XAC: Payment created
+        XM->>DB: Update reconciliation_records
+    else No Match
+        XM->>DB: Log reconciliation failure
+    end
+    
+    XM-->>Worker: Reconciliation result
+```
+
+### Webhook Processing with Retry Logic
+
+```mermaid
+sequenceDiagram
+    participant Stripe as Stripe
+    participant API as API Gateway
+    participant WP as WebhookProcessor
+    participant DLQ as DeadLetterQueue
+    participant RateLimit as RateLimiter
+    participant DB as Database
+
+    Stripe->>API: POST /webhook/stripe
+    API->>RateLimit: AllowRequest()
+    RateLimit-->>API: Allowed
+    API->>WP: ProcessWebhook(event)
+    
+    WP->>WP: ValidateSignature()
+    alt Invalid Signature
+        WP->>API: 401 Unauthorized
+    else Valid Signature
+        WP->>WP: ParseEvent()
+        
+        alt Processing Fails
+            WP->>WP: ShouldRetry()?
+            alt Retryable and MaxRetries not reached
+                WP->>WP: IncrementRetryCount()
+                WP->>WP: ScheduleRetry()
+                Note over WP: Exponential backoff
+                WP->>WP: ProcessWebhook(event)
+            else MaxRetries reached
+                WP->>DLQ: SendToDeadLetterQueue(event)
+                DLQ->>DB: INSERT dead_letter_events
+                WP->>API: 500 Server Error
+            end
+        else Processing Succeeds
+            WP->>DB: SaveProcessedEvent()
+            WP->>API: 200 OK
+        end
+    end
+    
+    Note over Stripe,API: Async retry processing
+    loop Retry scheduled events
+        WP->>WP: ProcessRetryEvent()
+        WP->>WP: ProcessWebhook(retry_event)
+    end
+```
+
+### Multi-Service Recovery Orchestration
+
+```mermaid
+sequenceDiagram
+    participant Web as Web Interface
+    participant API as API Gateway
+    participant ROS as RecoveryOrchestrationService
+    participant Lock as DistributedLockService
+    participant Worker1 as Worker Service 1
+    participant Worker2 as Worker Service 2
+    participant Analytics as AnalyticsService
+    participant Alert as AlertService
+    participant Xero as XeroMediator
+    participant DB as Database
+
+    Web->>API: POST /api/v1/recovery/start
+    API->>ROS: ExecuteWorkflow(workflowID, paymentID)
+    ROS->>Lock: AcquireLock("workflow_" + workflowID)
+    Lock-->>ROS: Lock acquired
+    
+    ROS->>ROS: CreateWorkflowExecution()
+    ROS->>DB: INSERT workflow_executions
+    
+    par Step 1: Payment Analysis
+        ROS->>Worker1: ExecuteStep("analyze_payment")
+        Worker1->>DB: Query payment history
+        Worker1-->>ROS: Analysis result
+    and Step 2: Cross-Method Reconciliation
+        ROS->>Worker2: ExecuteStep("reconcile_payment")
+        Worker2->>Xero: GetBankTransactions()
+        Xero-->>Worker2: Transaction data
+        Worker2-->>ROS: Reconciliation result
+    end
+    
+    ROS->>Analytics: UpdateWorkflowMetrics()
+    Analytics->>DB: UPDATE analytics
+    
+    alt Recovery Successful
+        ROS->>Alert: SendSuccessNotification()
+        Alert-->>ROS: Notification sent
+        ROS->>DB: UPDATE workflow_executions (completed)
+    else Recovery Failed
+        ROS->>Alert: SendFailureAlert()
+        Alert-->>ROS: Alert sent
+        ROS->>ROS: ScheduleNextRetry()
+    end
+    
+    ROS->>Lock: ReleaseLock()
+    ROS-->>API: Workflow status
+    API-->>Web: JSON response
+```
+
+---
+
 ## Contributing
 
 1. Fork the repository
