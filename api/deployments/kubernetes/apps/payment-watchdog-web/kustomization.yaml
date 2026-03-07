@@ -18,6 +18,6 @@ commonLabels:
   version: v1.0.0
 
 images:
-- name: payment-watchdog-web
+- name: payment-watchdog-ui
   newName: ghcr.io/sambitmohanty1/payment-watchdog/web
   newTag: latest

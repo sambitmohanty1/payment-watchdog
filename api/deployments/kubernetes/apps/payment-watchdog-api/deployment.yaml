@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: payment-watchdog
+  name: payment-watchdog-api
   labels:
-    app.kubernetes.io/name: payment-watchdog
+    app.kubernetes.io/name: payment-watchdog-api
     app.kubernetes.io/component: backend
     app.kubernetes.io/part-of: payment-watchdog
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app.kubernetes.io/name: payment-watchdog
+      app.kubernetes.io/name: payment-watchdog-api
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -19,17 +19,17 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: payment-watchdog
+        app.kubernetes.io/name: payment-watchdog-api
         app.kubernetes.io/component: backend
         app.kubernetes.io/part-of: payment-watchdog
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8085"
     spec:
-      serviceAccountName: payment-watchdog
+      serviceAccountName: payment-watchdog-api
       containers:
       - name: app
-        image: payment-watchdog:latest
+        image: payment-watchdog-api:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8085
@@ -77,7 +77,7 @@ spec:
                 - key: app.kubernetes.io/name
                   operator: In
                   values:
-                  - payment-watchdog
+                  - payment-watchdog-api
               topologyKey: "kubernetes.io/hostname"
       nodeSelector:
         kubernetes.io/arch: arm64

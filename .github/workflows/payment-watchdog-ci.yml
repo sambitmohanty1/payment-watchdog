@@ -546,7 +546,7 @@ jobs:
           cd ../..
           
           cd apps/payment-watchdog-web
-          kustomize edit set image payment-watchdog-web=ghcr.io/${{ github.repository }}/web:${IMAGE_TAG}
+          kustomize edit set image payment-watchdog-ui=ghcr.io/${{ github.repository }}/web:${IMAGE_TAG}
           cd ../..
           
           cd apps/recovery-orchestration
