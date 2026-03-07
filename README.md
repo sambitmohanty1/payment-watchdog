@@ -11,13 +11,17 @@
 
 Payment Watchdog is a payment recovery management platform designed to help SaaS companies handle payment failures through automated detection and recovery workflows.
 
-### Current Features
+### Enhanced Features
 - Payment failure detection via webhooks (Stripe)
-- Basic retry mechanisms with exponential backoff
-- Simple analytics dashboard
-- REST API for integration
-- Web interface for monitoring
-- Docker-based deployment
+- Advanced workflow orchestration with smart retry logic
+- VIP customer detection and prioritized recovery
+- Cross-method reconciliation (Stripe ↔ Xero)
+- Micro-transaction cost optimization (<$100 transactions)
+- AI-powered failure pattern detection and prediction
+- Advanced analytics with trend analysis
+- Sovereign data compliance (AU-only infrastructure)
+- Distributed locking for high-availability recovery
+- Multi-channel notifications (email, SMS)
 
 ---
 
@@ -61,6 +65,12 @@ docker-compose up -d
 
 ### Development Commands
 ```bash
+# Code formatting
+./format.sh
+
+# Sovereignty audit
+./scripts/AUDIT_SOVEREIGNTY.sh
+
 # API Service
 cd api && go run cmd/main.go
 
@@ -156,6 +166,14 @@ You can generate a Residency Report during deployments or manually run the manif
 ./scripts/AUDIT_SOVEREIGNTY.sh
 ```
 
+### GCP Sydney Setup
+For sovereign Australian infrastructure deployment:
+
+```bash
+# Setup GCP Sydney region infrastructure
+./deployment/gcp-sydney-setup.sh
+```
+
 ---
 
 ## API Documentation
@@ -203,6 +221,9 @@ docker-compose -f docker-compose.staging.yml up -d
 
 # Deploy to production (Kubernetes)
 kubectl apply -f api/deployments/kubernetes/
+
+# Deploy to sovereign AU environment
+kubectl apply -k api/deployments/kubernetes/overlays/sovereign-au
 ```
 
 ---
@@ -243,15 +264,19 @@ graph TB
 
 #### API Service (Port 8080)
 - RESTful API endpoints
-- Webhook ingestion (Stripe)
+- Webhook ingestion (Stripe, Xero)
 - Payment failure processing
+- Advanced workflow orchestration
+- VIP customer detection
 - Health checks and metrics
 
 #### Worker Service
 - Background job processing
-- Retry logic with exponential backoff
-- Payment failure detection
-- Analytics processing
+- Smart retry logic with cost optimization
+- Cross-method reconciliation
+- AI-powered pattern detection
+- Advanced analytics processing
+- Distributed locking coordination
 
 #### Web Interface (Port 4896)
 - Payment metrics dashboard
@@ -261,8 +286,10 @@ graph TB
 ### Database Schema
 - `payment_failures`: Failed payment attempts
 - `recovery_attempts`: Retry execution logs
-- `analytics`: Failure patterns and metrics
+- `analytics`: Failure patterns and trend metrics
 - `users`: System user accounts
+- `vip_customers`: Priority customer configurations
+- `reconciliation_records`: Cross-method payment matching
 
 ---
 
