@@ -26,5 +26,5 @@ nameSuffix: ""
 
 # Configure image overrides
 images:
-  - name: payment-watchdog
+  - name: payment-watchdog-api
     newTag: latest
