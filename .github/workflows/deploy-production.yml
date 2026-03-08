@@ -57,7 +57,15 @@ jobs:
       - name: Verify Oracle Cloud Cluster Connection
         run: |
           echo "🔍 Verifying Oracle Cloud OKE cluster connection..."
+          
+          # Set the correct context explicitly
+          kubectl config use-context payment-watchdog-cluster || echo "⚠️ Context setting failed"
+          
+          # Verify we're connected to the right cluster
+          echo "Current context: $(kubectl config current-context)"
+          echo "Cluster info:"
           kubectl cluster-info --request-timeout=30s || echo "⚠️ Cluster info failed, continuing..."
+          echo "Available nodes:"
           kubectl get nodes --request-timeout=30s || echo "⚠️ Get nodes failed, continuing..."
           echo "✅ Oracle Cloud cluster verification complete"
 
@@ -99,12 +107,22 @@ jobs:
           kustomize edit set image payment-watchdog-recovery-orchestration=ghcr.io/${{ github.repository }}/worker:${IMAGE_TAG}
 
           echo "🚀 Deploying to Oracle Cloud production environment..."
-          # Deploy to production namespace with validation disabled
-          kubectl apply -k . --validate=false --request-timeout=60s
+          
+          # Ensure we're using the correct context and namespace
+          kubectl config use-context payment-watchdog-cluster
+          kubectl config set-context --current --namespace=production
+          
+          # Deploy to production namespace with validation disabled and explicit server
+          kubectl apply -k --validate=false --server-side --request-timeout=60s .
 
       - name: Wait for rollout
         run: |
           echo "⏳ Waiting for Oracle Cloud deployment rollout..."
+          
+          # Ensure we're using the correct context and namespace
+          kubectl config use-context payment-watchdog-cluster
+          kubectl config set-context --current --namespace=production
+          
           kubectl rollout status deployment/payment-watchdog-api-prod --timeout=300s --request-timeout=30s || echo "⚠️ API rollout check failed"
           kubectl rollout status deployment/payment-watchdog-ui-prod --timeout=300s --request-timeout=30s || echo "⚠️ UI rollout check failed"
           kubectl rollout status deployment/recovery-orchestration-prod --timeout=300s --request-timeout=30s || echo "⚠️ Worker rollout check failed"
@@ -113,6 +131,10 @@ jobs:
       - name: Run smoke tests
         run: |
           echo "🧪 Running Oracle Cloud production smoke tests..."
+          
+          # Ensure we're using the correct context and namespace
+          kubectl config use-context payment-watchdog-cluster
+          kubectl config set-context --current --namespace=production
           
           # Test API health
           kubectl exec deployment/payment-watchdog-api-prod -- curl -s -f http://localhost:8080/health || echo "⚠️ API health check failed"
@@ -131,6 +153,11 @@ jobs:
         if: failure()
         run: |
             echo "🚨 Oracle Cloud deployment failed - initiating rollback"
+            
+            # Ensure we're using the correct context and namespace
+            kubectl config use-context payment-watchdog-cluster
+            kubectl config set-context --current --namespace=production
+            
             kubectl rollout undo deployment/payment-watchdog-api-prod || echo "⚠️ API rollback failed"
             kubectl rollout undo deployment/payment-watchdog-ui-prod || echo "⚠️ UI rollback failed"
             kubectl rollout undo deployment/recovery-orchestration-prod || echo "⚠️ Worker rollback failed"
