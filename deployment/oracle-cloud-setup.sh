@@ -126,7 +126,7 @@ if [ -z "$CLUSTER_ID" ]; then
                 --compartment-id "$COMPARTMENT_ID" \
                 --name "$CLUSTER_NAME" \
                 --kubernetes-version v1.28.2 \
-                --type VIRTUAL_NODE_POOL \
+                --type BASIC_CLUSTER \
                 --vcn-id "$VCN_ID" \
                 --endpoint-subnet-id "$SUBNET_ID" \
                 --service-lb-subnet-ids '["'"$SUBNET_ID"'"]' \
