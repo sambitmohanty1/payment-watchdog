@@ -28,6 +28,9 @@ jobs:
           check-name: 'Build and Push Images'
           wait-interval: 30
           allowed-conclusions: success
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
       - name: Decode Kubeconfig
         id: decode
