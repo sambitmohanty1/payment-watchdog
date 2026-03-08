@@ -125,7 +125,7 @@ if [ -z "$CLUSTER_ID" ]; then
     CLUSTER_ID=$(oci ce cluster create \
                 --compartment-id "$COMPARTMENT_ID" \
                 --name "$CLUSTER_NAME" \
-                --kubernetes-version v1.28.2 \
+                --kubernetes-version v1.34.2 \
                 --type BASIC_CLUSTER \
                 --vcn-id "$VCN_ID" \
                 --endpoint-subnet-id "$SUBNET_ID" \
@@ -145,7 +145,7 @@ if [ -z "$NODE_POOL_ID" ]; then
                     --cluster-id "$CLUSTER_ID" \
                     --compartment-id "$COMPARTMENT_ID" \
                     --name "$NODE_POOL_NAME" \
-                    --kubernetes-version v1.28.2 \
+                    --kubernetes-version v1.34.2 \
                     --node-shape VM.Standard.A1.Flex \
                     --size 2 \
                     --node-shape-config '{"memoryInGBs": 6, "ocpus": 2}' \
