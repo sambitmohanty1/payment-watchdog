@@ -100,7 +100,7 @@ jobs:
 
           echo "🚀 Deploying to Oracle Cloud production environment..."
           # Deploy to production namespace with validation disabled
-          kubectl apply -k --validate=false --request-timeout=60s .
+          kubectl apply -k . --validate=false --request-timeout=60s
 
       - name: Wait for rollout
         run: |
