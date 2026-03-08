@@ -132,7 +132,14 @@ if [ -z "$CLUSTER_ID" ]; then
                 --service-lb-subnet-ids '["'"$SUBNET_ID"'"]' \
                 --pods-cidr "$POD_CIDR" \
                 --services-cidr "$SERVICE_CIDR" \
-                --query "data.id" --raw-output)
+                --query "data.id" --raw-output 2>/dev/null || echo "")
+    
+    # Fallback: Get cluster ID if query failed
+    if [ -z "$CLUSTER_ID" ]; then
+        echo "⚠️ Query failed, getting cluster ID by name..."
+        sleep 5  # Wait for cluster to be available
+        CLUSTER_ID=$(oci ce cluster list --compartment-id "$COMPARTMENT_ID" --query "data[?name=='$CLUSTER_NAME'].id | [0]" --raw-output 2>/dev/null || echo "")
+    fi
     echo "✅ Created Cluster: $CLUSTER_ID"
 else
     echo "✅ Using existing Cluster: $CLUSTER_ID"
