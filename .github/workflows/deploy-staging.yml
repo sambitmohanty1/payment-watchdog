@@ -80,7 +80,7 @@ jobs:
           cd ../..
 
           # Deploy to staging namespace (skip validation to avoid local API dependency)
-          kubectl apply -k --validate=false .
+          kubectl apply -k . --validate=false
 
       - name: Wait for rollout
         run: |
