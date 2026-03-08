@@ -130,8 +130,8 @@ if [ -z "$CLUSTER_ID" ]; then
                 --vcn-id "$VCN_ID" \
                 --endpoint-subnet-id "$SUBNET_ID" \
                 --service-lb-subnet-ids '["'"$SUBNET_ID"'"]' \
-                --pod-cidr "$POD_CIDR" \
-                --service-cidr "$SERVICE_CIDR" \
+                --pods-cidr "$POD_CIDR" \
+                --services-cidr "$SERVICE_CIDR" \
                 --query "data.id" --raw-output)
     echo "✅ Created Cluster: $CLUSTER_ID"
 else
@@ -143,6 +143,7 @@ NODE_POOL_ID=$(oci ce node-pool list --cluster-id "$CLUSTER_ID" --compartment-id
 if [ -z "$NODE_POOL_ID" ]; then
     NODE_POOL_ID=$(oci ce node-pool create \
                     --cluster-id "$CLUSTER_ID" \
+                    --compartment-id "$COMPARTMENT_ID" \
                     --name "$NODE_POOL_NAME" \
                     --kubernetes-version v1.28.2 \
                     --node-shape VM.Standard.A1.Flex \
