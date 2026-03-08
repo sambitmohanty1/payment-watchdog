@@ -277,7 +277,6 @@ if [ -z "$NODE_POOL_ID" ] || [ "$NODE_POOL_ID" = "null" ]; then
         --node-shape VM.Standard.A1.Flex \
         --size 2 \
         --node-shape-config '{"memoryInGBs": 6, "ocpus": 2}' \
-        --placement-configs '[{"availabilityDomain":"AD-1","subnetId":"'"$SUBNET_ID"'"}]' \
         --query "data.id" --raw-output)
     CREATED_RESOURCES+=("Node Pool: $NODE_POOL_ID")
     echo "✅ Created Node Pool: $NODE_POOL_ID"
