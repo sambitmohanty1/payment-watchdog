@@ -128,7 +128,6 @@ if [ -z "$CLUSTER_ID" ]; then
                 --kubernetes-version v1.28.2 \
                 --type VIRTUAL_NODE_POOL \
                 --vcn-id "$VCN_ID" \
-                --subnet-ids '["'"$SUBNET_ID"'"]' \
                 --endpoint-subnet-ids '["'"$SUBNET_ID"'"]' \
                 --service-lb-subnet-ids '["'"$SUBNET_ID"'"]' \
                 --pod-cidr "$POD_CIDR" \
@@ -147,8 +146,8 @@ if [ -z "$NODE_POOL_ID" ]; then
                     --name "$NODE_POOL_NAME" \
                     --kubernetes-version v1.28.2 \
                     --node-shape VM.Standard.A1.Flex \
-                    --node-count 2 \
-                    --node-config '{"memoryInGBs": 6, "ocpus": 2}' \
+                    --size 2 \
+                    --node-shape-config '{"memoryInGBs": 6, "ocpus": 2}' \
                     --query "data.id" --raw-output)
     echo "✅ Created Node Pool: $NODE_POOL_ID"
 else
@@ -160,28 +159,6 @@ oci ce cluster create-kubeconfig \
     --cluster-id "$CLUSTER_ID" \
     --file "$HOME/.kube/payment-watchdog-config" \
     --region "$REGION"
-
-echo "📋 Step 6.1: Configuring Block Volume Replication (intra-AU)"
-REPLICA_REGION="ap-melbourne-1"
-if [ "$REGION" = "ap-melbourne-1" ]; then
-    REPLICA_REGION="ap-sydney-1"
-fi
-echo "Configuring Block Volume replication to $REPLICA_REGION for High Availability..."
-
-VOLUME_ID=$(oci bv volume list --compartment-id "$COMPARTMENT_ID" --query "data[?\"display-name\"=='Sovereign-DB-Vol'].id | [0]" --raw-output 2>/dev/null || echo "")
-if [ -z "$VOLUME_ID" ] || [ "$VOLUME_ID" = "null" ]; then
-    VOLUME_ID=$(oci bv volume create --availability-domain AD-1 --compartment-id "$COMPARTMENT_ID" --size-in-gbs 50 --display-name "Sovereign-DB-Vol" --region "$REGION" --query "data.id" --raw-output)
-    echo "Created Block Volume: $VOLUME_ID"
-else
-    echo "Using existing Block Volume: $VOLUME_ID"
-fi
-
-if [ -n "$SOVEREIGN_POLICY_ID" ] && [ -n "$VOLUME_ID" ] && [ "$VOLUME_ID" != "null" ]; then
-    oci bv volume-backup-policy-assignment create --asset-id "$VOLUME_ID" --policy-id "$SOVEREIGN_POLICY_ID"
-    echo "Block Volume Backup Policy Assigned."
-else
-    echo "⚠️ SOVEREIGN_POLICY_ID not set or Volume ID missing. Skipping backup policy assignment."
-fi
 
 export KUBECONFIG="$HOME/.kube/payment-watchdog-config"
 echo "✅ Kubeconfig created: $KUBECONFIG"
