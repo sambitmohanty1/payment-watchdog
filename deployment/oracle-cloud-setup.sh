@@ -5,7 +5,7 @@
 
 set -e
 
-REGION=${REGION:-ap-sydney-1}
+REGION=${REGION:-ap-melbourne-1}
 
 if [[ "$REGION" != "ap-sydney-1" && "$REGION" != "ap-melbourne-1" ]]; then
     echo "❌ ERROR: For sovereign compliance, REGION must be 'ap-sydney-1' or 'ap-melbourne-1'."
@@ -24,6 +24,22 @@ SUBNET_NAME="payment-watchdog-subnet"
 IGW_NAME="payment-watchdog-igw"
 DOMAIN=${DOMAIN:-""}  # Optional - leave empty for IP-based access
 TENANCY_ID="ocid1.tenancy.oc1..aaaaaaaaitfhbb6ix7yqiavspixzepzm4babf6qjonzom5pe4lvqzxvp2xla"
+
+# Region-specific network configuration
+if [[ "$REGION" == "ap-sydney-1" ]]; then
+    VCN_CIDR="10.0.0.0/16"
+    SUBNET_CIDR="10.0.1.0/24"
+    POD_CIDR="10.244.0.0/16"
+    SERVICE_CIDR="10.96.0.0/12"
+elif [[ "$REGION" == "ap-melbourne-1" ]]; then
+    VCN_CIDR="10.1.0.0/16"
+    SUBNET_CIDR="10.1.1.0/24"
+    POD_CIDR="10.245.0.0/16"
+    SERVICE_CIDR="10.97.0.0/12"
+else
+    echo "❌ ERROR: Unsupported region: $REGION"
+    exit 1
+fi
 
 echo "📋 Step 1: Creating Compartment..."
 COMPARTMENT_ID=$(oci iam compartment list --compartment-id "$TENANCY_ID" --query "data[?name=='$COMPARTMENT_NAME'].id | [0]" --raw-output)
@@ -44,7 +60,7 @@ VCN_ID=$(oci network vcn list --compartment-id "$COMPARTMENT_ID" --query "data[?
 if [ -z "$VCN_ID" ] || [ "$VCN_ID" = "null" ]; then
     VCN_ID=$(oci network vcn create \
             --compartment-id "$COMPARTMENT_ID" \
-            --cidr-block 10.0.0.0/16 \
+            --cidr-block "$VCN_CIDR" \
             --display-name "$VCN_NAME" \
             --region "$REGION" \
             --query "data.id" --raw-output)
@@ -53,12 +69,13 @@ else
     echo "✅ Using existing VCN: $VCN_ID"
 fi
 
+echo "📋 Step 3: Creating Subnet..."
 SUBNET_ID=$(oci network subnet list --compartment-id "$COMPARTMENT_ID" --vcn-id "$VCN_ID" --query "data[?name=='$SUBNET_NAME'].id | [0]" --raw-output)
-if [ -z "$SUBNET_ID" ]; then
+if [ -z "$SUBNET_ID" ] || [ "$SUBNET_ID" = "null" ]; then
     SUBNET_ID=$(oci network subnet create \
                 --compartment-id "$COMPARTMENT_ID" \
                 --vcn-id "$VCN_ID" \
-                --cidr-block 10.0.1.0/24 \
+                --cidr-block "$SUBNET_CIDR" \
                 --display-name "$SUBNET_NAME" \
                 --query "data.id" --raw-output)
     echo "✅ Created Subnet: $SUBNET_ID"
@@ -114,8 +131,8 @@ if [ -z "$CLUSTER_ID" ]; then
                 --subnet-ids '["'"$SUBNET_ID"'"]' \
                 --endpoint-subnet-ids '["'"$SUBNET_ID"'"]' \
                 --service-lb-subnet-ids '["'"$SUBNET_ID"'"]' \
-                --pod-cidr 10.244.0.0/16 \
-                --service-cidr 10.96.0.0/12 \
+                --pod-cidr "$POD_CIDR" \
+                --service-cidr "$SERVICE_CIDR" \
                 --query "data.id" --raw-output)
     echo "✅ Created Cluster: $CLUSTER_ID"
 else
