@@ -113,7 +113,9 @@ jobs:
           kubectl config set-context --current --namespace=production
           
           # Deploy to production namespace with validation disabled and explicit server
-          kubectl apply -k api/deployments/kubernetes/overlays/production --validate=false --server-side --request-timeout=60s
+          # Change directory to ensure relative paths resolve correctly
+          cd api/deployments/kubernetes/overlays/production
+          kubectl apply -k . --validate=false --server-side --request-timeout=60s
 
       - name: Wait for rollout
         run: |
