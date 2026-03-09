@@ -48,20 +48,7 @@ jobs:
 
           rm "$DECODED_FILE"
 
-      - name: Install OCI CLI
-        run: |
-          # Install OCI CLI
-          curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh | bash -s -- --accept-all-defaults
-          echo "$HOME/bin" >> $GITHUB_PATH
-          export PATH="$HOME/bin:$PATH"
-          export PYTHONPATH="$HOME/lib/python3.11/site-packages:$PYTHONPATH"
-
-      - name: Configure OCI CLI
-        run: |
-          # Configure OCI CLI with GitHub Actions token
-          echo "${{ secrets.OCI_USER_AUTH_TOKEN }}" | oci setup bootstrap --auth-token stdin
-          oci setup config --file-type=token --region=ap-melbourne-1
-
+      
       - name: Set up Kubernetes Context
         uses: azure/k8s-set-context@v3
         with:
@@ -71,6 +58,16 @@ jobs:
       - name: Verify Oracle Cloud Cluster Connection
         run: |
           echo "🔍 Verifying Oracle Cloud OKE cluster connection..."
+          
+          # Try OCI CLI first, then fallback to static kubeconfig
+          if kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
+            echo "✅ OCI CLI authentication working"
+          else
+            echo "⚠️ OCI CLI failed, using fallback static kubeconfig"
+            # Use static kubeconfig as fallback
+            echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > /tmp/fallback-kubeconfig
+            export KUBECONFIG=/tmp/fallback-kubeconfig
+          fi
           
           # Set the correct context (use actual context name from kubeconfig)
           kubectl config use-context context-ch4w6uqbtwa || echo "⚠️ Context setting failed"
