@@ -15,7 +15,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: https://payment-watchdog.example.com  # Update with your actual production URL
+      url: https://130.162.198.32.ap-melbourne-1.oraclecloudapps.com
 
     steps:
       - name: Checkout code
@@ -58,8 +58,8 @@ jobs:
         run: |
           echo "🔍 Verifying Oracle Cloud OKE cluster connection..."
           
-          # Set the correct context explicitly
-          kubectl config use-context payment-watchdog-cluster || echo "⚠️ Context setting failed"
+          # Set the correct context (use actual context name from kubeconfig)
+          kubectl config use-context context-ch4w6uqbtwa || echo "⚠️ Context setting failed"
           
           # Verify we're connected to the right cluster
           echo "Current context: $(kubectl config current-context)"
@@ -109,7 +109,7 @@ jobs:
           echo "🚀 Deploying to Oracle Cloud production environment..."
           
           # Ensure we're using the correct context and namespace
-          kubectl config use-context payment-watchdog-cluster
+          kubectl config use-context context-ch4w6uqbtwa
           kubectl config set-context --current --namespace=production
           
           # Deploy to production namespace with validation disabled and explicit server
@@ -120,7 +120,7 @@ jobs:
           echo "⏳ Waiting for Oracle Cloud deployment rollout..."
           
           # Ensure we're using the correct context and namespace
-          kubectl config use-context payment-watchdog-cluster
+          kubectl config use-context context-ch4w6uqbtwa
           kubectl config set-context --current --namespace=production
           
           kubectl rollout status deployment/payment-watchdog-api-prod --timeout=300s --request-timeout=30s || echo "⚠️ API rollout check failed"
@@ -133,7 +133,7 @@ jobs:
           echo "🧪 Running Oracle Cloud production smoke tests..."
           
           # Ensure we're using the correct context and namespace
-          kubectl config use-context payment-watchdog-cluster
+          kubectl config use-context context-ch4w6uqbtwa
           kubectl config set-context --current --namespace=production
           
           # Test API health
@@ -155,7 +155,7 @@ jobs:
             echo "🚨 Oracle Cloud deployment failed - initiating rollback"
             
             # Ensure we're using the correct context and namespace
-            kubectl config use-context payment-watchdog-cluster
+            kubectl config use-context context-ch4w6uqbtwa
             kubectl config set-context --current --namespace=production
             
             kubectl rollout undo deployment/payment-watchdog-api-prod || echo "⚠️ API rollback failed"
