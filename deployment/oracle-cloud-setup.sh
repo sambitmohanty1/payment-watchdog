@@ -19,6 +19,13 @@ fi
 echo "🚀 Oracle Cloud Free Tier Setup for Payment Watchdog in region: $REGION"
 echo "================================================"
 
+# Check for force flag to bypass duplicate warnings
+FORCE_MODE=${FORCE:-false}
+if [ "$FORCE_MODE" = "true" ]; then
+    echo "🔧 FORCE MODE: Will create resources even if they exist"
+    echo ""
+fi
+
 # Configuration
 COMPARTMENT_NAME="PaymentWatchdogSovereign"
 CLUSTER_NAME="payment-watchdog-cluster"
@@ -50,6 +57,37 @@ fi
 # Preflight checks
 # -------------------------------------------------------
 echo "🔍 Running preflight checks..."
+
+# Check for existing resources to prevent duplicates
+echo "🔍 Checking for existing resources in compartment..."
+
+EXISTING_VCN=$(oci network vcn list --compartment-id "$COMPARTMENT_ID" --query "data[?name=='$VCN_NAME'].id | [0]" --raw-output)
+EXISTING_CLUSTER=$(oci ce cluster list --compartment-id "$COMPARTMENT_ID" --query "data[?name=='$CLUSTER_NAME'].id | [0]" --raw-output)
+
+if [ -n "$EXISTING_VCN" ] && [ "$EXISTING_VCN" != "null" ]; then
+    echo "⚠️  WARNING: VCN '$VCN_NAME' already exists in compartment"
+    echo "   Existing VCN ID: $EXISTING_VCN"
+fi
+
+if [ -n "$EXISTING_CLUSTER" ] && [ "$EXISTING_CLUSTER" != "null" ]; then
+    echo "⚠️  WARNING: Cluster '$CLUSTER_NAME' already exists in compartment"
+    echo "   Existing Cluster ID: $EXISTING_CLUSTER"
+fi
+
+# Ask for confirmation if resources exist (unless force mode)
+if [ "$FORCE_MODE" != "true" ]; then
+    if [ -n "$EXISTING_VCN" ] || [ -n "$EXISTING_CLUSTER" ]; then
+        echo ""
+        read -p "⚠️  Existing resources found. Do you want to continue and potentially create duplicates? (y/N): " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "❌ Setup cancelled by user."
+            exit 0
+        fi
+    fi
+else
+    echo "🔧 Skipping duplicate checks due to FORCE_MODE=true"
+fi
 
 for cmd in oci kubectl helm; do
     if ! command -v "$cmd" &>/dev/null; then
@@ -98,7 +136,7 @@ if [ -z "$COMPARTMENT_ID" ] || [ "$COMPARTMENT_ID" = "null" ]; then
         --compartment-id "$TENANCY_ID" \
         --query "data.id" --raw-output)
     CREATED_RESOURCES+=("Compartment: $COMPARTMENT_ID")
-    echo "✅ Created compartment: $COMPARTMENT_ID"
+    echo "✅ Created compartment: $COMPART_ID"
 
     echo "⏳ Waiting for IAM compartment to propagate..."
     sleep 15
@@ -380,6 +418,7 @@ echo ""
 echo "🎉 Oracle Cloud Setup Complete!"
 echo "=================================="
 echo "Region:      $REGION"
+echo "Compartment: $COMPARTMENT_ID"
 echo "Cluster ID:  $CLUSTER_ID"
 echo "External IP: $EXTERNAL_IP"
 
@@ -389,7 +428,7 @@ if [ -n "$DOMAIN" ]; then
     echo "Next Steps:"
     echo "1. Point your domain DNS A record to: $EXTERNAL_IP"
     echo "2. Run: kubectl apply -f api/deployments/kubernetes"
-    echo "3. Add GitHub KUBE_CONFIG secret:"
+    echo "3. Update GitHub KUBE_CONFIG secret with:"
     echo "   cat $KUBECONFIG | base64 -w 0"
 else
     echo ""
@@ -399,4 +438,17 @@ else
     echo "3. Add GitHub KUBE_CONFIG secret:"
     echo "   cat $KUBECONFIG | base64 -w 0"
 fi
+
 echo "=================================="
+
+# Show created resources for tracking
+if [ ${#CREATED_RESOURCES[@]} -gt 0 ]; then
+    echo ""
+    echo "📋 Created Resources Summary:"
+    for resource in "${CREATED_RESOURCES[@]}"; do
+        echo "   - $resource"
+    done
+    echo ""
+    echo "💡 To cleanup these resources, run:"
+    echo "   ./deployment/cleanup-oracle.sh"
+fi
