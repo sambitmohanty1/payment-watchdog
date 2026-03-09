@@ -48,6 +48,11 @@ jobs:
 
           rm "$DECODED_FILE"
 
+      - name: Install OCI CLI
+        run: |
+          curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh | bash -s -- --accept-all-defaults
+          echo "$HOME/bin" >> $GITHUB_PATH
+
       - name: Set up Kubernetes Context
         uses: azure/k8s-set-context@v3
         with:
