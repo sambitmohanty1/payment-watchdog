@@ -50,8 +50,16 @@ jobs:
 
       - name: Install OCI CLI
         run: |
+          # Install OCI CLI
           curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh | bash -s -- --accept-all-defaults
           echo "$HOME/bin" >> $GITHUB_PATH
+          echo "$HOME/lib/python3.11/site-packages" >> $PYTHONPATH
+
+      - name: Configure OCI CLI
+        run: |
+          # Configure OCI CLI with GitHub Actions token
+          echo "${{ secrets.OCI_USER_AUTH_TOKEN }}" | oci setup bootstrap --auth-token stdin
+          oci setup config --file-type=token --region=ap-melbourne-1
 
       - name: Set up Kubernetes Context
         uses: azure/k8s-set-context@v3
