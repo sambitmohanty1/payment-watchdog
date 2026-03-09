@@ -6,6 +6,9 @@
 set -e
 set -u
 
+# Ensure USER variable is always defined
+USER=${USER:-$(whoami)}
+
 REGION=${REGION:-ap-melbourne-1}
 
 if [[ "$REGION" != "ap-sydney-1" && "$REGION" != "ap-melbourne-1" ]]; then
