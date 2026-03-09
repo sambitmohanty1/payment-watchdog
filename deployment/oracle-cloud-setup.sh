@@ -123,11 +123,14 @@ trap cleanup ERR
 # -------------------------------------------------------
 # Step 1: Creating Compartment
 # -------------------------------------------------------
-echo "📋 Step 1: Creating Compartment..."
+echo " Step 1: Creating# Get compartment ID"
 COMPARTMENT_ID=$(oci iam compartment list \
     --compartment-id "$TENANCY_ID" \
     --query "data[?name=='$COMPARTMENT_NAME'].id | [0]" \
     --raw-output)
+
+# Export for global availability
+export COMPARTMENT_ID
 
 if [ -z "$COMPARTMENT_ID" ] || [ "$COMPARTMENT_ID" = "null" ]; then
     COMPARTMENT_ID=$(oci iam compartment create \
