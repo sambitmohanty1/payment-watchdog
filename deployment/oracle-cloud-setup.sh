@@ -228,6 +228,7 @@ if [ -z "$CLUSTER_ID" ] || [ "$CLUSTER_ID" = "null" ]; then
         --service-lb-subnet-ids '["'"$SUBNET_ID"'"]' \
         --pods-cidr "$POD_CIDR" \
         --services-cidr "$SERVICE_CIDR" \
+        --is-public-ip-enabled true \
         --query "data.id" --raw-output)
     CREATED_RESOURCES+=("Kubernetes Cluster: $CLUSTER_ID")
     echo "✅ Submitted cluster creation: $CLUSTER_ID"
