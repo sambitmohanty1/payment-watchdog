@@ -21,6 +21,51 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # --- New: Install OCI CLI so kubeconfig exec plugin can run `oci` ---
+      - name: Set up Python (for OCI CLI)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install & configure OCI CLI
+        env:
+          OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+          OCI_PRIVATE_KEY_PASSPHRASE: ${{ secrets.OCI_PRIVATE_KEY_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+
+          # Install OCI CLI via pip; add user bin to PATH for subsequent steps
+          python -m pip install --upgrade pip
+          pip install oci-cli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+          # Configure OCI CLI credentials for the exec plugin
+          mkdir -p ~/.oci
+          echo "$OCI_PRIVATE_KEY" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
+
+          {
+            echo "[DEFAULT]"
+            echo "user=${OCI_USER_OCID}"
+            echo "fingerprint=${OCI_FINGERPRINT}"
+            echo "tenancy=${OCI_TENANCY_OCID}"
+            echo "region=${OCI_REGION}"
+            echo "key_file=${HOME}/.oci/oci_api_key.pem"
+          } > ~/.oci/config
+
+          if [ -n "${OCI_PRIVATE_KEY_PASSPHRASE:-}" ]; then
+            printf "\npass_phrase=%s\n" "${OCI_PRIVATE_KEY_PASSPHRASE}" >> ~/.oci/config
+          fi
+          chmod 600 ~/.oci/config
+
+          # Sanity checks
+          oci --version
+          oci iam region list >/dev/null
+
       - name: Wait for CI to complete
         uses: lewagon/wait-on-check-action@v1.3.4
         with:
@@ -48,7 +93,6 @@ jobs:
 
           rm "$DECODED_FILE"
 
-      
       - name: Set up Kubernetes Context
         uses: azure/k8s-set-context@v3
         with:
@@ -59,20 +103,18 @@ jobs:
         run: |
           echo "🔍 Verifying Oracle Cloud OKE cluster connection..."
           
-          # Try OCI CLI first, then fallback to static kubeconfig
+          # Try normal path first (uses kubeconfig with exec: oci)
           if kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
             echo "✅ OCI CLI authentication working"
           else
             echo "⚠️ OCI CLI failed, using fallback static kubeconfig"
-            # Use static kubeconfig as fallback
             echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > /tmp/fallback-kubeconfig
             export KUBECONFIG=/tmp/fallback-kubeconfig
           fi
           
-          # Set the correct context (use actual context name from kubeconfig)
+          # Set the correct context (update to match the context name in your kubeconfig)
           kubectl config use-context context-ch4w6uqbtwa || echo "⚠️ Context setting failed"
           
-          # Verify we're connected to the right cluster
           echo "Current context: $(kubectl config current-context)"
           echo "Cluster info:"
           kubectl cluster-info --request-timeout=30s || echo "⚠️ Cluster info failed, continuing..."
@@ -94,7 +136,6 @@ jobs:
             echo "Using provided image tag: ${{ inputs.image_tag }}"
             echo "image_tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
           else
-            # Use the commit SHA as default (same as CI workflow)
             echo "No image tag provided. Defaulting to workflow sha: ${{ github.sha }}"
             echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
@@ -103,34 +144,24 @@ jobs:
         run: |
           cd api/deployments/kubernetes/overlays/production
 
-          # Update image tags using kustomize
           IMAGE_TAG=${{ steps.tag.outputs.image_tag }}
-
           echo "🏷️ Updating image tags with tag: $IMAGE_TAG"
           
-          # Update API image - matches CI workflow: ghcr.io/${{ github.repository }}/api
           kustomize edit set image payment-watchdog-api=ghcr.io/${{ github.repository }}/api:${IMAGE_TAG}
-
-          # Update web image - matches CI workflow: ghcr.io/${{ github.repository }}/web  
           kustomize edit set image payment-watchdog-ui=ghcr.io/${{ github.repository }}/web:${IMAGE_TAG}
-
-          # Update worker image - matches CI workflow: ghcr.io/${{ github.repository }}/worker
           kustomize edit set image payment-watchdog-recovery-orchestration=ghcr.io/${{ github.repository }}/worker:${IMAGE_TAG}
 
           echo "🚀 Deploying to Oracle Cloud production environment..."
           
-          # Ensure we're using the correct context and namespace
           kubectl config use-context context-ch4w6uqbtwa
           kubectl config set-context --current --namespace=production
           
-          # Deploy to production namespace with validation disabled and explicit server
           kubectl apply -k . --validate=false --server-side --request-timeout=60s
 
       - name: Wait for rollout
         run: |
           echo "⏳ Waiting for Oracle Cloud deployment rollout..."
           
-          # Ensure we're using the correct context and namespace
           kubectl config use-context context-ch4w6uqbtwa
           kubectl config set-context --current --namespace=production
           
@@ -143,14 +174,11 @@ jobs:
         run: |
           echo "🧪 Running Oracle Cloud production smoke tests..."
           
-          # Ensure we're using the correct context and namespace
           kubectl config use-context context-ch4w6uqbtwa
           kubectl config set-context --current --namespace=production
           
-          # Test API health
           kubectl exec deployment/payment-watchdog-api-prod -- curl -s -f http://localhost:8080/health || echo "⚠️ API health check failed"
 
-          # Test web accessibility
           WEB_POD=$(kubectl get pods -l app=payment-watchdog,component=ui -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
           if [ -n "$WEB_POD" ]; then
             kubectl exec $WEB_POD -- curl -s -f http://localhost:3011 || echo "⚠️ Web health check failed"
@@ -163,13 +191,12 @@ jobs:
       - name: Rollback on failure
         if: failure()
         run: |
-            echo "🚨 Oracle Cloud deployment failed - initiating rollback"
-            
-            # Ensure we're using the correct context and namespace
-            kubectl config use-context context-ch4w6uqbtwa
-            kubectl config set-context --current --namespace=production
-            
-            kubectl rollout undo deployment/payment-watchdog-api-prod || echo "⚠️ API rollback failed"
-            kubectl rollout undo deployment/payment-watchdog-ui-prod || echo "⚠️ UI rollback failed"
-            kubectl rollout undo deployment/recovery-orchestration-prod || echo "⚠️ Worker rollback failed"
-            echo "✅ Rollback attempts complete"
+          echo "🚨 Oracle Cloud deployment failed - initiating rollback"
+          
+          kubectl config use-context context-ch4w6uqbtwa
+          kubectl config set-context --current --namespace=production
+          
+          kubectl rollout undo deployment/payment-watchdog-api-prod || echo "⚠️ API rollback failed"
+          kubectl rollout undo deployment/payment-watchdog-ui-prod || echo "⚠️ UI rollback failed"
+          kubectl rollout undo deployment/recovery-orchestration-prod || echo "⚠️ Worker rollback failed"
+          echo "✅ Rollback attempts complete"
