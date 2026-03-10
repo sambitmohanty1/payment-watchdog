@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: payment-watchdog-ui
-  namespace: lexure-mvp
   labels:
     app: payment-watchdog
     component: ui

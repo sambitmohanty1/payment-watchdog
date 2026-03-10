@@ -1,10 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: recovery-orchestration-prod
+  name: recovery-orchestration
 spec:
   template:
     spec:
       containers:
       - name: recovery-orchestration
         image: ghcr.io/sambitmohanty1/payment-watchdog/worker:latest
+        imagePullPolicy: Always

@@ -13,10 +13,10 @@ resources:
   - namespace.yaml
 
 # Strategic merge patches for existing deployments
-patchesStrategicMerge:
-  - api-deployment-patch.yaml
-  - web-deployment-patch.yaml
-  - worker-deployment-patch.yaml
+patches:
+  - path: api-deployment-patch.yaml
+  - path: web-deployment-patch.yaml
+  - path: worker-deployment-patch.yaml
 
 # Production namespace for Oracle Cloud
 namespace: production

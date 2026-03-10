@@ -1,10 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: payment-watchdog-api-prod
+  name: payment-watchdog-api
 spec:
   template:
     spec:
       containers:
-      - name: payment-watchdog-api
+      - name: app
         image: ghcr.io/sambitmohanty1/payment-watchdog/api:latest
+        imagePullPolicy: Always
