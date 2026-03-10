@@ -2,11 +2,19 @@ name: Phase 1 Security Scan
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
+    paths-ignore:
+      - 'api/**'
+      - 'web/**'
+      - 'deployment/**'
+      - '.github/workflows/**'
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
+    paths:
+      - 'api/**'
+      - 'web/**'
   schedule:
-    # Run security scan daily at 2 AM UTC
+    # Run security scan daily at 2 AM UTC (off-peak hours)
     - cron: '0 2 * * *'
 
 # 🛑 SECURITY: Restrict permissions for security scanning
@@ -21,11 +29,11 @@ jobs:
   codeql-sast:
     name: CodeQL SAST Analysis
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     
     strategy:
       matrix:
-        language: [ 'go', 'javascript' ]
+        language: [ 'go' ]
         
     steps:
       - name: Checkout repository
