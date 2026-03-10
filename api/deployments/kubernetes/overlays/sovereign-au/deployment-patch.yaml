@@ -32,7 +32,7 @@ spec:
       nodeSelector:
         kubernetes.io/arch: amd64  # Fix: Changed from arm64
       containers:
-      - name: payment-watchdog-ui
+      - name: payment-watchdog-web
         imagePullPolicy: IfNotPresent # Fix: Ensure images are pulled from GHCR
         resources:
           requests:
