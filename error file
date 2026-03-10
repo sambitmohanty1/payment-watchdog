@@ -1,0 +1,14 @@
+ServiceError:
+{
+    "client_version": "Oracle-PythonSDK/2.168.0, Oracle-PythonCLI/3.75.0",
+    "code": "NotAuthenticated",
+    "logging_tips": "Please run the OCI CLI command using --debug flag to find more debug information.",
+    "message": "Failed to verify the HTTP(S) Signature",
+    "opc-request-id": "3C28152377B04574AF764886F07BAAD9/8866317D91CD8572DED7AF694D454C60/4D7962664EC3E7C74606D492C8722258",
+    "operation_name": "list_regions",
+    "request_endpoint": "GET https://identity.***.oci.oraclecloud.com/20160918/regions",
+    "status": 401,
+    "target_service": "identity",
+    "timestamp": "2026-03-10T08:35:42.741968+00:00",
+    "troubleshooting_tips": "See [https://docs.oracle.com/iaas/Content/API/References/apierrors.htm] for more information about resolving this error. If you are unable to resolve this issue, run this CLI command with --debug option and contact Oracle support and provide them the full error message."
+}
