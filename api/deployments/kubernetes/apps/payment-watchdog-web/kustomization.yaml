@@ -12,10 +12,13 @@ resources:
 - service.yaml
 - deployment.yaml
 
-commonLabels:
-  app: payment-watchdog
-  component: ui
-  version: v1.0.0
+labels:
+  - pairs:
+      app: payment-watchdog
+      component: ui
+      version: v1.0.0
+    includeSelectors: false
+    includeTemplates: true
 
 images:
 - name: payment-watchdog-ui
