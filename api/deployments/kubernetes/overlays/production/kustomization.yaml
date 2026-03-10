@@ -14,30 +14,9 @@ resources:
 
 # Strategic merge patches for existing deployments
 patchesStrategicMerge:
-  - path: ../../apps/payment-watchdog-api/deployment.yaml
-    target:
-      kind: Deployment
-      name: payment-watchdog-api-prod
-    patch: |
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: ghcr.io/sambitmohanty1/payment-watchdog/api:latest
-  - path: ../../apps/payment-watchdog-web/deployment.yaml
-    target:
-      kind: Deployment
-      name: payment-watchdog-web-prod
-    patch: |
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: ghcr.io/sambitmohanty1/payment-watchdog/web:latest
-  - path: ../../apps/recovery-orchestration/deployment.yaml
-    target:
-      kind: Deployment
-      name: recovery-orchestration-prod
-    patch: |
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: ghcr.io/sambitmohanty1/payment-watchdog/worker:latest
+  - api-deployment-patch.yaml
+  - web-deployment-patch.yaml
+  - worker-deployment-patch.yaml
 
 # Production namespace for Oracle Cloud
 namespace: production
