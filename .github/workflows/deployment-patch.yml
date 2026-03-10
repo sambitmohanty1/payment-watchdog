@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-watchdog-api
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: amd64  # Fix: Changed from arm64 to match your OCI node
+      containers:
+      - name: payment-watchdog-api
+        resources:
+          requests:
+            memory: "128Mi"        # Fix: Reduced to fit on a single node
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        env:
+        - name: DATABASE_HOST
+          value: "lexure-postgres-prod.production.svc.cluster.local" # Fix: Corrected service name
+        - name: REDIS_URL
+          value: "redis://lexure-redis-prod.production.svc.cluster.local:6379"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-watchdog-ui
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: amd64  # Fix: Changed from arm64
+      containers:
+      - name: payment-watchdog-ui
+        imagePullPolicy: IfNotPresent # Fix: Ensure images are pulled from GHCR
+        resources:
+          requests:
+            memory: "128Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recovery-orchestration
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: amd64  # Fix: Changed from arm64
+      containers:
+      - name: recovery-orchestration
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+        env:
+        - name: DATABASE_HOST
+          value: "lexure-postgres-prod.production.svc.cluster.local"
