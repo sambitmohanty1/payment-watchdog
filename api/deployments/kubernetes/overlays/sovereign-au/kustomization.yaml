@@ -2,11 +2,34 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - ../../app-deployment.yaml
-  - ../../redis-deployment.yaml
-  - ../../configmap.yaml
-  - network-policy.yaml
-  - service-monitor.yaml
+  - ../../base/components/postgres
+  - ../../base/components/redis
+  - ../../base/components/ingress
+  - ../../base/components/monitoring
+  - ../../apps/payment-watchdog-api
+  - ../../apps/payment-watchdog-web
+  - ../../apps/recovery-orchestration
+  - namespace.yaml
+
+namespace: production
+nameSuffix: "-prod"
+
+# Add this section to fix Storage Classes in production
+patches:
+  - target:
+      kind: PersistentVolumeClaim
+      name: postgres-pv-claim
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: oci-bv
+  - target:
+      kind: PersistentVolumeClaim
+      name: redis-pv-claim
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: oci-bv
 
 patches:
   - path: deployment-patch.yaml
