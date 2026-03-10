@@ -16,7 +16,7 @@ labels:
       app.kubernetes.io/component: backend
       app.kubernetes.io/part-of: payment-watchdog
       environment: staging
-    includeSelectors: true
+    includeSelectors: false
     includeTemplates: true
 
 images:
