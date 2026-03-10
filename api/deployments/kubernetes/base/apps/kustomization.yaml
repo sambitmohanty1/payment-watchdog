@@ -9,6 +9,9 @@ resources:
   - ../../apps/payment-watchdog-mvp
   - ../../apps/recovery-orchestration
 
-commonLabels:
-  app.kubernetes.io/part-of: payment-watchdog
-  environment: development
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: payment-watchdog
+      environment: development
+    includeSelectors: false
+    includeTemplates: true
