@@ -149,6 +149,16 @@ jobs:
           kubectl config use-context context-ch4w6uqbtwa
           kubectl config set-context --current --namespace=production
           
+          # First apply non-deployment resources
+          echo "📦 Applying non-deployment resources..."
+          kustomize build . | grep -v "kind: Deployment" | kubectl apply -f - --validate=false --server-side --force-conflicts --request-timeout=60s || true
+          
+          # Then handle deployments with replace to fix selector issues
+          echo "🔄 Updating deployments (may recreate if selectors changed)..."
+          kustomize build . | grep -A 50 "kind: Deployment" | kubectl replace --force -f - --validate=false --server-side --force-conflicts --request-timeout=60s || true
+          
+          # Final apply to catch anything missed
+          echo "✅ Final apply for remaining resources..."
           kubectl apply -k . --validate=false --server-side --force-conflicts --request-timeout=60s
 
       - name: Wait for rollout
