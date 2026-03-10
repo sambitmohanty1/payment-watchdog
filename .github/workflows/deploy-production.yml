@@ -144,13 +144,6 @@ jobs:
         run: |
           cd api/deployments/kubernetes/overlays/production
 
-          IMAGE_TAG=${{ steps.tag.outputs.image_tag }}
-          echo "🏷️ Updating image tags with tag: $IMAGE_TAG"
-          
-          kustomize edit set image payment-watchdog-api=ghcr.io/${{ github.repository }}/api:${IMAGE_TAG}
-          kustomize edit set image payment-watchdog-ui=ghcr.io/${{ github.repository }}/web:${IMAGE_TAG}
-          kustomize edit set image payment-watchdog-recovery-orchestration=ghcr.io/${{ github.repository }}/worker:${IMAGE_TAG}
-
           echo "🚀 Deploying to Oracle Cloud production environment..."
           
           kubectl config use-context context-ch4w6uqbtwa
