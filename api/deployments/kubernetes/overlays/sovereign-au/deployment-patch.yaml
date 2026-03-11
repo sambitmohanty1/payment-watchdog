@@ -18,9 +18,9 @@ spec:
             cpu: "500m"
         env:
         - name: DATABASE_HOST
-          value: "lexure-postgres-prod.production.svc.cluster.local" # Fix: Corrected service name
+          value: "lexure-postgres-sovereign-au.sovereign-au.svc.cluster.local" # Fix: Corrected for Sovereign AU namespace
         - name: REDIS_URL
-          value: "redis://lexure-redis-prod.production.svc.cluster.local:6379"
+          value: "redis://lexure-redis-sovereign-au.sovereign-au.svc.cluster.local:6379"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -32,7 +32,7 @@ spec:
       nodeSelector:
         kubernetes.io/arch: amd64  # Fix: Changed from arm64
       containers:
-      - name: payment-watchdog-web
+      - name: payment-watchdog-ui  # Fix: Corrected container name to match base deployment
         imagePullPolicy: IfNotPresent # Fix: Ensure images are pulled from GHCR
         resources:
           requests:
@@ -55,4 +55,4 @@ spec:
             cpu: "100m"
         env:
         - name: DATABASE_HOST
-          value: "lexure-postgres-prod.production.svc.cluster.local"
+          value: "lexure-postgres-sovereign-au.sovereign-au.svc.cluster.local" # Fix: Corrected for Sovereign AU namespace
