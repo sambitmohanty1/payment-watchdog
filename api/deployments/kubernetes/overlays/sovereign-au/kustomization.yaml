@@ -14,7 +14,7 @@ resources:
 # Note: If this is strictly for the Sovereign environment, 
 # ensure this is 'sovereign-au' instead of 'production'
 namespace: sovereign-au
-nameSuffix: "-prod"
+nameSuffix: "-sovereign-au"
 
 patches:
   # 1. File-based patches for Architecture, Resources, and Secrets
