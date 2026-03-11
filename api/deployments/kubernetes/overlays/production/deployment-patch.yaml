@@ -28,7 +28,7 @@ spec:
         - name: REDIS_URL
           value: "redis://payment-watchdog-redis.production.svc.cluster.local:6379"
         - name: ORACLE_REGION
-          value: "ap-sydney-1"
+          value: "ap-melbourne-1"
         - name: ORACLE_COMPARTMENT
           value: "PaymentWatchdogSovereign"
 ---
@@ -84,4 +84,4 @@ spec:
         - name: REDIS_URL
           value: "redis://payment-watchdog-redis.production.svc.cluster.local:6379"
         - name: ORACLE_REGION
-          value: "ap-sydney-1"
+          value: "ap-melbourne-1"
