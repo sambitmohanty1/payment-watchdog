@@ -190,9 +190,9 @@ jobs:
           echo "📦 Applying non-deployment resources..."
           kustomize build . | grep -v "kind: Deployment" | kubectl apply -f - --validate=false --server-side --force-conflicts --request-timeout=60s || true
           
-          # Extract and apply deployments separately
+          # Extract deployments to separate file and apply with replace
           echo "🔄 Updating deployments (may recreate if selectors changed)..."
-          kustomize build . | awk '/^kind: Deployment$/,/^---$/{if(/^---$/ && NR>1) exit; print}' | kubectl replace --force -f - --validate=false --force-conflicts --request-timeout=60s || true
+          kustomize build . | grep -A 1000 "kind: Deployment" | grep -B 1000 "kind: Service" | head -n -1 | kubectl replace --force -f - --validate=false --request-timeout=60s || true
           
           # Final apply to catch anything missed
           echo "✅ Final apply for remaining resources..."
