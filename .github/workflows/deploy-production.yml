@@ -21,7 +21,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # --- New: Install OCI CLI so kubeconfig exec plugin can run `oci` ---
       - name: Set up Python (for OCI CLI)
         uses: actions/setup-python@v5
         with:
@@ -38,12 +37,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Install OCI CLI via pip; add user bin to PATH for subsequent steps
           python -m pip install --upgrade pip
           pip install oci-cli
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-          # Configure OCI CLI credentials for the exec plugin
           mkdir -p ~/.oci
           echo "$OCI_PRIVATE_KEY" > ~/.oci/oci_api_key.pem
           chmod 600 ~/.oci/oci_api_key.pem
@@ -62,7 +59,6 @@ jobs:
           fi
           chmod 600 ~/.oci/config
 
-          # Sanity checks
           oci --version
           oci iam region list --debug >/dev/null
 
@@ -83,11 +79,9 @@ jobs:
           DECODED_FILE=$(mktemp)
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$DECODED_FILE"
 
-          # Use dynamic EOF marker to handle multiline output safely
           EOF_MARKER=$(head -c 16 /dev/urandom | od -An -t x | tr -d ' \n')
           echo "kubeconfig<<$EOF_MARKER" >> "$GITHUB_OUTPUT"
           cat "$DECODED_FILE" >> "$GITHUB_OUTPUT"
-          # Ensure trailing newline
           echo "" >> "$GITHUB_OUTPUT"
           echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
 
@@ -103,7 +97,6 @@ jobs:
         run: |
           echo "🔍 Verifying Oracle Cloud OKE cluster connection..."
           
-          # Try normal path first (uses kubeconfig with exec: oci)
           if kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
             echo "✅ OCI CLI authentication working"
           else
@@ -112,15 +105,11 @@ jobs:
             export KUBECONFIG=/tmp/fallback-kubeconfig
           fi
           
-          # Set the correct context (update to match the context name in your kubeconfig)
           kubectl config use-context context-ch4w6uqbtwa || echo "⚠️ Context setting failed"
           
           echo "Current context: $(kubectl config current-context)"
-          echo "Cluster info:"
           kubectl cluster-info --request-timeout=30s || echo "⚠️ Cluster info failed, continuing..."
-          echo "Available nodes:"
           kubectl get nodes --request-timeout=30s || echo "⚠️ Get nodes failed, continuing..."
-          echo "✅ Oracle Cloud cluster verification complete"
 
       - name: Set namespace context
         run: |
@@ -143,21 +132,15 @@ jobs:
       - name: Deep Deployment Analysis
         run: |
           echo "🔍 Deep Deployment Analysis for Production Namespace"
-          echo "=================================================="
           
           kubectl config use-context context-ch4w6uqbtwa
           kubectl config set-context --current --namespace=production
-          
-          echo ""
-          echo "📋 CURRENT DEPLOYMENT SELECTORS IN CLUSTER:"
-          echo "=========================================="
           
           deployments=("lexure-postgres-prod" "lexure-redis-prod" "payment-watchdog-api-prod" "payment-watchdog-ui-prod" "recovery-orchestration-prod")
           
           for deployment in "${deployments[@]}"; do
               echo "🔍 $deployment:"
               if kubectl get deployment $deployment -o jsonpath='{.spec.selector.matchLabels}' 2>/dev/null; then
-                  echo ""
                   echo "  Template labels:"
                   kubectl get deployment $deployment -o jsonpath='{.spec.template.metadata.labels}' 2>/dev/null
               else
@@ -166,41 +149,22 @@ jobs:
               echo ""
           done
           
-          echo "📋 EXPECTED SELECTORS FROM KUSTOMIZE:"
-          echo "=================================="
-          
           cd api/deployments/kubernetes/overlays/production
           kustomize build . | grep -A 5 "kind: Deployment" | grep -A 3 "selector:" | head -20
-          
-          echo ""
-          echo "📋 HPA SCALE TARGET REF:"
-          echo "======================"
-          kustomize build . | grep -A 10 "scaleTargetRef:"
 
       - name: Update production deployment
         run: |
+          # 🚨 FIX: Ensure you are in the correct directory.
+          # Change this to sovereign-au if that is your intended environment.
           cd api/deployments/kubernetes/overlays/production
 
           echo "🚀 Deploying to Oracle Cloud production environment..."
-          
           kubectl config use-context context-ch4w6uqbtwa
           kubectl config set-context --current --namespace=production
           
-          # First apply non-deployment resources
-          echo "📦 Applying non-deployment resources..."
-          kustomize build . | grep -v "kind: Deployment" | kubectl apply -f - --validate=false --server-side --force-conflicts --request-timeout=60s || true
-          
-          # Delete postgres deployment first to fix selector issue
-          echo "🗑️ Deleting postgres deployment to fix selector..."
-          kubectl delete deployment lexure-postgres-prod --ignore-not-found=true
-          
-          # Apply all deployments (postgres will be recreated with correct selector)
-          echo "🔄 Applying all deployments..."
-          kustomize build . | grep -A 1000 "kind: Deployment" | grep -B 1000 "kind: Service" | head -n -1 | kubectl apply -f - --validate=false --server-side --force-conflicts --request-timeout=60s || true
-          
-          # Final apply to catch anything missed
-          echo "✅ Final apply for remaining resources..."
-          kubectl apply -k . --validate=false --server-side --force-conflicts --request-timeout=60s
+          # 🚨 FIX: Removed the grep hacks that corrupted Kustomize output
+          echo "✅ Applying all resources cleanly..."
+          kubectl apply -k . --server-side --force-conflicts --request-timeout=60s
 
       - name: Diagnose Pod Issues
         run: |
@@ -212,11 +176,9 @@ jobs:
           echo "📋 Pod Status Overview:"
           kubectl get pods -o wide
           
-          echo ""
           echo "📋 Recent Events:"
           kubectl get events --sort-by='.lastTimestamp' | tail -20
           
-          echo ""
           echo "📋 Pod Logs (last 10 lines for each failing pod):"
           for pod in $(kubectl get pods -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n'); do
             if [[ "$(kubectl get pod $pod -o jsonpath='{.status.phase}')" != "Running" ]]; then
@@ -245,11 +207,11 @@ jobs:
           kubectl config use-context context-ch4w6uqbtwa
           kubectl config set-context --current --namespace=production
           
-          kubectl exec deployment/payment-watchdog-api-prod -- curl -s -f http://localhost:8080/health || echo "⚠️ API health check failed"
+          kubectl exec deployment/payment-watchdog-api-prod -- curl -s -f http://localhost:8085/health || echo "⚠️ API health check failed"
 
           WEB_POD=$(kubectl get pods -l app=payment-watchdog,component=ui -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
           if [ -n "$WEB_POD" ]; then
-            kubectl exec $WEB_POD -- curl -s -f http://localhost:3011 || echo "⚠️ Web health check failed"
+            kubectl exec $WEB_POD -- curl -s -f http://localhost:3001 || echo "⚠️ Web health check failed"
           else
             echo "⚠️ No UI pod found for health check"
           fi
