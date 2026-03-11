@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: payment-watchdog-config
-  namespace: sovereign-au
+  # 🚨 FIX 1: Removed the 'namespace' line so Kustomize can match it to the base resource
 data:
   config.yaml: |
     server:
@@ -13,7 +13,8 @@ data:
       key_file: "/app/certs/tls.key"
 
     database:
-      host: "lexure-postgres-prod.production.svc.cluster.local"
+      # 🚨 FIX 2: Pointing to the correct Sovereign AU database service and namespace
+      host: "lexure-postgres-sovereign-au.sovereign-au.svc.cluster.local"
       port: 5432
       name: "lexure_intelligence_mvp"
       user: "postgres"
