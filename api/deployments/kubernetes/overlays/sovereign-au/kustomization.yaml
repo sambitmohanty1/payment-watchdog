@@ -9,7 +9,6 @@ resources:
   - ../../apps/payment-watchdog-api
   - ../../apps/payment-watchdog-web
   - ../../apps/recovery-orchestration
-  - namespace.yaml
 
 # Note: If this is strictly for the Sovereign environment, 
 # ensure this is 'sovereign-au' instead of 'production'
