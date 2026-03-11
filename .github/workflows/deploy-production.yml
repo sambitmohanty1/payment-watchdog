@@ -190,32 +190,17 @@ jobs:
           echo "📦 Applying non-deployment resources..."
           kustomize build . | grep -v "kind: Deployment" | kubectl apply -f - --validate=false --server-side --force-conflicts --request-timeout=60s || true
           
-          # Extract deployments to separate file and apply with replace
-          echo "🔄 Updating deployments (may recreate if selectors changed)..."
-          kustomize build . | grep -A 1000 "kind: Deployment" | grep -B 1000 "kind: Service" | head -n -1 | kubectl replace --force -f - --validate=false --request-timeout=60s || true
+          # Delete postgres deployment first to fix selector issue
+          echo "🗑️ Deleting postgres deployment to fix selector..."
+          kubectl delete deployment lexure-postgres-prod --ignore-not-found=true
+          
+          # Apply all deployments (postgres will be recreated with correct selector)
+          echo "🔄 Applying all deployments..."
+          kustomize build . | grep -A 1000 "kind: Deployment" | grep -B 1000 "kind: Service" | head -n -1 | kubectl apply -f - --validate=false --server-side --force-conflicts --request-timeout=60s || true
           
           # Final apply to catch anything missed
           echo "✅ Final apply for remaining resources..."
           kubectl apply -k . --validate=false --server-side --force-conflicts --request-timeout=60s
-
-      - name: Fix Postgres Deployment Selector
-        run: |
-          echo "🔧 Fix remaining postgres deployment selector issue..."
-          
-          kubectl config use-context context-ch4w6uqbtwa
-          kubectl config set-context --current --namespace=production
-          
-          echo "🗑️ Deleting problematic postgres deployment..."
-          kubectl delete deployment lexure-postgres-prod --ignore-not-found=true
-          
-          echo "⏳ Waiting for deletion to complete..."
-          kubectl wait --for=delete deployment/lexure-postgres-prod --timeout=60s || true
-          
-          echo "🔄 Recreating postgres deployment with correct selector..."
-          cd api/deployments/kubernetes/overlays/production
-          kustomize build . | grep -A 50 "lexure-postgres-prod" | kubectl apply -f -
-          
-          echo "✅ Postgres deployment fixed!"
 
       - name: Wait for rollout
         run: |
