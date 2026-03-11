@@ -12,7 +12,6 @@ jobs:
   deploy-sovereign:
     name: Deploy to Sovereign
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     environment:
       name: sovereign-au # Changed to reflect the target environment
       url: https://130.162.198.32.ap-melbourne-1.oraclecloudapps.com

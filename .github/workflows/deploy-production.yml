@@ -12,7 +12,6 @@ jobs:
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     environment:
       name: production
       url: https://130.162.198.32.ap-melbourne-1.oraclecloudapps.com
