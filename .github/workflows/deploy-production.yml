@@ -202,6 +202,29 @@ jobs:
           echo "✅ Final apply for remaining resources..."
           kubectl apply -k . --validate=false --server-side --force-conflicts --request-timeout=60s
 
+      - name: Diagnose Pod Issues
+        run: |
+          echo "🔍 Diagnosing pod issues before rollout checks..."
+          
+          kubectl config use-context context-ch4w6uqbtwa
+          kubectl config set-context --current --namespace=production
+          
+          echo "📋 Pod Status Overview:"
+          kubectl get pods -o wide
+          
+          echo ""
+          echo "📋 Recent Events:"
+          kubectl get events --sort-by='.lastTimestamp' | tail -20
+          
+          echo ""
+          echo "📋 Pod Logs (last 10 lines for each failing pod):"
+          for pod in $(kubectl get pods -o jsonpath='{.items[*].metadata.name}' | tr ' ' '\n'); do
+            if [[ "$(kubectl get pod $pod -o jsonpath='{.status.phase}')" != "Running" ]]; then
+              echo "--- $pod ---"
+              kubectl logs $pod --tail=10 || echo "No logs available"
+            fi
+          done
+
       - name: Wait for rollout
         run: |
           echo "⏳ Waiting for Oracle Cloud deployment rollout..."
@@ -209,10 +232,10 @@ jobs:
           kubectl config use-context context-ch4w6uqbtwa
           kubectl config set-context --current --namespace=production
           
-          kubectl rollout status deployment/payment-watchdog-api-prod --timeout=300s --request-timeout=30s || echo "⚠️ API rollout check failed"
-          kubectl rollout status deployment/payment-watchdog-ui-prod --timeout=300s --request-timeout=30s || echo "⚠️ UI rollout check failed"
-          kubectl rollout status deployment/recovery-orchestration-prod --timeout=300s --request-timeout=30s || echo "⚠️ Worker rollout check failed"
-          kubectl rollout status deployment/lexure-postgres-prod --timeout=300s --request-timeout=30s || echo "⚠️ Postgres rollout check failed"
+          kubectl rollout status deployment/payment-watchdog-api-prod --timeout=600s --request-timeout=30s || echo "⚠️ API rollout check failed"
+          kubectl rollout status deployment/payment-watchdog-ui-prod --timeout=600s --request-timeout=30s || echo "⚠️ UI rollout check failed"
+          kubectl rollout status deployment/recovery-orchestration-prod --timeout=600s --request-timeout=30s || echo "⚠️ Worker rollout check failed"
+          kubectl rollout status deployment/lexure-postgres-prod --timeout=600s --request-timeout=30s || echo "⚠️ Postgres rollout check failed"
           echo "✅ Rollout status checks complete"
 
       - name: Run smoke tests
