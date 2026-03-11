@@ -11,11 +11,17 @@ resources:
   - ../../apps/recovery-orchestration
   - namespace.yaml
 
-namespace: production
+# Note: If this is strictly for the Sovereign environment, 
+# ensure this is 'sovereign-au' instead of 'production'
+namespace: sovereign-au
 nameSuffix: "-prod"
 
-# Add this section to fix Storage Classes in production
 patches:
+  # 1. File-based patches for Architecture, Resources, and Secrets
+  - path: deployment-patch.yaml
+  - path: configmap-patch.yaml
+  
+  # 2. Inline patches to fix Storage Classes for Oracle Cloud
   - target:
       kind: PersistentVolumeClaim
       name: postgres-pv-claim
@@ -30,7 +36,3 @@ patches:
       - op: replace
         path: /spec/storageClassName
         value: oci-bv
-
-patches:
-  - path: deployment-patch.yaml
-  - path: configmap-patch.yaml
