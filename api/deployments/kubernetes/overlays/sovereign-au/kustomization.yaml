@@ -29,6 +29,7 @@ patches:
       - op: replace
         path: /spec/storageClassName
         value: oci-bv
+
   - target:
       kind: PersistentVolumeClaim
       name: redis-pv-claim
@@ -36,3 +37,16 @@ patches:
       - op: replace
         path: /spec/storageClassName
         value: oci-bv
+
+# Configure image overrides for sovereign-au
+# These will be dynamically updated by the deployment workflow to match CI builds
+images:
+  - name: payment-watchdog-api
+    newName: ghcr.io/sambitmohanty1/payment-watchdog/api
+    newTag: latest
+  - name: payment-watchdog-ui
+    newName: ghcr.io/sambitmohanty1/payment-watchdog/web
+    newTag: latest
+  - name: payment-watchdog-recovery-orchestration
+    newName: ghcr.io/sambitmohanty1/payment-watchdog/worker
+    newTag: latest
