@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: sovereign-au # Changed to reflect the target environment
-      url: https://130.162.198.32.ap-melbourne-1.oraclecloudapps.com
+      url: https://207.211.153.246.ap-melbourne-1.oraclecloudapps.com
 
     steps:
       - name: Checkout code
@@ -104,7 +104,8 @@ jobs:
             export KUBECONFIG=/tmp/fallback-kubeconfig
           fi
           
-          kubectl config use-context context-ch4w6uqbtwa || echo "⚠️ Context setting failed"
+          # Use the current active cluster context
+          kubectl config use-context $(kubectl config get-contexts -o name | head -1) || echo "⚠️ Context setting failed"
           
           echo "Current context: $(kubectl config current-context)"
           kubectl cluster-info --request-timeout=30s || echo "⚠️ Cluster info failed, continuing..."
