@@ -147,7 +147,7 @@ jobs:
           cd api/deployments/kubernetes/overlays/sovereign-au
 
           echo "🚀 Deploying to Oracle Cloud Sovereign environment..."
-          kubectl config use-context context-ch4w6uqbtwa
+          kubectl config use-context $(kubectl config get-contexts -o name | head -1)
           kubectl config set-context --current --namespace=sovereign-au
           
           # 🚨 FIX: Clean, standard apply without corrupting grep commands
@@ -158,7 +158,7 @@ jobs:
         run: |
           echo "⏳ Waiting for Oracle Cloud deployment rollout..."
           
-          kubectl config use-context context-ch4w6uqbtwa
+          kubectl config use-context $(kubectl config get-contexts -o name | head -1)
           kubectl config set-context --current --namespace=sovereign-au
           
           kubectl rollout status deployment/payment-watchdog-api-sovereign-au --timeout=600s --request-timeout=30s || echo "⚠️ API rollout check failed"
@@ -171,7 +171,7 @@ jobs:
         run: |
           echo "🧪 Running Oracle Cloud Sovereign smoke tests..."
           
-          kubectl config use-context context-ch4w6uqbtwa
+          kubectl config use-context $(kubectl config get-contexts -o name | head -1)
           kubectl config set-context --current --namespace=sovereign-au
           
           # Changed to 8085 based on your deployment configurations
@@ -192,7 +192,7 @@ jobs:
         run: |
           echo "🚨 Oracle Cloud Sovereign deployment failed - initiating rollback"
           
-          kubectl config use-context context-ch4w6uqbtwa
+          kubectl config use-context $(kubectl config get-contexts -o name | head -1)
           kubectl config set-context --current --namespace=sovereign-au
           
           kubectl rollout undo deployment/payment-watchdog-api-sovereign-au || echo "⚠️ API rollback failed"
