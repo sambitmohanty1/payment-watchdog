@@ -109,6 +109,17 @@ jobs:
           echo "Current context: $(kubectl config current-context)"
           kubectl cluster-info --request-timeout=30s || echo "⚠️ Cluster info failed, continuing..."
           kubectl get nodes --request-timeout=30s || echo "⚠️ Get nodes failed, continuing..."
+          
+          # 🚀 NEW: Check node readiness after service gateway fix
+          echo "🔍 Checking sovereign compartment node readiness..."
+          NODE_COUNT=$(kubectl get nodes --no-headers 2>/dev/null | wc -l || echo "0")
+          READY_NODES=$(kubectl get nodes --no-headers 2>/dev/null | grep "Ready" | wc -l || echo "0")
+          echo "✅ Found $READY_NODES/$NODE_COUNT nodes ready"
+          
+          if [ "$READY_NODES" -lt 1 ]; then
+            echo "⚠️ No ready nodes found. Deployment may fail."
+            echo "💡 Ensure service gateway is configured and nodes are registered."
+          fi
 
       - name: Set namespace context
         run: |
