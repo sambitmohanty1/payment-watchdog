@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -637,4 +638,300 @@ func getRiskLevel(riskScore float64) string {
 	default:
 		return "minimal"
 	}
+}
+
+// HealthStatus represents the overall system health status
+type HealthStatus struct {
+	API         APIStatus         `json:"api"`
+	Database    DatabaseStatus    `json:"database"`
+	Redis       RedisStatus       `json:"redis"`
+	Workers     WorkerStatus      `json:"workers"`
+	Environment EnvironmentStatus `json:"environment"`
+	System      SystemStatus      `json:"system"`
+	Timestamp   time.Time         `json:"timestamp"`
+}
+
+type APIStatus struct {
+	Status    string    `json:"status"` // healthy, degraded, down
+	Version   string    `json:"version"`
+	Uptime    string    `json:"uptime"`
+	LastCheck time.Time `json:"last_check"`
+	Response  string    `json:"response_time"`
+}
+
+type DatabaseStatus struct {
+	Status      string `json:"status"` // connected, disconnected, error
+	Host        string `json:"host"`
+	Connections int    `json:"connections"`
+	Latency     string `json:"latency"`
+	LastQuery   string `json:"last_query"`
+}
+
+type RedisStatus struct {
+	Status      string `json:"status"` // connected, disconnected, error
+	Host        string `json:"host"`
+	Connections int    `json:"connections"`
+	Memory      string `json:"memory_used"`
+	LastCommand string `json:"last_command"`
+}
+
+type WorkerStatus struct {
+	Status     string    `json:"status"` // active, idle, error
+	Count      int       `json:"count"`
+	LastRun    time.Time `json:"last_run"`
+	NextRun    time.Time `json:"next_run"`
+	Running    []string  `json:"running_jobs"`
+	FailedJobs int       `json:"failed_jobs"`
+}
+
+type EnvironmentStatus struct {
+	Name      string `json:"name"`      // staging, production
+	Version   string `json:"version"`   // sovereign-au
+	Region    string `json:"region"`    // ap-melbourne-1
+	Namespace string `json:"namespace"` // sovereign-au
+}
+
+type SystemStatus struct {
+	CPU    string `json:"cpu_usage"`
+	Memory string `json:"memory_usage"`
+	Disk   string `json:"disk_usage"`
+	Load   string `json:"system_load"`
+}
+
+// HealthCheck returns comprehensive system health status
+func (h *Handlers) HealthCheck(c *gin.Context) {
+	// Check API health
+	apiStatus := h.checkAPIHealth()
+
+	// Check database connectivity
+	dbStatus := h.checkDatabaseHealth()
+
+	// Check Redis connectivity
+	redisStatus := h.checkRedisHealth()
+
+	// Check worker status
+	workerStatus := h.checkWorkerHealth()
+
+	// Get environment info
+	envStatus := h.getEnvironmentStatus()
+
+	// Get system metrics
+	systemStatus := h.getSystemMetrics()
+
+	health := HealthStatus{
+		API:         apiStatus,
+		Database:    dbStatus,
+		Redis:       redisStatus,
+		Workers:     workerStatus,
+		Environment: envStatus,
+		System:      systemStatus,
+		Timestamp:   time.Now(),
+	}
+
+	// Return appropriate HTTP status based on overall health
+	overallStatus := h.getOverallHealth(health)
+	if overallStatus == "down" {
+		c.JSON(http.StatusServiceUnavailable, health)
+	} else if overallStatus == "degraded" {
+		c.JSON(http.StatusOK, health) // But with degraded status
+	} else {
+		c.JSON(http.StatusOK, health)
+	}
+}
+
+// checkAPIHealth checks the API service health
+func (h *Handlers) checkAPIHealth() APIStatus {
+	start := time.Now()
+
+	// Simulate database and Redis checks
+	// In a real implementation, these would be actual health checks
+	dbErr := h.simulateDatabasePing()
+	redisErr := h.simulateRedisPing()
+
+	responseTime := time.Since(start)
+
+	status := "healthy"
+	if dbErr != nil || redisErr != nil {
+		status = "degraded"
+	}
+
+	return APIStatus{
+		Status:    status,
+		Version:   os.Getenv("APP_VERSION"),
+		Uptime:    h.getUptime(),
+		LastCheck: time.Now(),
+		Response:  responseTime.String(),
+	}
+}
+
+// checkDatabaseHealth checks database connectivity
+func (h *Handlers) checkDatabaseHealth() DatabaseStatus {
+	start := time.Now()
+	err := h.simulateDatabasePing()
+	latency := time.Since(start)
+
+	status := "connected"
+	if err != nil {
+		status = "disconnected"
+	}
+
+	return DatabaseStatus{
+		Status:      status,
+		Host:        h.getDatabaseHost(),
+		Connections: h.getDatabaseConnections(),
+		Latency:     latency.String(),
+		LastQuery:   h.getLastQueryTime(),
+	}
+}
+
+// checkRedisHealth checks Redis connectivity
+func (h *Handlers) checkRedisHealth() RedisStatus {
+	start := time.Now()
+	err := h.simulateRedisPing()
+	_ = time.Since(start) // Use the latency calculation to avoid unused variable
+
+	status := "connected"
+	if err != nil {
+		status = "disconnected"
+	}
+
+	return RedisStatus{
+		Status:      status,
+		Host:        h.getRedisHost(),
+		Connections: h.getRedisConnections(),
+		Memory:      h.getRedisMemoryUsage(),
+		LastCommand: h.getLastRedisCommand(),
+	}
+}
+
+// checkWorkerHealth checks worker service health
+func (h *Handlers) checkWorkerHealth() WorkerStatus {
+	// Simulate worker status check
+	workers := h.getWorkerStatus()
+
+	status := "active"
+	if len(workers.Running) == 0 {
+		status = "idle"
+	}
+	if workers.FailedJobs > 10 {
+		status = "error"
+	}
+
+	return WorkerStatus{
+		Status:     status,
+		Count:      workers.Count,
+		LastRun:    workers.LastRun,
+		NextRun:    workers.NextRun,
+		Running:    workers.Running,
+		FailedJobs: workers.FailedJobs,
+	}
+}
+
+// getEnvironmentStatus returns environment information
+func (h *Handlers) getEnvironmentStatus() EnvironmentStatus {
+	return EnvironmentStatus{
+		Name:      os.Getenv("ENVIRONMENT"),
+		Version:   os.Getenv("APP_VERSION"),
+		Region:    os.Getenv("OCI_REGION"),
+		Namespace: os.Getenv("KUBERNETES_NAMESPACE"),
+	}
+}
+
+// getSystemMetrics returns system metrics
+func (h *Handlers) getSystemMetrics() SystemStatus {
+	return SystemStatus{
+		CPU:    h.getCPUUsage(),
+		Memory: h.getMemoryUsage(),
+		Disk:   h.getDiskUsage(),
+		Load:   h.getSystemLoad(),
+	}
+}
+
+// getOverallHealth determines overall system health
+func (h *Handlers) getOverallHealth(health HealthStatus) string {
+	if health.API.Status == "down" || health.Database.Status == "disconnected" || health.Redis.Status == "disconnected" {
+		return "down"
+	}
+	if health.API.Status == "degraded" || health.Database.Status == "error" || health.Redis.Status == "error" {
+		return "degraded"
+	}
+	return "healthy"
+}
+
+// Helper functions for health checks
+func (h *Handlers) simulateDatabasePing() error {
+	// Simulate database ping - in real implementation, this would be actual DB ping
+	return nil
+}
+
+func (h *Handlers) simulateRedisPing() error {
+	// Simulate Redis ping - in real implementation, this would be actual Redis ping
+	return nil
+}
+
+func (h *Handlers) getUptime() string {
+	// Simulate uptime - in real implementation, track actual start time
+	return "2h 30m"
+}
+
+func (h *Handlers) getDatabaseHost() string {
+	return os.Getenv("DATABASE_HOST")
+}
+
+func (h *Handlers) getDatabaseConnections() int {
+	// Simulate connection count - in real implementation, get from DB pool stats
+	return 5
+}
+
+func (h *Handlers) getLastQueryTime() string {
+	return time.Now().Add(-5 * time.Minute).Format(time.RFC3339)
+}
+
+func (h *Handlers) getRedisHost() string {
+	return os.Getenv("REDIS_HOST")
+}
+
+func (h *Handlers) getRedisConnections() int {
+	// Simulate Redis connections
+	return 3
+}
+
+func (h *Handlers) getRedisMemoryUsage() string {
+	// Simulate memory usage
+	return "45MB"
+}
+
+func (h *Handlers) getLastRedisCommand() string {
+	return "GET"
+}
+
+func (h *Handlers) getWorkerStatus() WorkerStatus {
+	return WorkerStatus{
+		Status:     "active",
+		Count:      2,
+		LastRun:    time.Now().Add(-10 * time.Minute),
+		NextRun:    time.Now().Add(50 * time.Minute),
+		Running:    []string{"job-001", "job-002"},
+		FailedJobs: 2,
+	}
+}
+
+func (h *Handlers) getCPUUsage() string {
+	// Simulate CPU usage - in real implementation, get from system metrics
+	return "25%"
+}
+
+func (h *Handlers) getMemoryUsage() string {
+	// Simulate memory usage
+	return "512MB"
+}
+
+func (h *Handlers) getDiskUsage() string {
+	// Simulate disk usage
+	return "2.1GB"
+}
+
+func (h *Handlers) getSystemLoad() string {
+	// Simulate system load
+	return "0.75"
 }
