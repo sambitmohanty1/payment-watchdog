@@ -4,8 +4,8 @@ kind: Kustomization
 resources:
   - ../../base/components/postgres
   - ../../base/components/redis
-  - ../../base/components/ingress
-  - ../../base/components/monitoring
+  # - ../../base/components/ingress
+  # - ../../base/components/monitoring
   - ../../apps/payment-watchdog-api
   - ../../apps/payment-watchdog-web
   - ../../apps/recovery-orchestration
