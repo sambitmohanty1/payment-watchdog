@@ -96,3 +96,20 @@ spec:
         env:
         - name: DATABASE_HOST
           value: "lexure-postgres-sovereign-au.sovereign-au.svc.cluster.local" # Fix: Corrected for Sovereign AU namespace
+        - name: REDIS_URL
+          value: "redis://lexure-redis-sovereign-au.sovereign-au.svc.cluster.local:6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: recovery-orchestration-secrets-sovereign-au
+              key: REDIS_PASSWORD
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: recovery-orchestration-secrets-sovereign-au
+              key: DATABASE_PASSWORD
+        - name: DATABASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: recovery-orchestration-secrets-sovereign-au
+              key: DATABASE_USER

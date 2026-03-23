@@ -15,6 +15,10 @@ resources:
 namespace: sovereign-au
 nameSuffix: "-sovereign-au"
 
+commonLabels:
+  app.kubernetes.io/part-of: payment-watchdog
+  environment: sovereign-au
+
 patches:
   # 1. File-based patches for Architecture, Resources, and Secrets
   - path: deployment-patch.yaml

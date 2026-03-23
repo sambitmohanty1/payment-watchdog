@@ -10,7 +10,7 @@ metadata:
     prometheus.io/scrape: "true"
     prometheus.io/port: "8086"
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   ports:
   - name: http
     port: 80
