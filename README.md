@@ -1,48 +1,238 @@
 # Payment Watchdog
-## Payment Recovery Management Platform
+## 🇦🇺 Australian Payment Recovery Platform
 
 [![Go Version](https://img.shields.io/badge/Go-1.24-blue.svg)](https://golang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflows/payment-watchdog-ci.yml/badge/main)](https://github.com/sambitmohanty1/payment-watchdog/actions)
+[![Coverage](https://img.shields.io/codecov/c/github/sambitmohanty1/payment-watchdog)](https://codecov.io/gh/sambitmohanty1/payment-watchdog)
 
 ---
 
-## Project Overview
+## 📋 Overview
 
-Payment Watchdog is a payment recovery management platform designed to help SaaS companies handle payment failures through automated detection and recovery workflows.
+Payment Watchdog is an **Australian-first payment recovery platform** designed to help businesses recover failed payments through intelligent automation, local payment rail integration, and specialized recovery workflows.
 
-### Enhanced Features
-- Payment failure detection via webhooks (Stripe)
-- Advanced workflow orchestration with smart retry logic
-- VIP customer detection and prioritized recovery
-- Cross-method reconciliation (Stripe ↔ Xero)
-- PayTo failover for insufficient funds (PW-101)
-- Micro-transaction cost optimization < $100 (PW-103)
-- AI-powered failure pattern detection and prediction
-- Advanced analytics with trend analysis
-- Sovereign data compliance (AU-only infrastructure)
-- Distributed locking for high-availability recovery
-- Multi-channel notifications (email, SMS)
+### 🎯 Market Focus
+- **Micro-Merchant Recovery Engine**: Specialized for tap-on-phone businesses
+- **AU/NZ Rail Integration**: PayTo, NPP, and BECS payment rails
+- **Vertical Intelligence**: Education, gig economy, and healthcare specialization
+- **Sovereign Data Compliance**: Australian data residency and privacy compliance
+
+### 🚀 Key Features
+- **🔄 Intelligent Recovery Workflows**: Automated payment failure recovery
+- **💳 PayTo Integration**: NPP/PayTo rail integration for insufficient funds
+- **🔄 Cross-Method Reconciliation**: Xero integration for manual payments
+- **💰 Cost Optimization**: Micro-transaction routing for <$100 transactions
+- **🤖 AI-Powered Analytics**: Machine learning for recovery optimization
+- **🔒 Sovereign Compliance**: Australian data residency and security
+- **📊 Real-Time Dashboard**: Comprehensive analytics and monitoring
 
 ---
 
-## Architecture
+## 📚 Documentation Structure
 
-### Technology Stack
+### **📋 Strategic Documents**
+- **[📊 FUTURE_STATE.md](FUTURE_STATE.md)** - Strategic roadmap and market analysis
+- **[🎯 FEATURE_BACKLOG.md](FEATURE_BACKLOG.md)** - Product features and user stories
+- **[🏢 PLATFORM_BACKLOG.md](PLATFORM_BACKLOG.md)** - Technical debt and platform improvements
+
+### **🏗️ Architecture Documentation**
+- **[📐 SYSTEM_DESIGN.md](docs/ARCHITECTURE/SYSTEM_DESIGN.md)** - High-level system architecture
+- **[🔌 API_SPECIFICATION.md](docs/ARCHITECTURE/API_SPECIFICATION.md)** - Complete API documentation
+- **[📋 BUSINESS_REQUIREMENTS.md](docs/STRATEGIC/BUSINESS_REQUIREMENTS.md)** - Business requirements and user stories
+
+### **🔧 Operations Documentation**
+- **[🔒 SECURITY.md](SECURITY.md)** - Security policies and compliance
+- **[📝 LOGGING_GUIDELINES.md](docs/OPERATIONS/LOGGING_GUIDELINES.md)** - Logging standards and best practices
+- **[📄 ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md)** - Configuration reference
+
+### **📚 Reference Documentation**
+- **[💱 CURRENCY_GUIDELINES.md](api/CURRENCY_GUIDELINES.md)** - Currency field usage guidelines
+
+### **🗃️ Archived Documentation**
+- **[📁 ARCHIVED/TECH_DEBT_BACKLOG_OLD.md](docs/ARCHIVED/TECH_DEBT_BACKLOG_OLD.md)** - Previous technical debt backlog
+- **[📁 ARCHIVED/LOGGING_IMPROVEMENTS_OLD.md](docs/ARCHIVED/LOGGING_IMPROVEMENTS_OLD.md)** - Previous logging improvements
+
+### 🏗️ Architecture Overview
+
+### **📐 Technology Stack**
 - **Backend**: Go 1.24, Gin, GORM, PostgreSQL, Redis
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS
-- **Infrastructure**: Docker, Docker Compose
+- **Infrastructure**: Docker, Kubernetes, AWS
+- **Payment Rails**: PayTo, NPP, BECS, Stripe, PayPal
+- **Monitoring**: Prometheus, Grafana, ELK Stack
 
-### Services
-- **API Service**: REST API with Go + Gin framework
-- **Worker Service**: Background processing and retry orchestration
-- **Web Interface**: Next.js dashboard
-- **Database**: PostgreSQL
-- **Cache**: Redis for event processing
+### **🚀 Microservices Architecture**
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        WEB[Next.js Dashboard]
+        API_CLIENTS[API Clients]
+    end
+    
+    subgraph "API Gateway"
+        GATEWAY[API Gateway]
+        LB[Load Balancer]
+    end
+    
+    subgraph "Application Services"
+        API[Payment API Service]
+        WORKER[Background Worker Service]
+        WEBHOOK[Webhook Service]
+        ANALYTICS[Analytics Service]
+    end
+    
+    subgraph "Data Layer"
+        POSTGRES[(PostgreSQL)]
+        REDIS[(Redis Cache)]
+        TIMESERIES[(Time Series)]
+    end
+    
+    subgraph "External Services"
+        STRIPE[Stripe API]
+        PAYTO[PayTo/NPP API]
+        XERO[Xero API]
+        BNPL[BNPL Providers]
+    end
+    
+    WEB --> GATEWAY
+    API_CLIENTS --> GATEWAY
+    GATEWAY --> API
+    GATEWAY --> WEBHOOK
+    
+    API --> POSTGRES
+    API --> REDIS
+    WORKER --> POSTGRES
+    WORKER --> REDIS
+    
+    API --> STRIPE
+    WORKER --> PAYTO
+    WORKER --> XERO
+```
+
+### **🔒 Security Architecture**
+- **Authentication**: JWT-based authentication with MFA
+- **Authorization**: Role-based access control (RBAC)
+- **Data Protection**: AES-256 encryption, TLS 1.3
+- **Compliance**: Australian data residency, PCI-DSS Level 1
+- **Monitoring**: Security scanning, vulnerability management
 
 ---
 
-## Quick Start
+## 🚀 Deployment
+
+### **🏗️ Production Deployment**
+Payment Watchdog is deployed using Kubernetes with automated CI/CD pipelines.
+
+#### **📋 Deployment Environments**
+- **Development**: `docker-compose.yml` (localhost)
+- **Staging**: `docker-compose.staging.yml` (staging servers)
+- **Production**: Kubernetes clusters (AWS/Azure)
+
+#### **🔄 CI/CD Pipeline**
+- **Build**: Automated build and test execution
+- **Security**: Security scanning and vulnerability assessment
+- **Deploy**: Automated deployment to staging and production
+- **Monitor**: Health checks and rollback capabilities
+
+#### **🔧 Deployment Commands**
+```bash
+# Build Docker images
+make build-prod
+
+# Deploy to staging
+make deploy-staging
+
+# Deploy to production
+make deploy-production
+
+# Check deployment status
+make deploy-status
+```
+
+### **📊 Monitoring and Observability**
+- **Health Checks**: `/health` and `/health/detailed` endpoints
+- **Metrics**: Prometheus metrics collection
+- **Logging**: Structured logging with ELK stack
+- **Alerting**: Grafana dashboards and alerting
+
+---
+
+## 📊 API Documentation
+
+### **🔌 API Reference**
+Complete API documentation is available at:
+- **Interactive**: [Swagger UI](http://localhost:8080/docs) (development)
+- **Specification**: [API Specification](docs/ARCHITECTURE/API_SPECIFICATION.md)
+- **OpenAPI**: [OpenAPI JSON](http://localhost:8080/api/v1/openapi.json)
+
+### **📋 Key Endpoints**
+- **Health**: `GET /health` - Basic health check
+- **Authentication**: `POST /api/v1/auth/login` - User authentication
+- **Payment Failures**: `GET /api/v1/payment-failures` - Payment failure data
+- **Workflows**: `GET /api/v1/workflows` - Recovery workflows
+- **Analytics**: `GET /api/v1/analytics/*` - Analytics and reporting
+
+---
+
+## 🤝 Contributing
+
+### **📋 Development Workflow**
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests (`go test ./...`)
+5. Commit changes (`git commit -m "Add amazing feature"`)
+6. Push to branch (`git push origin feature/amazing-feature`)
+7. Create Pull Request
+8. Wait for review and merge
+
+### **📝 Code Standards**
+- **Go**: Follow Go best practices and `gofmt` formatting
+- **TypeScript**: Use TypeScript with strict mode
+- **Testing**: Maintain 90%+ test coverage
+- **Documentation**: Update relevant documentation
+
+### **🧪 Testing**
+```bash
+# Run all tests
+go test ./... -v -race -cover
+
+# Run specific service tests
+go test ./services -v
+
+# Run integration tests
+go test ./integration -v
+
+# Run benchmarks
+go test -bench=.
+```
+
+---
+
+## 📞 Support
+
+### **🆘 Getting Help**
+- **Documentation**: [docs/](https://github.com/sambitmohanty1/payment-watchdog/docs)
+- **Issues**: [GitHub Issues](https://github.com/sambitmohanty1/payment-watchdog/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/sambitmohanty1/payment-watchdog/discussions)
+- **Email**: support@payment-watchdog.com.au
+
+### **📞 Community**
+- **Slack**: [Join our Slack community](https://payment-watchdog.slack.com)
+- **Twitter**: [@paymentwatchdog](https://twitter.com/paymentwatchdog)
+- **LinkedIn**: [Payment Watchdog](https://linkedin.com/company/payment-watchdog)
+
+### **📚 Resources**
+- **Website**: [https://payment-watchdog.com.au](https://payment-watchdog.com.au)
+- **Blog**: [Blog posts and tutorials](https://blog.payment-watchdog.com.au)
+- **Status**: [System status page](https://status.payment-watchdog.com.au)
+- **Changelog**: [Release notes and updates](https://github.com/sambitmohanty1/payment-watchdog/releases)
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 - Docker & Docker Compose
@@ -52,7 +242,7 @@ Payment Watchdog is a payment recovery management platform designed to help SaaS
 ### Local Development
 ```bash
 # Clone the repository
-git clone https://github.com/payment-watchdog.git
+git clone https://github.com/sambitmohanty1/payment-watchdog.git
 cd payment-watchdog
 
 # Start all services
@@ -62,6 +252,28 @@ docker-compose up -d
 # Web interface at http://localhost:4896
 # Database at localhost:5432
 # Redis at localhost:6379
+```
+
+### 🚀 Staging Environment
+```bash
+# Start staging environment
+docker-compose -f docker-compose.staging.yml up -d
+
+# API will be available at http://localhost:8091
+# Web interface at http://localhost:3011
+# Database at localhost:5443
+# Redis at localhost:6390
+```
+
+### 🏢 Local Deployment (Isolated)
+```bash
+# Start isolated local deployment
+make local-start
+
+# Access services
+# Web Interface: http://localhost:3016
+# API Endpoint: http://localhost:8096
+# MailHog: http://localhost:8041
 ```
 
 ### Development Commands
@@ -96,7 +308,36 @@ go test ./... -cover
 
 ---
 
-## 🚀 Local Deployment (Isolated Environment)
+## � Development Environment
+
+### **🔧 Development Tools**
+- **IDE**: VS Code, GoLand, WebStorm
+- **Database**: PostgreSQL 15+, Redis 7+
+- **Container**: Docker Desktop, Docker Compose
+- **Version Control**: Git, GitHub
+- **CI/CD**: GitHub Actions
+
+### **📋 Environment Variables**
+Refer to [📄 ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md) for complete configuration reference.
+
+### **🔍 Debugging**
+```bash
+# View logs
+docker-compose logs -f payment-api
+
+# Check service status
+docker-compose ps
+
+# Access database shell
+docker-compose exec postgres psql -U postgres -d payment_watchdog
+
+# Access Redis CLI
+docker-compose exec redis redis-cli
+```
+
+---
+
+## 🚀 Deployment
 
 For isolated local testing and development, separate from CI/CD flows:
 
@@ -144,7 +385,7 @@ make local-clean
 
 ---
 
-## � AU/NZ Rail Orchestrator
+## AU/NZ Rail Orchestrator
 
 ### PW-101: PayTo Failover Mediator
 **Technical Implementation**: `PayToExecutor` in `step_executors.go`
