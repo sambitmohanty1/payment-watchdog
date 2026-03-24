@@ -14,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build the binary with optimizations
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker \
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o payment-watchdog-worker \
     -ldflags="-w -s -X main.version=${VERSION:-dev} -X main.buildTime=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
     cmd/main.go
 
@@ -27,7 +27,7 @@ RUN apk --no-cache add ca-certificates tzdata && \
 
 WORKDIR /app
 
-COPY --from=builder /build/worker .
+COPY --from=builder /build/payment-watchdog-worker .
 
 # Create non-root user
 USER appuser
@@ -35,4 +35,4 @@ USER appuser
 # Worker doesn't expose ports, it's a background service
 # Health check would need to be implemented differently (e.g., via metrics endpoint)
 
-CMD ["./worker"]
+CMD ["./payment-watchdog-worker"]
