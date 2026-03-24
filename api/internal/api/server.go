@@ -47,6 +47,10 @@ func (s *Server) SetupRoutes() {
 	var recoveryService *services.RecoveryOrchestrationService = nil
 	var communicationService *services.CommunicationService = nil
 
+	// Create Xero handlers
+	// For testing, passing nil mediator
+	xeroHandlers := NewXeroHandlers(nil, s.logger)
+
 	// Create handlers with available services
 	handlers := NewHandlers(
 		paymentFailureService,
@@ -57,6 +61,7 @@ func (s *Server) SetupRoutes() {
 		analyticsService,
 		recoveryService,
 		communicationService,
+		xeroHandlers,
 		s.logger,
 	)
 

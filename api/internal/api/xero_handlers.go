@@ -108,8 +108,8 @@ type XeroPaymentFailure struct {
 	Status        string  `json:"status"`
 }
 
-// GetAuthorizationURL initiates Xero OAuth flow
-func (h *XeroHandlers) GetAuthorizationURL(c *gin.Context) {
+// GetOAuthURL initiates Xero OAuth flow
+func (h *XeroHandlers) GetOAuthURL(c *gin.Context) {
 	var req XeroOAuthRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Error("Invalid request body", zap.Error(err))
@@ -142,8 +142,8 @@ func (h *XeroHandlers) GetAuthorizationURL(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// HandleCallback handles Xero OAuth callback
-func (h *XeroHandlers) HandleCallback(c *gin.Context) {
+// OAuthCallback handles Xero OAuth callback
+func (h *XeroHandlers) OAuthCallback(c *gin.Context) {
 	// Get parameters from URL query string (OAuth callback comes as GET request)
 	code := c.Query("code")
 	state := c.Query("state")
@@ -358,12 +358,32 @@ func RegisterXeroRoutes(router *gin.RouterGroup, xeroHandlers *XeroHandlers) {
 		})
 
 		// OAuth endpoints
-		xero.POST("/auth/authorize", xeroHandlers.GetAuthorizationURL)
-		xero.GET("/auth/callback", xeroHandlers.HandleCallback)
+		xero.POST("/auth/authorize", xeroHandlers.GetOAuthURL)
+		xero.GET("/auth/callback", xeroHandlers.OAuthCallback)
 
 		// Data endpoints
 		xero.GET("/tenants", xeroHandlers.GetTenants)
 		xero.GET("/organizations", xeroHandlers.GetOrganizations)
 		xero.GET("/payment-failures", xeroHandlers.GetPaymentFailures)
 	}
+}
+
+// GetContacts gets contacts from Xero
+func (h *XeroHandlers) GetContacts(c *gin.Context) {
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+}
+
+// CreateContact creates a contact in Xero
+func (h *XeroHandlers) CreateContact(c *gin.Context) {
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+}
+
+// GetInvoices gets invoices from Xero
+func (h *XeroHandlers) GetInvoices(c *gin.Context) {
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+}
+
+// CreateInvoice creates an invoice in Xero
+func (h *XeroHandlers) CreateInvoice(c *gin.Context) {
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
 }
