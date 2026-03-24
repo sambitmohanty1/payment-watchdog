@@ -596,10 +596,14 @@ func (e *EventProcessorService) StopEventProcessing(ctx context.Context) error {
 	e.logger.Info("Stopping event processing service")
 
 	// Stop health server
-	if e.healthServer != nil {
+	e.mu.Lock()
+	server := e.healthServer
+	e.mu.Unlock()
+
+	if server != nil {
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
-		if err := e.healthServer.Shutdown(ctx); err != nil {
+		if err := server.Shutdown(ctx); err != nil {
 			e.logger.Error("Failed to shutdown health server", zap.Error(err))
 		}
 	}
@@ -660,11 +664,14 @@ func (e *EventProcessorService) startHealthServer(ctx context.Context) error {
 		json.NewEncoder(w).Encode(metrics)
 	})
 
-	e.healthServer = &http.Server{Addr: e.config.HealthServerPort}
+	server := &http.Server{Addr: e.config.HealthServerPort}
+	e.mu.Lock()
+	e.healthServer = server
+	e.mu.Unlock()
 
 	// Start health server with proper error handling
 	go func() {
-		if err := e.healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			select {
 			case e.healthErr <- err:
 			default:
