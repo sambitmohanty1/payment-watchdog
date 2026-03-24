@@ -86,3 +86,8 @@ func (s *EventProcessorService) handlePaymentFailure(ctx context.Context, payloa
 func (s *EventProcessorService) ProcessPaymentFailureEvent(ctx context.Context, event *models.PaymentFailureEvent) error {
 	return s.handlePaymentFailure(ctx, event)
 }
+
+func (s *EventProcessorService) Stop(ctx context.Context) error {
+	s.logger.Info("Stopping Event Processor Service")
+	return nil
+}
