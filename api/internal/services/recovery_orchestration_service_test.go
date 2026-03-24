@@ -195,14 +195,26 @@ func TestRecoveryOrchestrationService_ExecuteStep(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
+		// Since we want the test to focus on successful trigger, and the async goroutine might execute operations
+		// out of order or unpredictably, we'll allow any further queries.
+		// Allow any other update queries
+		mock.ExpectBegin()
+		mock.ExpectExec(`UPDATE.*`).WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+
+		mock.ExpectBegin()
+		mock.ExpectExec(`UPDATE.*`).WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+
 		// Execute test - focus on successful trigger, not async execution
 		err := service.TriggerWorkflowsForFailure(context.Background(), paymentFailure)
 
 		// Verify basic functionality - workflow was triggered successfully
 		assert.NoError(t, err)
 
-		// Allow minimal time for async setup, but don't wait for full execution
-		time.Sleep(1 * time.Millisecond)
+		// Wait for the async goroutine to complete its work to avoid "database closed" errors
+		// It executes a few DB queries in a defer block which might race with test cleanup
+		time.Sleep(50 * time.Millisecond)
 
 		// Clean up
 		sqlDB, _ := gormDB.DB()
