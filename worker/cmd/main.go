@@ -96,27 +96,27 @@ func initLogger() *zap.Logger {
 }
 
 func initDatabase(logger *zap.Logger) (*gorm.DB, error) {
-	// Similar to original initDatabase
-	host := os.Getenv("DATABASE_HOST")
-	if host == "" {
-		host = "localhost"
-	}
-	user := os.Getenv("DATABASE_USER")
-	if user == "" {
-		user = "postgres"
-	}
-	password := os.Getenv("DATABASE_PASSWORD")
-	if password == "" {
-		password = "password"
-	}
-	dbname := os.Getenv("DATABASE_NAME")
-	if dbname == "" {
-		dbname = "payment_watchdog"
-	}
-	port := os.Getenv("DATABASE_PORT")
-	if port == "" {
-		port = "5432"
-	}
+        // Similar to original initDatabase
+        host := os.Getenv("DB_HOST")
+        if host == "" {
+                host = "localhost"
+        }
+        user := os.Getenv("DB_USER")
+        if user == "" {
+                user = "postgres"
+        }
+        password := os.Getenv("DB_PASSWORD")
+        if password == "" {
+                password = "password"
+        }
+        dbname := os.Getenv("DB_NAME")
+        if dbname == "" {
+                dbname = "payment_watchdog"
+        }
+        port := os.Getenv("DB_PORT")
+        if port == "" {
+                port = "5432"
+        }
 
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		host, user, password, dbname, port)
