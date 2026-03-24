@@ -202,9 +202,10 @@ func Load() error {
 
 	// Check for potential environment variable conflicts
 	if err := checkEnvironmentConflicts(logger); err != nil {
-		logger.Warn("Environment variable conflict detected",
+		logger.Warn("Environment variable conflict detected - using DATABASE_* format as priority",
 			zap.String("component", "config-loader"),
 			zap.Error(err))
+		// Don't fail startup - just log the warning
 	}
 
 	logger.Info("Configuration loading completed successfully",
@@ -238,11 +239,12 @@ func checkEnvironmentConflicts(logger *zap.Logger) error {
 		if standard != "" && legacy != "" {
 			// Both are set - log warning about potential confusion
 			conflictStrings = append(conflictStrings,
-				fmt.Sprintf("CONFLICT: %s (both %s and %s set)", conflict.description, conflict.standard, conflict.legacy))
+				fmt.Sprintf("CONFLICT: %s (using %s as priority)", conflict.description, conflict.standard))
 		}
 	}
 
 	if len(conflictStrings) > 0 {
+		// Return warning message instead of error to allow startup
 		return fmt.Errorf("environment variable conflicts detected: %s", strings.Join(conflictStrings, "; "))
 	}
 
