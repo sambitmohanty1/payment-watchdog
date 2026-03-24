@@ -153,7 +153,7 @@ func startWorker(lc fx.Lifecycle, processor *services.EventProcessorService, log
 			logger.Info("Starting Payment Watchdog Worker...")
 
 			// Start event processing with keep-alive and health server
-			if err := processor.StartEventProcessing(ctx); err != nil {
+			if err := processor.Start(ctx); err != nil {
 				return fmt.Errorf("failed to start event processing: %w", err)
 			}
 
@@ -162,7 +162,7 @@ func startWorker(lc fx.Lifecycle, processor *services.EventProcessorService, log
 		},
 		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping Payment Watchdog Worker...")
-			return processor.StopEventProcessing(ctx)
+			return processor.Stop(ctx)
 		},
 	})
 }
