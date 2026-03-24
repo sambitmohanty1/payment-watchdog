@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -56,6 +58,11 @@ func (t *TestEventBus) GetEvents(topic string) []interface{} {
 	return t.events[topic]
 }
 
+// Add Ping method for health check testing
+func (t *TestEventBus) Ping(ctx context.Context) error {
+	return nil // Always healthy for testing
+}
+
 // TestSubscription is a mock subscription for testing
 type TestSubscription struct{}
 
@@ -93,6 +100,10 @@ func TestEventProcessorService(t *testing.T) {
 		assert.NotNil(t, service.metrics)
 		assert.Equal(t, 3, service.maxRetries)
 		assert.Equal(t, time.Second*2, service.retryDelay)
+		assert.NotNil(t, service.config)
+		assert.Equal(t, 30*time.Second, service.config.HealthCheckInterval)
+		assert.Equal(t, 5*time.Minute, service.config.MaxIdleTime)
+		assert.Equal(t, ":8086", service.config.HealthServerPort)
 	})
 
 	t.Run("Payment Failure Event Processing", func(t *testing.T) {
@@ -435,5 +446,183 @@ func TestEventProcessorPipelineStages(t *testing.T) {
 		assert.Equal(t, architecture.PaymentFailureStatusAnalyzed, failure.Status)
 		assert.NotNil(t, failure.ProcessedAt)
 		assert.False(t, failure.UpdatedAt.IsZero())
+	})
+}
+
+// TestKeepAliveLoop tests the keep-alive mechanism
+func TestKeepAliveLoop(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	defer logger.Sync()
+
+	config := &EventProcessorConfig{
+		HealthCheckInterval: 100 * time.Millisecond, // Fast for testing
+		MaxIdleTime:         500 * time.Millisecond,
+		HealthServerPort:    ":8087",
+	}
+
+	service := NewEventProcessorServiceWithConfig(nil, nil, nil, logger, config)
+
+	t.Run("Keep-alive with context cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+		defer cancel()
+
+		// Start keep-alive loop in goroutine
+		done := make(chan bool)
+		go func() {
+			service.keepAliveLoop(ctx)
+			done <- true
+		}()
+
+		// Wait for context cancellation
+		select {
+		case <-done:
+			// Loop stopped as expected
+		case <-time.After(1 * time.Second):
+			t.Fatal("Keep-alive loop did not stop on context cancellation")
+		}
+	})
+
+	t.Run("Idle detection", func(t *testing.T) {
+		// Set last event to past
+		service.updateLastEvent()
+		time.Sleep(200 * time.Millisecond) // Wait for some idle time
+
+		lastEvent := service.getLastEvent()
+		idleTime := time.Since(lastEvent)
+
+		// Should be idle but not over max idle time yet
+		assert.True(t, idleTime > 100*time.Millisecond)
+		assert.True(t, idleTime < config.MaxIdleTime)
+	})
+}
+
+// TestHealthEndpoint tests the health server functionality
+func TestHealthEndpoint(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	defer logger.Sync()
+
+	config := &EventProcessorConfig{
+		HealthCheckInterval: 30 * time.Second,
+		MaxIdleTime:         5 * time.Minute,
+		HealthServerPort:    ":8088",
+	}
+
+	// Create test event bus with Ping method
+	testEventBus := &TestEventBus{
+		events: make(map[string][]interface{}),
+	}
+
+	service := NewEventProcessorServiceWithConfig(nil, nil, testEventBus, logger, config)
+
+	t.Run("Health endpoint success", func(t *testing.T) {
+		ctx := context.Background()
+
+		// Start health server
+		err := service.startHealthServer(ctx)
+		require.NoError(t, err)
+
+		// Give server time to start
+		time.Sleep(100 * time.Millisecond)
+
+		// Test health endpoint
+		resp, err := http.Get("http://localhost:8088/health")
+		if err == nil {
+			defer resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		}
+
+		// Test metrics endpoint
+		resp, err = http.Get("http://localhost:8088/metrics")
+		if err == nil {
+			defer resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		}
+
+		// Stop health server
+		err = service.StopEventProcessing(ctx)
+		require.NoError(t, err)
+	})
+
+	t.Run("Health check with disconnected services", func(t *testing.T) {
+		// Create service with nil dependencies
+		badService := NewEventProcessorServiceWithConfig(nil, nil, nil, logger, config)
+
+		ctx := context.Background()
+		err := badService.healthCheck(ctx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not connected")
+	})
+}
+
+// TestMutexProtection tests thread safety of lastEvent updates
+func TestMutexProtection(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	defer logger.Sync()
+
+	service := NewEventProcessorService(nil, nil, nil, logger)
+
+	t.Run("Concurrent lastEvent updates", func(t *testing.T) {
+		const numGoroutines = 100
+		const numUpdates = 10
+
+		var wg sync.WaitGroup
+		wg.Add(numGoroutines * 2) // Double for both readers and writers
+
+		// Start multiple goroutines updating lastEvent
+		for i := 0; i < numGoroutines; i++ {
+			go func() {
+				defer wg.Done()
+				for j := 0; j < numUpdates; j++ {
+					service.updateLastEvent()
+					time.Sleep(1 * time.Millisecond) // Small delay to increase contention
+				}
+			}()
+		}
+
+		// Start multiple goroutines reading lastEvent
+		for i := 0; i < numGoroutines; i++ {
+			go func() {
+				defer wg.Done()
+				for j := 0; j < numUpdates; j++ {
+					_ = service.getLastEvent()
+					time.Sleep(1 * time.Millisecond)
+				}
+			}()
+		}
+
+		wg.Wait()
+
+		// Verify no race conditions occurred
+		lastEvent := service.getLastEvent()
+		assert.False(t, lastEvent.IsZero(), "lastEvent should be updated")
+	})
+}
+
+// TestConfiguration tests custom configuration
+func TestConfiguration(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	defer logger.Sync()
+
+	t.Run("Custom configuration", func(t *testing.T) {
+		config := &EventProcessorConfig{
+			HealthCheckInterval: 45 * time.Second,
+			MaxIdleTime:         10 * time.Minute,
+			HealthServerPort:    ":9090",
+		}
+
+		service := NewEventProcessorServiceWithConfig(nil, nil, nil, logger, config)
+
+		assert.Equal(t, config.HealthCheckInterval, service.config.HealthCheckInterval)
+		assert.Equal(t, config.MaxIdleTime, service.config.MaxIdleTime)
+		assert.Equal(t, config.HealthServerPort, service.config.HealthServerPort)
+	})
+
+	t.Run("Default configuration", func(t *testing.T) {
+		service := NewEventProcessorService(nil, nil, nil, logger)
+
+		defaultConfig := DefaultEventProcessorConfig()
+		assert.Equal(t, defaultConfig.HealthCheckInterval, service.config.HealthCheckInterval)
+		assert.Equal(t, defaultConfig.MaxIdleTime, service.config.MaxIdleTime)
+		assert.Equal(t, defaultConfig.HealthServerPort, service.config.HealthServerPort)
 	})
 }

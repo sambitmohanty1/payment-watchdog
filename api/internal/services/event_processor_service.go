@@ -2,7 +2,10 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,12 +16,29 @@ import (
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 )
 
+// EventProcessorConfig holds configuration for event processor
+type EventProcessorConfig struct {
+	HealthCheckInterval time.Duration `yaml:"health_check_interval" json:"health_check_interval"`
+	MaxIdleTime         time.Duration `yaml:"max_idle_time" json:"max_idle_time"`
+	HealthServerPort    string        `yaml:"health_server_port" json:"health_server_port"`
+}
+
+// DefaultEventProcessorConfig returns default configuration
+func DefaultEventProcessorConfig() *EventProcessorConfig {
+	return &EventProcessorConfig{
+		HealthCheckInterval: 30 * time.Second,
+		MaxIdleTime:         5 * time.Minute,
+		HealthServerPort:    ":8086",
+	}
+}
+
 // EventProcessorService processes payment failure events and applies business intelligence
 type EventProcessorService struct {
 	db         *gorm.DB
 	ruleEngine rules.RuleEngine
 	eventBus   architecture.EventBus
 	logger     *zap.Logger
+	config     *EventProcessorConfig
 
 	// Processing metrics
 	metrics *EventProcessorMetrics
@@ -26,6 +46,12 @@ type EventProcessorService struct {
 	// Configuration
 	maxRetries int
 	retryDelay time.Duration
+
+	// Keep-alive and health monitoring
+	mu           sync.RWMutex
+	lastEvent    time.Time
+	healthServer *http.Server
+	healthErr    chan error
 }
 
 // EventProcessorMetrics tracks processing performance and statistics
@@ -53,6 +79,11 @@ type ProcessingError struct {
 
 // NewEventProcessorService creates a new event processor service
 func NewEventProcessorService(db *gorm.DB, ruleEngine rules.RuleEngine, eventBus architecture.EventBus, logger *zap.Logger) *EventProcessorService {
+	return NewEventProcessorServiceWithConfig(db, ruleEngine, eventBus, logger, DefaultEventProcessorConfig())
+}
+
+// NewEventProcessorServiceWithConfig creates a new event processor service with custom configuration
+func NewEventProcessorServiceWithConfig(db *gorm.DB, ruleEngine rules.RuleEngine, eventBus architecture.EventBus, logger *zap.Logger, config *EventProcessorConfig) *EventProcessorService {
 	metrics := &EventProcessorMetrics{
 		EventsByProvider: make(map[string]int64),
 		EventsByStatus:   make(map[string]int64),
@@ -64,9 +95,12 @@ func NewEventProcessorService(db *gorm.DB, ruleEngine rules.RuleEngine, eventBus
 		ruleEngine: ruleEngine,
 		eventBus:   eventBus,
 		logger:     logger,
+		config:     config,
 		metrics:    metrics,
 		maxRetries: 3,
 		retryDelay: time.Second * 2,
+		lastEvent:  time.Now(), // Initialize to current time
+		healthErr:  make(chan error, 1),
 	}
 }
 
@@ -125,7 +159,24 @@ func (e *EventProcessorService) ProcessPaymentFailureEvent(ctx context.Context, 
 		zap.String("event_id", paymentFailure.ID.String()),
 		zap.Duration("processing_time", processingTime))
 
+	// Update last event time with mutex protection
+	e.updateLastEvent()
+
 	return nil
+}
+
+// updateLastEvent updates the last event time with mutex protection
+func (e *EventProcessorService) updateLastEvent() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.lastEvent = time.Now()
+}
+
+// getLastEvent returns the last event time with mutex protection
+func (e *EventProcessorService) getLastEvent() time.Time {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.lastEvent
 }
 
 // processEventPipeline processes the event through all pipeline stages
@@ -519,6 +570,12 @@ func (e *EventProcessorService) StartEventProcessing(ctx context.Context) error 
 		return fmt.Errorf("failed to subscribe to payment failure events: %w", err)
 	}
 
+	// Start health server
+	go e.startHealthServer(ctx)
+
+	// Start keep-alive loop
+	go e.keepAliveLoop(ctx)
+
 	e.logger.Info("Event processing service started successfully")
 	return nil
 }
@@ -538,9 +595,130 @@ func (e *EventProcessorService) handlePaymentFailureEvent(ctx context.Context, e
 func (e *EventProcessorService) StopEventProcessing(ctx context.Context) error {
 	e.logger.Info("Stopping event processing service")
 
+	// Stop health server
+	if e.healthServer != nil {
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		if err := e.healthServer.Shutdown(ctx); err != nil {
+			e.logger.Error("Failed to shutdown health server", zap.Error(err))
+		}
+	}
+
 	// TODO: Implement graceful shutdown
 	// This would typically unsubscribe from events and wait for in-flight processing to complete
 
 	e.logger.Info("Event processing service stopped")
 	return nil
+}
+
+// keepAliveLoop ensures worker stays alive even without events
+func (e *EventProcessorService) keepAliveLoop(ctx context.Context) {
+	ticker := time.NewTicker(e.config.HealthCheckInterval)
+	defer ticker.Stop()
+	maxIdleTime := e.config.MaxIdleTime
+
+	for {
+		select {
+		case <-ctx.Done():
+			e.logger.Info("Keep-alive loop stopped")
+			return
+		case <-ticker.C:
+			lastEvent := e.getLastEvent()
+			timeSinceLastEvent := time.Since(lastEvent)
+
+			if timeSinceLastEvent > maxIdleTime {
+				e.logger.Warn("Worker idle for extended period",
+					zap.Duration("idle_time", timeSinceLastEvent))
+			}
+
+			e.logger.Debug("Worker heartbeat",
+				zap.Time("last_event", lastEvent),
+				zap.Duration("idle_duration", timeSinceLastEvent))
+		}
+	}
+}
+
+// startHealthServer starts HTTP health server for readiness probes
+func (e *EventProcessorService) startHealthServer(ctx context.Context) error {
+	mux := http.NewServeMux()
+
+	// Health endpoint for readiness probes
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		if err := e.healthCheck(ctx); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(err.Error()))
+		} else {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+		}
+	})
+
+	// Metrics endpoint for monitoring
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		metrics := e.getHealthMetrics()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(metrics)
+	})
+
+	e.healthServer = &http.Server{Addr: e.config.HealthServerPort}
+
+	// Start health server with proper error handling
+	go func() {
+		if err := e.healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			select {
+			case e.healthErr <- err:
+			default:
+				// Channel full, error already queued
+			}
+		}
+	}()
+
+	e.logger.Info("Health server started", zap.String("port", e.config.HealthServerPort))
+	return nil
+}
+
+// healthCheck performs comprehensive health checks
+func (e *EventProcessorService) healthCheck(ctx context.Context) error {
+	// Check event bus connectivity
+	if e.eventBus != nil {
+		// Try to ping event bus if it supports it
+		if pinger, ok := e.eventBus.(interface{ Ping(context.Context) error }); ok {
+			if err := pinger.Ping(ctx); err != nil {
+				return fmt.Errorf("event bus disconnected: %w", err)
+			}
+		}
+	} else {
+		return fmt.Errorf("event bus not connected")
+	}
+
+	// Check database connectivity
+	if e.db != nil {
+		sqlDB, err := e.db.DB()
+		if err != nil || sqlDB.Ping() != nil {
+			return fmt.Errorf("database disconnected: %w", err)
+		}
+	} else {
+		return fmt.Errorf("database not connected")
+	}
+
+	return nil
+}
+
+// getHealthMetrics returns health metrics for monitoring
+func (e *EventProcessorService) getHealthMetrics() map[string]interface{} {
+	lastEvent := e.getLastEvent()
+	return map[string]interface{}{
+		"last_event":        lastEvent,
+		"idle_duration":     time.Since(lastEvent).String(),
+		"total_events":      e.metrics.TotalEventsProcessed,
+		"successful_events": e.metrics.SuccessfullyProcessed,
+		"failed_events":     e.metrics.FailedProcessing,
+		"service_uptime":    time.Since(lastEvent).String(),
+		"timestamp":         time.Now(),
+		"config": map[string]interface{}{
+			"health_check_interval": e.config.HealthCheckInterval.String(),
+			"max_idle_time":         e.config.MaxIdleTime.String(),
+			"health_server_port":    e.config.HealthServerPort,
+		},
+	}
 }

@@ -1,0 +1,145 @@
+{
+  "clusterPodNetworkOptions": [
+    [
+      "This parameter should actually be a JSON object rather than an array - pick one of the following object variants to use",
+      {
+        "cniType": "FLANNEL_OVERLAY"
+      },
+      {
+        "cniType": "OCI_VCN_IP_NATIVE"
+      }
+    ],
+    null
+  ],
+  "compartmentId": "string",
+  "dashboardEnabled": true,
+  "definedTags": {
+    "tagNamespace1": {
+      "tagKey1": "tagValue1",
+      "tagKey2": "tagValue2"
+    },
+    "tagNamespace2": {
+      "tagKey1": "tagValue1",
+      "tagKey2": "tagValue2"
+    }
+  },
+  "endpointNsgIds": [
+    "string",
+    "string"
+  ],
+  "endpointPublicIpEnabled": true,
+  "endpointSubnetId": "string",
+  "freeformTags": {
+    "tagKey1": "tagValue1",
+    "tagKey2": "tagValue2"
+  },
+  "governancePolicyConfig": "string",
+  "imagePolicyConfig": {
+    "isPolicyEnabled": true,
+    "keyDetails": [
+      {
+        "kmsKeyId": "string"
+      },
+      {
+        "kmsKeyId": "string"
+      }
+    ]
+  },
+  "ipFamilies": [
+    "string",
+    "string"
+  ],
+  "kmsKeyId": "string",
+  "kubernetesVersion": "string",
+  "maxWaitSeconds": 0,
+  "name": "string",
+  "oidcCaCertificate": "string",
+  "oidcClientId": "string",
+  "oidcConfigurationFile": "string",
+  "oidcGroupsClaim": "string",
+  "oidcGroupsPrefix": "string",
+  "oidcIssuerUrl": "string",
+  "oidcRequiredClaims": [
+    {
+      "key": "string",
+      "value": "string"
+    },
+    {
+      "key": "string",
+      "value": "string"
+    }
+  ],
+  "oidcSigningAlgorithms": [
+    "string",
+    "string"
+  ],
+  "oidcUsernameClaim": "string",
+  "oidcUsernamePrefix": "string",
+  "openIdConnectAuthEnabled": true,
+  "openIdConnectDiscoveryEnabled": true,
+  "persistentVolumeDefinedTags": {
+    "string1": {
+      "string1": {
+        "string1": "string",
+        "string2": "string"
+      },
+      "string2": {
+        "string1": "string",
+        "string2": "string"
+      }
+    },
+    "string2": {
+      "string1": {
+        "string1": "string",
+        "string2": "string"
+      },
+      "string2": {
+        "string1": "string",
+        "string2": "string"
+      }
+    }
+  },
+  "persistentVolumeFreeformTags": {
+    "string1": "string",
+    "string2": "string"
+  },
+  "podsCidr": "string",
+  "serviceLbDefinedTags": {
+    "string1": {
+      "string1": {
+        "string1": "string",
+        "string2": "string"
+      },
+      "string2": {
+        "string1": "string",
+        "string2": "string"
+      }
+    },
+    "string2": {
+      "string1": {
+        "string1": "string",
+        "string2": "string"
+      },
+      "string2": {
+        "string1": "string",
+        "string2": "string"
+      }
+    }
+  },
+  "serviceLbFreeformTags": {
+    "string1": "string",
+    "string2": "string"
+  },
+  "serviceLbSubnetIds": [
+    "string",
+    "string"
+  ],
+  "servicesCidr": "string",
+  "tillerEnabled": true,
+  "type": "BASIC_CLUSTER|ENHANCED_CLUSTER",
+  "vcnId": "string",
+  "waitForState": [
+    "ACCEPTED|IN_PROGRESS|FAILED|SUCCEEDED|CANCELING|CANCELED"
+  ],
+  "waitIntervalSeconds": 0
+}

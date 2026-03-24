@@ -96,27 +96,27 @@ func initLogger() *zap.Logger {
 }
 
 func initDatabase(logger *zap.Logger) (*gorm.DB, error) {
-        // Similar to original initDatabase
-        host := os.Getenv("DB_HOST")
-        if host == "" {
-                host = "localhost"
-        }
-        user := os.Getenv("DB_USER")
-        if user == "" {
-                user = "postgres"
-        }
-        password := os.Getenv("DB_PASSWORD")
-        if password == "" {
-                password = "password"
-        }
-        dbname := os.Getenv("DB_NAME")
-        if dbname == "" {
-                dbname = "payment_watchdog"
-        }
-        port := os.Getenv("DB_PORT")
-        if port == "" {
-                port = "5432"
-        }
+	// Similar to original initDatabase
+	host := os.Getenv("DB_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	user := os.Getenv("DB_USER")
+	if user == "" {
+		user = "postgres"
+	}
+	password := os.Getenv("DB_PASSWORD")
+	if password == "" {
+		password = "password"
+	}
+	dbname := os.Getenv("DB_NAME")
+	if dbname == "" {
+		dbname = "payment_watchdog"
+	}
+	port := os.Getenv("DB_PORT")
+	if port == "" {
+		port = "5432"
+	}
 
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		host, user, password, dbname, port)
@@ -151,12 +151,18 @@ func startWorker(lc fx.Lifecycle, processor *services.EventProcessorService, log
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting Payment Watchdog Worker...")
-			return processor.Start(ctx)
+
+			// Start event processing with keep-alive and health server
+			if err := processor.StartEventProcessing(ctx); err != nil {
+				return fmt.Errorf("failed to start event processing: %w", err)
+			}
+
+			logger.Info("Worker started successfully with keep-alive and health monitoring")
+			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping Payment Watchdog Worker...")
-			// No explicit stop needed - Start() handles context cancellation
-			return nil
+			return processor.StopEventProcessing(ctx)
 		},
 	})
 }
