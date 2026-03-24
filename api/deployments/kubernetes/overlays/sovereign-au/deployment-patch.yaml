@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: payment-watchdog-api
+  name: payment-watchdog-api-sovereign-au
 spec:
   replicas: 1
   selector:
@@ -90,7 +90,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: payment-watchdog-ui
+  name: payment-watchdog-ui-sovereign-au
 spec:
   replicas: 2
   selector:
@@ -168,7 +168,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: recovery-orchestration
+  name: recovery-orchestration-sovereign-au
 spec:
   replicas: 1
   selector:
