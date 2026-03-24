@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -152,7 +153,10 @@ func Load() error {
 	logger.Debug("Automatic environment loading enabled",
 		zap.String("component", "config-loader"))
 
-	// Bind specific environment variables with proper error handling
+	// Bind database environment variables
+	// Accepts both DATABASE_* (standard) and DB_* (legacy) for flexibility
+	// DATABASE_* variables take precedence over DB_* if both are set (Viper behavior)
+	// This enables backward compatibility with existing ConfigMaps while supporting new standards
 	envVars := []struct {
 		key, env string
 	}{
@@ -162,10 +166,15 @@ func Load() error {
 		{"server.cert_file", "SERVER_CERT_FILE"},
 		{"server.key_file", "SERVER_KEY_FILE"},
 		{"database.host", "DATABASE_HOST"},
+		{"database.host", "DB_HOST"},
 		{"database.port", "DATABASE_PORT"},
+		{"database.port", "DB_PORT"},
 		{"database.name", "DATABASE_NAME"},
+		{"database.name", "DB_NAME"},
 		{"database.user", "DATABASE_USER"},
+		{"database.user", "DB_USER"},
 		{"database.password", "DATABASE_PASSWORD"},
+		{"database.password", "DB_PASSWORD"},
 		{"stripe.secret_key", "STRIPE_SECRET_KEY"},
 		{"stripe.webhook_secret", "STRIPE_WEBHOOK_SECRET"},
 		{"email.host", "EMAIL_HOST"},
@@ -191,11 +200,51 @@ func Load() error {
 		zap.String("component", "config-loader"),
 		zap.Int("bound_vars", len(envVars)))
 
+	// Check for potential environment variable conflicts
+	if err := checkEnvironmentConflicts(logger); err != nil {
+		logger.Warn("Environment variable conflict detected",
+			zap.String("component", "config-loader"),
+			zap.Error(err))
+	}
+
 	logger.Info("Configuration loading completed successfully",
 		zap.String("component", "config-loader"),
 		zap.String("server_port", viper.GetString("server.port")),
 		zap.String("database_host", viper.GetString("database.host")),
 		zap.Bool("sovereign_mode", viper.GetBool("sovereign_mode")))
+
+	return nil
+}
+
+// checkEnvironmentConflicts checks for conflicting environment variable pairs
+// and warns if both standard and legacy variables are set
+func checkEnvironmentConflicts(logger *zap.Logger) error {
+	conflicts := []struct {
+		standard, legacy string
+		description      string
+	}{
+		{"DATABASE_HOST", "DB_HOST", "Database hostname - both DATABASE_HOST and DB_HOST set"},
+		{"DATABASE_USER", "DB_USER", "Database user - both DATABASE_USER and DB_USER set"},
+		{"DATABASE_PASSWORD", "DB_PASSWORD", "Database password - both DATABASE_PASSWORD and DB_PASSWORD set"},
+		{"DATABASE_NAME", "DB_NAME", "Database name - both DATABASE_NAME and DB_NAME set"},
+		{"DATABASE_PORT", "DB_PORT", "Database port - both DATABASE_PORT and DB_PORT set"},
+	}
+
+	var conflictStrings []string
+	for _, conflict := range conflicts {
+		standard := os.Getenv(conflict.standard)
+		legacy := os.Getenv(conflict.legacy)
+
+		if standard != "" && legacy != "" {
+			// Both are set - log warning about potential confusion
+			conflictStrings = append(conflictStrings,
+				fmt.Sprintf("CONFLICT: %s (both %s and %s set)", conflict.description, conflict.standard, conflict.legacy))
+		}
+	}
+
+	if len(conflictStrings) > 0 {
+		return fmt.Errorf("environment variable conflicts detected: %s", strings.Join(conflictStrings, "; "))
+	}
 
 	return nil
 }
