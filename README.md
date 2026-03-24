@@ -16,8 +16,8 @@ Payment Watchdog is an **Australian-first payment recovery platform** designed t
 ### 🎯 Market Focus
 - **Micro-Merchant Recovery Engine**: Specialized for tap-on-phone businesses
 - **AU/NZ Rail Integration**: PayTo, NPP, and BECS payment rails
-- **Vertical Intelligence**: Education, gig economy, and healthcare specialization
-- **Sovereign Data Compliance**: Australian data residency and privacy compliance
+- **Vertical Intelligence**: Education, gig economy, and healthcare specialization.
+- **Sovereign Data Compliance**: Australian data residency and privacy compliance.
 
 ### 🚀 Key Features
 - **🔄 Intelligent Recovery Workflows**: Automated payment failure recovery
