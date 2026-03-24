@@ -147,15 +147,30 @@ func TestRecoveryOrchestrationService_ExecuteStep(t *testing.T) {
 		)
 		mock.ExpectQuery(`.*recovery_workflows.*`).WillReturnRows(rows)
 
-		// Mock the steps query (from preload)
+		// Mock the steps query (from preload) - return empty steps to simplify test
 		stepRows := sqlmock.NewRows([]string{"id", "workflow_id", "step_order", "step_type", "step_name", "description", "config", "conditions", "delay_minutes", "is_parallel", "is_active", "is_critical", "created_at", "updated_at"})
 		mock.ExpectQuery(`.*recovery_workflow_steps.*`).WillReturnRows(stepRows)
 
-		// Execute test
+		// Mock the database transaction Begin call
+		mock.ExpectBegin()
+
+		// Mock the workflow execution insert (Query with RETURNING)
+		mock.ExpectQuery(`INSERT INTO.*recovery_workflow_executions.*RETURNING.*id`).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New().String()))
+
+		// Mock the transaction commit
+		mock.ExpectCommit()
+
+		// Execute test - focus on successful trigger, not async execution
 		err := service.TriggerWorkflowsForFailure(context.Background(), paymentFailure)
 
-		// Verify results
+		// Verify basic functionality - workflow was triggered successfully
 		assert.NoError(t, err)
+
+		// Allow minimal time for async setup, but don't wait for full execution
+		time.Sleep(1 * time.Millisecond)
+
+		// Verify database expectations were met
 		assert.NoError(t, mock.ExpectationsWereMet())
 
 		// Clean up

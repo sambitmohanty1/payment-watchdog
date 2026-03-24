@@ -454,6 +454,125 @@ func LoadConfig() (*Config, error) {
 
 ---
 
+## 🔴 P0-002: Service Constructor Dependencies Resolution
+**Priority**: P0 - Critical  
+**Impact**: Compilation failures, CI/CD pipeline blocked, development paralysis  
+**Timeline**: 3 days  
+**Owner**: Backend Team + Architecture Team
+
+**Problem**: Multiple service constructors have missing dependencies causing compilation failures. The server setup in `api/internal/api/server.go` cannot instantiate required services, blocking all development and deployment.
+
+**Technical Requirements**:
+- [ ] **WebhookService Constructor**: Fix `NewWebhookService(*gorm.DB, *zap.Logger)` - needs Redis client, rule engine, webhook URL
+- [ ] **RetryService Constructor**: Fix `NewRetryService(*gorm.DB, *zap.Logger)` - needs retry config parameters (max retries, delays, timeouts)
+- [ ] **RecoveryOrchestrationService Constructor**: Fix `NewRecoveryOrchestrationService(*gorm.DB, *zap.Logger)` - needs dependency injection
+- [ ] **CommunicationService Constructor**: Fix `NewCommunicationService(*gorm.DB, *zap.Logger)` - needs email and SMS providers
+- [ ] **Handler Dependencies**: Fix missing handler methods (ExecuteWorkflow, GetWorkflowStatus, GetWorkflowLogs)
+- [ ] **XeroHandlers**: Implement missing xeroHandlers for cross-method reconciliation
+- [ ] **Service Interface Contracts**: Define proper interfaces for all services
+- [ ] **Dependency Injection**: Implement proper DI container or factory pattern
+
+**Acceptance Criteria**:
+- [ ] All service constructors compile without errors
+- [ ] Server setup completes successfully
+- [ ] All API endpoints are properly wired
+- [ ] Missing handler methods are implemented
+- [ ] Xero integration handlers are added
+- [ ] Service interfaces are properly defined
+- [ ] Dependency injection is implemented
+- [ ] CI/CD pipeline passes compilation
+
+---
+
+## 🔴 P0-003: CI/CD Pipeline Test Stability
+**Priority**: P0 - Critical  
+**Impact**: Unreliable CI/CD pipeline, deployment risks, development friction  
+**Timeline**: 2 days  
+**Owner**: DevOps Team + Backend Team
+
+**Problem**: Unit tests are flaky due to async execution complexity and mock expectations. The CI/CD pipeline cannot reliably determine code quality, creating deployment risks.
+
+**Technical Requirements**:
+- [ ] **Test Isolation**: Separate unit tests from integration tests
+- [ ] **Mock Simplification**: Reduce complex mock expectations
+- [ ] **Async Testing**: Implement proper async test patterns
+- [ ] **Test Data Management**: Use test fixtures and proper cleanup
+- [ ] **Flaky Test Detection**: Identify and fix unstable tests
+- [ ] **Test Parallelization**: Enable parallel test execution
+- [ ] **Coverage Requirements**: Maintain 90%+ test coverage
+- [ ] **Test Environment**: Stabilize test environment setup
+
+**Acceptance Criteria**:
+- [ ] All unit tests pass consistently
+- [ ] No flaky tests in CI/CD pipeline
+- [ ] Test execution time is reasonable (<5 minutes)
+- [ ] Test coverage is maintained or improved
+- [ ] Tests are properly isolated
+- [ ] Mock expectations are reliable
+- [ ] Async operations are properly tested
+
+---
+
+## 🟡 P1-001: Architecture Decision Records (ADRs) Implementation
+**Priority**: P1 - High  
+**Impact**: Missing architectural documentation, decision tracking, knowledge loss  
+**Timeline**: 5 days  
+**Owner**: Architecture Team
+
+**Problem**: Critical architectural decisions are not documented in ADR format, making it difficult to understand system evolution and rationale behind design choices.
+
+**Technical Requirements**:
+- [ ] **ADR Template**: Create standardized ADR template
+- [ ] **Historical ADRs**: Document existing architectural decisions
+- [ ] **ADR Process**: Establish ADR review and approval process
+- [ ] **ADR Repository**: Create ADR documentation structure
+- [ ] **Decision Tracking**: Track all architectural decisions
+- [ ] **Rationale Documentation**: Document decision rationale and alternatives
+- [ ] **Impact Assessment**: Assess impact of architectural decisions
+- [ ] **Review Process**: Regular ADR reviews and updates
+
+---
+
+## 🟠 P2-001: Missing Handler Methods Implementation
+**Priority**: P2 - Medium  
+**Impact**: Incomplete API functionality, broken endpoints, poor user experience  
+**Timeline**: 3 days  
+**Owner**: Backend Team
+
+**Problem**: Several handler methods are referenced but not implemented, causing 404 errors and incomplete API functionality.
+
+**Technical Requirements**:
+- [ ] **ExecuteWorkflow Method**: Implement workflow execution endpoint
+- [ ] **GetWorkflowStatus Method**: Implement workflow status retrieval
+- [ ] **GetWorkflowLogs Method**: Implement workflow log retrieval
+- [ ] **XeroHandlers**: Implement Xero integration handlers
+- [ ] **Error Handling**: Add proper error handling for all endpoints
+- [ ] **Request Validation**: Add input validation for all endpoints
+- [ ] **Response Formatting**: Standardize response formats
+- [ ] **API Documentation**: Update API documentation
+
+---
+
+## 🎯 Next Steps Summary
+
+### **🔴 Immediate Actions (P0 - Critical)**
+1. **Service Constructor Dependencies** - Fix compilation issues blocking development
+2. **Dynamic Status Dashboard** - Fix false confidence in system health
+3. **CI/CD Test Stability** - Stabilize test pipeline for reliable deployments
+
+### **🟡 Short-term Improvements (P1 - High)**
+1. **Architecture Decision Records** - Document critical architectural decisions
+2. **Service Interface Standardization** - Standardize service patterns and interfaces
+
+### **🟠 Medium-term Enhancements (P2 - Medium)**
+1. **Missing Handler Methods** - Implement complete API functionality
+2. **Test Coverage Enhancement** - Achieve 90%+ test coverage
+
+### **🟢 Long-term Improvements (P3 - Low)**
+1. **Documentation Enhancement** - Improve developer experience and knowledge sharing
+
+---
+
 ## 🎉 Conclusion
 
 This platform backlog provides a comprehensive roadmap for improving the Payment Watchdog platform's technical foundation, security posture, and operational capabilities.
