@@ -683,3 +683,21 @@ func (h *RecoveryHandlers) GetRecoveryMetrics(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"metrics": metrics})
 }
+
+// ExecuteWorkflow executes a specific workflow
+func (h *RecoveryHandlers) ExecuteWorkflow(c *gin.Context) {
+	// Implementation placeholder to fix build errors
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+}
+
+// GetWorkflowStatus gets the status of a specific workflow
+func (h *RecoveryHandlers) GetWorkflowStatus(c *gin.Context) {
+	// Implementation placeholder to fix build errors
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+}
+
+// GetWorkflowLogs gets the logs of a specific workflow
+func (h *RecoveryHandlers) GetWorkflowLogs(c *gin.Context) {
+	// Implementation placeholder to fix build errors
+	c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"})
+}

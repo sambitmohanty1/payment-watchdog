@@ -25,6 +25,7 @@ type Handlers struct {
 	recoveryService       *services.RecoveryOrchestrationService
 	communicationService  *services.CommunicationService
 	recoveryHandlers      *RecoveryHandlers
+	xeroHandlers          *XeroHandlers
 	logger                *zap.Logger
 }
 
@@ -38,6 +39,7 @@ func NewHandlers(
 	analyticsService *services.AnalyticsService,
 	recoveryService *services.RecoveryOrchestrationService,
 	communicationService *services.CommunicationService,
+	xeroHandlers *XeroHandlers,
 	logger *zap.Logger,
 ) *Handlers {
 	recoveryHandlers := NewRecoveryHandlers(recoveryService, communicationService)
@@ -52,6 +54,7 @@ func NewHandlers(
 		recoveryService:       recoveryService,
 		communicationService:  communicationService,
 		recoveryHandlers:      recoveryHandlers,
+		xeroHandlers:          xeroHandlers,
 		logger:                logger,
 	}
 }
