@@ -73,9 +73,9 @@ spec:
           value: redis://lexure-redis-sovereign-au.sovereign-au.svc.cluster.local:6379
         envFrom:
         - configMapRef:
-            name: payment-watchdog-config
+            name: payment-watchdog-config-sovereign-au
         - secretRef:
-            name: payment-watchdog-secrets
+            name: payment-watchdog-secrets-sovereign-au
         volumeMounts:
         - mountPath: /app/config
           name: config-volume
@@ -83,7 +83,7 @@ spec:
       volumes:
       - configMap:
           defaultMode: 420
-          name: payment-watchdog-config
+          name: payment-watchdog-config-sovereign-au
           optional: false
         name: config-volume
 ---

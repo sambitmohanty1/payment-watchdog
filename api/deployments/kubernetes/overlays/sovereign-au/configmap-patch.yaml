@@ -22,7 +22,7 @@ data:
       name: "lexure_intelligence_mvp"
       user: "postgres"
       password: ""
-      ssl_mode: "disable"
+      ssl_mode: "require"
 
     stripe:
       secret_key: ""
@@ -51,39 +51,6 @@ data:
       https: false
       cert_file: "/app/certs/tls.crt"
       key_file: "/app/certs/tls.key"
-
-    database:
-      host: "lexure-postgres-sovereign-au.sovereign-au.svc.cluster.local"
-      port: 5432
-      name: "lexure_intelligence_mvp"
-      user: "postgres"
-      password: ""
-      ssl_mode: "disable"
-
-    stripe:
-      secret_key: ""
-      webhook_secret: ""
-      publishable_key: ""
-
-    xero:
-      client_id: ""
-      client_secret: ""
-      redirect_uri: "http://localhost:8085/api/v1/xero/auth/callback"
-
-    email:
-      provider: "smtp"
-      host: "localhost"
-      port: 587
-      username: ""
-      password: ""
-      from_email: "noreply@payment-watchdog.com"
-      from_name: "Lexure Intelligence"
-
-    log:
-      level: "info"
-    oracle:
-      region: "ap-melbourne-1"
-      compartment: "PaymentwatchdogSovereign"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -93,12 +60,14 @@ data:
   DB_HOST: lexure-postgres-sovereign-au.sovereign-au.svc.cluster.local
   DB_NAME: lexure_intelligence_mvp
   DB_PORT: "5432"
-  DB_SSL_MODE: disable
+  DB_SSL_MODE: require
   ENVIRONMENT: staging
   LOG_LEVEL: info
-  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability.svc.cluster.local:4317
-  OTEL_SERVICE_NAME: recovery-orchestration
   REDIS_ADDR: lexure-redis-sovereign-au.sovereign-au.svc.cluster.local:6379
   WORKFLOW_MAX_CONCURRENT: "100"
   WORKFLOW_MAX_RETRY: "3"
   WORKFLOW_RETRY_DELAY: 5m
+  DB_CONNECT_TIMEOUT: "30"
+  DB_MAX_CONNECTIONS: "10"
+  REDIS_CONNECT_TIMEOUT: "10"
+  REDIS_MAX_RETRIES: "3"

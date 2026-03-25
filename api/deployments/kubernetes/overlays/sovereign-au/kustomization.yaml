@@ -9,6 +9,12 @@ resources:
   - ../../apps/payment-watchdog-api
   - ../../apps/payment-watchdog-web
   - ../../apps/recovery-orchestration
+  
+  # Local Prometheus monitoring stack
+  - prometheus-config.yaml
+  - prometheus-deployment.yaml
+  - prometheus-rbac.yaml
+  - prometheus-exporters.yaml
 
 # Note: If this is strictly for the Sovereign environment, 
 # ensure this is 'sovereign-au' instead of 'production'
