@@ -29,7 +29,7 @@ spec:
       hostPID: true
       containers:
       - name: node-exporter
-        image: prom/node-exporter:v1.6.1
+        image: docker.io/prom/node-exporter:v1.6.1
         imagePullPolicy: IfNotPresent
         args:
           - '--path.procfs=/host/proc'
@@ -169,7 +169,7 @@ spec:
       serviceAccountName: postgres-exporter
       containers:
       - name: postgres-exporter
-        image: prometheuscommunity/postgres-exporter:v0.10.0
+        image: docker.io/prometheuscommunity/postgres-exporter:v0.10.0
         imagePullPolicy: IfNotPresent
         env:
         - name: DATA_SOURCE_NAME
