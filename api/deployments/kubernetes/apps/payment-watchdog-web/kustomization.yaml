@@ -3,7 +3,7 @@ kind: Kustomization
 
 metadata:
   name: payment-watchdog-ui
-  namespace: staging
+  # namespace: staging  # Removed - let overlays control namespace
 
 resources:
 - service-account.yaml
