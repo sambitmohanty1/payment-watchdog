@@ -12,7 +12,6 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     environment:
       name: staging
       url: https://staging.payment-watchdog.example.com  # Update with your actual staging URL
