@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: payment-watchdog-api-sovereign-au
+  name: payment-watchdog-api
 spec:
   replicas: 1
   selector:
@@ -73,9 +73,9 @@ spec:
           value: redis://lexure-redis-sovereign-au.sovereign-au.svc.cluster.local:6379
         envFrom:
         - configMapRef:
-            name: payment-watchdog-config-sovereign-au
+            name: payment-watchdog-config
         - secretRef:
-            name: payment-watchdog-secrets-sovereign-au
+            name: payment-watchdog-secrets
         volumeMounts:
         - mountPath: /app/config
           name: config-volume
@@ -83,14 +83,14 @@ spec:
       volumes:
       - configMap:
           defaultMode: 420
-          name: payment-watchdog-config-sovereign-au
+          name: payment-watchdog-config
           optional: false
         name: config-volume
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: payment-watchdog-ui-sovereign-au
+  name: payment-watchdog-ui
 spec:
   replicas: 2
   selector:
@@ -168,7 +168,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: recovery-orchestration-sovereign-au
+  name: recovery-orchestration
 spec:
   replicas: 1
   selector:
@@ -241,19 +241,19 @@ spec:
           valueFrom:
             secretKeyRef:
               key: REDIS_PASSWORD
-              name: recovery-orchestration-secrets-sovereign-au-9ttch86tfh
+              name: recovery-orchestration-secrets
         - name: DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
               key: DATABASE_PASSWORD
-              name: recovery-orchestration-secrets-sovereign-au-9ttch86tfh
+              name: recovery-orchestration-secrets
         - name: DATABASE_USER
           valueFrom:
             secretKeyRef:
               key: DATABASE_USER
-              name: recovery-orchestration-secrets-sovereign-au-9ttch86tfh
+              name: recovery-orchestration-secrets
         envFrom:
         - configMapRef:
-            name: recovery-orchestration-config-sovereign-au-f47fc9gcbd
+            name: recovery-orchestration-config
         - secretRef:
-            name: recovery-orchestration-secrets-sovereign-au-9ttch86tfh
+            name: recovery-orchestration-secrets

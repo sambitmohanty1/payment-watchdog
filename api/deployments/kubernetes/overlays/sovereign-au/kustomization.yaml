@@ -19,6 +19,28 @@ commonLabels:
   app.kubernetes.io/part-of: payment-watchdog
   environment: sovereign-au
 
+images:
+  - name: ghcr.io/sambitmohanty1/payment-watchdog/api
+    newTag: latest
+  - name: ghcr.io/sambitmohanty1/payment-watchdog/web
+    newTag: latest
+  - name: ghcr.io/sambitmohanty1/payment-watchdog/worker
+    newTag: latest
+
+secretGenerator:
+  - name: recovery-orchestration-secrets
+    behavior: merge
+    literals:
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres_password
+      - REDIS_PASSWORD=redis_password
+      - JWT_SECRET=jwt_signing_key
+      - STRIPE_API_KEY=stripe_key_placeholder
+      - XERO_CLIENT_ID=xero_id_placeholder
+      - XERO_CLIENT_SECRET=xero_secret_placeholder
+      - QUICKBOOKS_CLIENT_ID=qb_id_placeholder
+      - QUICKBOOKS_CLIENT_SECRET=qb_secret_placeholder
+
 patches:
   # 1. File-based patches for Architecture, Resources, and Secrets
   - path: deployment-patch.yaml
