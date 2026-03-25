@@ -47,7 +47,14 @@ func main() {
 			func(ref rules.RuleEngineFactory) rules.RuleEngine {
 				return ref.CreateComprehensiveRuleEngine()
 			},
-			eventbus.NewRedisEventBus,
+			func(logger *zap.Logger) (eventbus.EventBus, error) {
+				return eventbus.NewRedisEventBus(
+					"localhost:6379", // Redis address
+					"",               // Redis password (empty for default)
+					0,                // Redis DB
+					logger,
+				)
+			},
 			services.NewEventProcessorService,
 		),
 		fx.Invoke(startWorker),
