@@ -87,7 +87,7 @@ type LogConfig struct {
 }
 
 // Load loads configuration from file and environment variables
-func Load() error {
+func Load() (*Config, error) {
 	fmt.Println("🔍 CONFIG DEBUG: Starting configuration loading...")
 
 	// Set defaults to match Kubernetes service configuration
@@ -120,7 +120,7 @@ func Load() error {
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			fmt.Printf("🔍 CONFIG DEBUG: Failed to read config file: %v\n", err)
-			return fmt.Errorf("failed to read config file: %w", err)
+			return nil, fmt.Errorf("failed to read config file: %w", err)
 		}
 		fmt.Println("🔍 CONFIG DEBUG: No config file found, using defaults and environment")
 	} else {
@@ -134,95 +134,86 @@ func Load() error {
 	// Bind specific environment variables with proper error handling
 	if err := viper.BindEnv("server.port", "SERVER_PORT"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SERVER_PORT: %v\n", err)
-		return fmt.Errorf("failed to bind SERVER_PORT: %w", err)
+		return nil, fmt.Errorf("failed to bind SERVER_PORT: %w", err)
 	}
 	if err := viper.BindEnv("server.host", "SERVER_HOST"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SERVER_HOST: %v\n", err)
-		return fmt.Errorf("failed to bind SERVER_HOST: %w", err)
+		return nil, fmt.Errorf("failed to bind SERVER_HOST: %w", err)
 	}
 	if err := viper.BindEnv("server.https", "SERVER_HTTPS"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SERVER_HTTPS: %v\n", err)
-		return fmt.Errorf("failed to bind SERVER_HTTPS: %w", err)
+		return nil, fmt.Errorf("failed to bind SERVER_HTTPS: %w", err)
 	}
 	if err := viper.BindEnv("server.cert_file", "SERVER_CERT_FILE"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SERVER_CERT_FILE: %v\n", err)
-		return fmt.Errorf("failed to bind SERVER_CERT_FILE: %w", err)
+		return nil, fmt.Errorf("failed to bind SERVER_CERT_FILE: %w", err)
 	}
 	if err := viper.BindEnv("server.key_file", "SERVER_KEY_FILE"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SERVER_KEY_FILE: %v\n", err)
-		return fmt.Errorf("failed to bind SERVER_KEY_FILE: %w", err)
+		return nil, fmt.Errorf("failed to bind SERVER_KEY_FILE: %w", err)
 	}
 	if err := viper.BindEnv("database.host", "DATABASE_HOST"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_HOST: %v\n", err)
-		return fmt.Errorf("failed to bind DATABASE_HOST: %w", err)
+		return nil, fmt.Errorf("failed to bind DATABASE_HOST: %w", err)
 	}
 	if err := viper.BindEnv("database.port", "DATABASE_PORT"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_PORT: %v\n", err)
-		return fmt.Errorf("failed to bind DATABASE_PORT: %v", err)
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_PORT: %v", err)
+		return nil, fmt.Errorf("failed to bind DATABASE_PORT: %v", err)
 	}
 	if err := viper.BindEnv("database.name", "DATABASE_NAME"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_NAME: %v\n", err)
-		return fmt.Errorf("failed to bind DATABASE_NAME: %w", err)
+		return nil, fmt.Errorf("failed to bind DATABASE_NAME: %w", err)
 	}
 	if err := viper.BindEnv("database.user", "DATABASE_USER"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_USER: %v\n", err)
-		return fmt.Errorf("failed to bind DATABASE_USER: %w", err)
+		return nil, fmt.Errorf("failed to bind DATABASE_USER: %w", err)
 	}
 	if err := viper.BindEnv("database.password", "DATABASE_PASSWORD"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_PASSWORD: %v\n", err)
-		return fmt.Errorf("failed to bind DATABASE_PASSWORD: %w", err)
+		return nil, fmt.Errorf("failed to bind DATABASE_PASSWORD: %w", err)
 	}
 	if err := viper.BindEnv("stripe.secret_key", "STRIPE_SECRET_KEY"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind STRIPE_SECRET_KEY: %v\n", err)
-		return fmt.Errorf("failed to bind STRIPE_SECRET_KEY: %w", err)
+		return nil, fmt.Errorf("failed to bind STRIPE_SECRET_KEY: %w", err)
 	}
 	if err := viper.BindEnv("stripe.webhook_secret", "STRIPE_WEBHOOK_SECRET"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind STRIPE_WEBHOOK_SECRET: %v\n", err)
-		return fmt.Errorf("failed to bind STRIPE_WEBHOOK_SECRET: %w", err)
-	}
-	if err := viper.BindEnv("email.host", "EMAIL_HOST"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind EMAIL_HOST: %v\n", err)
-		return fmt.Errorf("failed to bind EMAIL_HOST: %v", err)
-	}
-	if err := viper.BindEnv("email.port", "EMAIL_PORT"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind EMAIL_PORT: %v\n", err)
-		return fmt.Errorf("failed to bind EMAIL_PORT: %v", err)
-	}
-	if err := viper.BindEnv("email.username", "EMAIL_USERNAME"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind EMAIL_USERNAME: %v\n", err)
-		return fmt.Errorf("failed to bind EMAIL_USERNAME: %v", err)
-	}
-	if err := viper.BindEnv("email.password", "EMAIL_PASSWORD"); err != nil {
-		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind EMAIL_PASSWORD: %v\n", err)
-		return fmt.Errorf("failed to bind EMAIL_PASSWORD: %v", err)
+		return nil, fmt.Errorf("failed to bind STRIPE_WEBHOOK_SECRET: %w", err)
 	}
 	if err := viper.BindEnv("log.level", "LOG_LEVEL"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOG_LEVEL: %v\n", err)
-		return fmt.Errorf("failed to bind LOG_LEVEL: %v", err)
+		return nil, fmt.Errorf("failed to bind LOG_LEVEL: %v", err)
 	}
 	if err := viper.BindEnv("sovereign_mode", "SOVEREIGN_MODE"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SOVEREIGN_MODE: %v\n", err)
-		return fmt.Errorf("failed to bind SOVEREIGN_MODE: %v", err)
+		return nil, fmt.Errorf("failed to bind SOVEREIGN_MODE: %v", err)
 	}
 
 	fmt.Println("🔍 CONFIG DEBUG: All environment variables bound")
 
+	// Unmarshal configuration into struct
+	var config Config
+	if err := viper.Unmarshal(&config); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to unmarshal config: %v\n", err)
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
 	// Log final configuration values
 	fmt.Printf("🔍 CONFIG DEBUG: Final configuration values:\n")
-	fmt.Printf("  server.port: %s\n", viper.GetString("server.port"))
-	fmt.Printf("  server.host: %s\n", viper.GetString("server.host"))
-	fmt.Printf("  server.https: %t\n", viper.GetBool("server.https"))
-	fmt.Printf("  server.cert_file: %s\n", viper.GetString("server.cert_file"))
-	fmt.Printf("  server.key_file: %s\n", viper.GetString("server.key_file"))
-	fmt.Printf("  database.host: %s\n", viper.GetString("database.host"))
-	fmt.Printf("  database.port: %d\n", viper.GetInt("database.port"))
-	fmt.Printf("  database.name: %s\n", viper.GetString("database.name"))
-	fmt.Printf("  database.user: %s\n", viper.GetString("database.user"))
-	fmt.Printf("  database.ssl_mode: %s\n", viper.GetString("database.ssl_mode"))
-	fmt.Printf("  sovereign_mode: %t\n", viper.GetBool("sovereign_mode"))
+	fmt.Printf("  server.port: %s\n", config.Server.Port)
+	fmt.Printf("  server.host: %s\n", config.Server.Host)
+	fmt.Printf("  server.https: %t\n", config.Server.HTTPS)
+	fmt.Printf("  server.cert_file: %s\n", config.Server.CertFile)
+	fmt.Printf("  server.key_file: %s\n", config.Server.KeyFile)
+	fmt.Printf("  database.host: %s\n", config.Database.Host)
+	fmt.Printf("  database.port: %d\n", config.Database.Port)
+	fmt.Printf("  database.name: %s\n", config.Database.Name)
+	fmt.Printf("  database.user: %s\n", config.Database.User)
+	fmt.Printf("  database.ssl_mode: %s\n", config.Database.SSLMode)
+	fmt.Printf("  sovereign_mode: %t\n", config.SovereignMode)
 
 	fmt.Println("🔍 CONFIG DEBUG: Configuration loading completed successfully")
-	return nil
+	return &config, nil
 }
 
 // Get returns the current configuration

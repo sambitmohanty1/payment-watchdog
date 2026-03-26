@@ -47,7 +47,14 @@ func main() {
 			func(ref rules.RuleEngineFactory) rules.RuleEngine {
 				return ref.CreateComprehensiveRuleEngine()
 			},
-			eventbus.NewRedisEventBus,
+			func(logger *zap.Logger) (eventbus.EventBus, error) {
+				return eventbus.NewRedisEventBus(
+					"localhost:6379", // Redis address
+					"",               // Redis password (empty for default)
+					0,                // Redis DB
+					logger,
+				)
+			},
 			services.NewEventProcessorService,
 		),
 		fx.Invoke(startWorker),
@@ -97,23 +104,23 @@ func initLogger() *zap.Logger {
 
 func initDatabase(logger *zap.Logger) (*gorm.DB, error) {
 	// Similar to original initDatabase
-	host := os.Getenv("DB_HOST")
+	host := os.Getenv("DATABASE_HOST")
 	if host == "" {
 		host = "localhost"
 	}
-	user := os.Getenv("DB_USER")
+	user := os.Getenv("DATABASE_USER")
 	if user == "" {
 		user = "postgres"
 	}
-	password := os.Getenv("DB_PASSWORD")
+	password := os.Getenv("DATABASE_PASSWORD")
 	if password == "" {
-		password = "password"
+		password = "postgres"
 	}
-	dbname := os.Getenv("DB_NAME")
+	dbname := os.Getenv("DATABASE_NAME")
 	if dbname == "" {
 		dbname = "payment_watchdog"
 	}
-	port := os.Getenv("DB_PORT")
+	port := os.Getenv("DATABASE_PORT")
 	if port == "" {
 		port = "5432"
 	}

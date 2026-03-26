@@ -32,14 +32,17 @@ images:
     newTag: latest
   - name: ghcr.io/sambitmohanty1/payment-watchdog/worker
     newTag: latest
+  - name: postgres
+    newName: docker.io/library/postgres
+    newTag: 15-alpine
 
 secretGenerator:
   - name: recovery-orchestration-secrets
     behavior: merge
     literals:
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres_password
-      - REDIS_PASSWORD=redis_password
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - REDIS_PASSWORD=redis
       - JWT_SECRET=jwt_signing_key
       - STRIPE_API_KEY=stripe_key_placeholder
       - XERO_CLIENT_ID=xero_id_placeholder
@@ -68,3 +71,18 @@ patches:
       - op: replace
         path: /spec/storageClassName
         value: oci-bv
+
+replacements:
+  # Fix ConfigMap reference to use generated hash
+  - source:
+      kind: ConfigMap
+      name: recovery-orchestration-config
+      fieldPath: metadata.name
+    targets:
+      - select:
+          group: apps
+          version: v1
+          kind: Deployment
+          name: recovery-orchestration
+        fieldPaths:
+          - spec.template.spec.containers.0.envFrom.0.configMapRef.name
