@@ -70,6 +70,29 @@ patches:
       - op: replace
         path: /spec/storageClassName
         value: oci-bv
+  # 3. Fix postgres environment variables
+  - target:
+      kind: Deployment
+      name: lexure-postgres
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secrets
+                key: POSTGRES_USER
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secrets
+                key: POSTGRES_PASSWORD
+          - name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secrets
+                key: POSTGRES_DB
 
 replacements:
   # Fix ConfigMap reference to use generated hash
