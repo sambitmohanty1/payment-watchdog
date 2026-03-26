@@ -32,6 +32,9 @@ images:
     newTag: latest
   - name: ghcr.io/sambitmohanty1/payment-watchdog/worker
     newTag: latest
+  - name: postgres
+    newName: docker.io/library/postgres
+    newTag: 15-alpine
 
 secretGenerator:
   - name: recovery-orchestration-secrets
