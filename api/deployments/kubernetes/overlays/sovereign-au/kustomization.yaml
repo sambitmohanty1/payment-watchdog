@@ -37,8 +37,8 @@ secretGenerator:
   - name: recovery-orchestration-secrets
     behavior: merge
     literals:
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
       - REDIS_PASSWORD=redis
       - JWT_SECRET=jwt_signing_key
       - STRIPE_API_KEY=stripe_key_placeholder
