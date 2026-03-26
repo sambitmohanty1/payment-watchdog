@@ -54,7 +54,7 @@ patches:
   # 1. File-based patches for Architecture, Resources, and Secrets
   - path: deployment-patch.yaml
   - path: configmap-patch.yaml
-  - path: postgres-env-simple-patch.yaml
+  - path: postgres-security-patch.yaml
   
   # 2. Inline patches to fix Storage Classes for Oracle Cloud
   - target:
