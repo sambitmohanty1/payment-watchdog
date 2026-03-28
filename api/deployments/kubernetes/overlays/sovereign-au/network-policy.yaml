@@ -18,5 +18,14 @@ spec:
     - namespaceSelector:
         matchLabels:
           kubernetes.io/metadata.name: sovereign-au
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
     # Allow external connections to specific Stripe endpoints or AU cloud resources
     # Egress rules will be defined here to restrict traffic
