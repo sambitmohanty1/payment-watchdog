@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST='{"node_modules/@tanstack/query-devtools/build/index.js -> ./Devtools/U2TDTBMY.js":{"id":null,"files":[]}}';
+self.__REACT_LOADABLE_MANIFEST="{\"node_modules/.pnpm/@tanstack+query-devtools@5.37.1/node_modules/@tanstack/query-devtools/build/dev.js -> ./Devtools/Q436JGP5.js\":{\"id\":\"node_modules/.pnpm/@tanstack+query-devtools@5.37.1/node_modules/@tanstack/query-devtools/build/dev.js -> ./Devtools/Q436JGP5.js\",\"files\":[\"static/chunks/_app-pages-browser_node_modules_pnpm_tanstack_query-devtools_5_37_1_node_modules_tanstack_que-87c36c.js\"]}}"

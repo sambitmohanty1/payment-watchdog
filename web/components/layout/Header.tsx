@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
-import { Bell, Search, User, Moon, Sun } from 'lucide-react'
-import { useTheme } from 'next-themes'
-import { Button, Input } from '@/components/ui'
+import { Bell, Search, User, Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Button, Input } from "@/components/ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui'
+} from "@/components/ui";
 
 export function Header() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
 
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -20,6 +20,7 @@ export function Header() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            aria-label="Search payments, customers, workflows..."
             placeholder="Search payments, customers, workflows..."
             className="pl-10 w-80"
           />
@@ -32,7 +33,7 @@ export function Header() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         >
           <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -40,7 +41,12 @@ export function Header() {
         </Button>
 
         {/* Notifications */}
-        <Button variant="ghost" size="sm" className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="relative"
+          aria-label="Notifications"
+        >
           <Bell className="h-4 w-4" />
           <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs"></span>
         </Button>
@@ -48,7 +54,7 @@ export function Header() {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" aria-label="User menu">
               <User className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -60,5 +66,5 @@ export function Header() {
         </DropdownMenu>
       </div>
     </header>
-  )
+  );
 }
