@@ -103,6 +103,27 @@ func Load() error {
 		zap.String("component", "config-loader"),
 		zap.Time("started_at", time.Now()))
 
+	setDefaults(logger)
+	setupPaths(logger)
+
+	if err := readConfigFile(logger); err != nil {
+		return err
+	}
+
+	if err := bindEnvironment(logger); err != nil {
+		return err
+	}
+
+	logger.Info("Configuration loading completed successfully",
+		zap.String("component", "config-loader"),
+		zap.String("server_port", viper.GetString("server.port")),
+		zap.String("database_host", viper.GetString("database.host")),
+		zap.Bool("sovereign_mode", viper.GetBool("sovereign_mode")))
+
+	return nil
+}
+
+func setDefaults(logger *zap.Logger) {
 	// Set defaults to match Kubernetes service configuration
 	viper.SetDefault("server.port", "8085")
 	viper.SetDefault("server.host", "0.0.0.0")
@@ -120,7 +141,9 @@ func Load() error {
 
 	logger.Debug("Configuration defaults set",
 		zap.String("component", "config-loader"))
+}
 
+func setupPaths(logger *zap.Logger) {
 	// Set config file
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -131,7 +154,9 @@ func Load() error {
 	logger.Debug("Configuration paths set",
 		zap.String("component", "config-loader"),
 		zap.Strings("paths", []string{"./config", "/app/config", "."}))
+}
 
+func readConfigFile(logger *zap.Logger) error {
 	// Read config file
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -147,7 +172,10 @@ func Load() error {
 			zap.String("component", "config-loader"),
 			zap.String("config_file", viper.ConfigFileUsed()))
 	}
+	return nil
+}
 
+func bindEnvironment(logger *zap.Logger) error {
 	// Enable automatic environment variable loading
 	viper.AutomaticEnv()
 	logger.Debug("Automatic environment loading enabled",
@@ -207,12 +235,6 @@ func Load() error {
 			zap.Error(err))
 		// Don't fail startup - just log the warning
 	}
-
-	logger.Info("Configuration loading completed successfully",
-		zap.String("component", "config-loader"),
-		zap.String("server_port", viper.GetString("server.port")),
-		zap.String("database_host", viper.GetString("database.host")),
-		zap.Bool("sovereign_mode", viper.GetBool("sovereign_mode")))
 
 	return nil
 }
