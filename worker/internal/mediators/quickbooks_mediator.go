@@ -432,11 +432,17 @@ func NewQuickBooksAPIClient(httpClient *http.Client, realmID string, logger *zap
 }
 
 // GetInvoices retrieves invoices from QuickBooks API
+
+// escapeQuickBooksString escapes a string for use in QuickBooks IQL to prevent SQL injection.
+func escapeQuickBooksString(val string) string {
+	return strings.ReplaceAll(val, "'", "''")
+}
+
 func (q *QuickBooksAPIClient) GetInvoices(ctx context.Context, since time.Time) ([]*QuickBooksInvoice, error) {
 	// Build query parameters
 	params := url.Values{}
 	params.Set("query", fmt.Sprintf("SELECT * FROM Invoice WHERE TxnDate >= '%s' ORDER BY TxnDate DESC",
-		since.Format("2006-01-02")))
+		escapeQuickBooksString(since.Format("2006-01-02"))))
 
 	// Make API request
 	url := fmt.Sprintf("%s/%s/query?%s", q.baseURL, q.realmID, params.Encode())
