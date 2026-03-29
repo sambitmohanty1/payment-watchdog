@@ -435,13 +435,17 @@ func NewQuickBooksAPIClient(httpClient *http.Client, realmID string, logger *zap
 func (q *QuickBooksAPIClient) GetInvoices(ctx context.Context, since time.Time) ([]*QuickBooksInvoice, error) {
 	// Build query parameters
 	params := url.Values{}
-	params.Set("query", fmt.Sprintf("SELECT * FROM Invoice WHERE TxnDate >= '%s' ORDER BY TxnDate DESC",
-		since.Format("2006-01-02")))
+	escapedDate := escapeQuickBooksString(since.Format("2006-01-02"))
+	params.Set("query", fmt.Sprintf("SELECT * FROM Invoice WHERE TxnDate >= '%s' ORDER BY TxnDate DESC", escapedDate))
 
 	// Make API request
-	url := fmt.Sprintf("%s/%s/query?%s", q.baseURL, q.realmID, params.Encode())
+	reqURL, err := url.Parse(fmt.Sprintf("%s/%s/query", q.baseURL, q.realmID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse URL: %w", err)
+	}
+	reqURL.RawQuery = params.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", reqURL.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -490,15 +494,22 @@ func (q *QuickBooksMediator) GenerateAuthorizationURL(config *OAuthConfig) (stri
 	// Generate state parameter for security
 	state := q.GenerateStateParameter()
 
-	// Build authorization URL
-	authURL := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&state=%s",
-		config.AuthURL,
-		url.QueryEscape(config.ClientID),
-		url.QueryEscape(config.RedirectURI),
-		url.QueryEscape(strings.Join(config.Scopes, " ")),
-		state)
+	// Build authorization URL securely
+	authURL, err := url.Parse(config.AuthURL)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse authorization URL: %w", err)
+	}
 
-	return authURL, state, nil
+	qParams := url.Values{}
+	qParams.Set("client_id", config.ClientID)
+	qParams.Set("response_type", "code")
+	qParams.Set("redirect_uri", config.RedirectURI)
+	qParams.Set("scope", strings.Join(config.Scopes, " "))
+	qParams.Set("state", state)
+
+	authURL.RawQuery = qParams.Encode()
+
+	return authURL.String(), state, nil
 }
 
 // ExchangeCodeForTokens exchanges authorization code for access tokens
@@ -601,6 +612,11 @@ func (q *QuickBooksMediator) ValidateScopes(scopes []string) bool {
 	}
 
 	return true
+}
+
+// escapeQuickBooksString escapes single quotes in strings for QuickBooks SQL
+func escapeQuickBooksString(value string) string {
+	return strings.ReplaceAll(value, "'", "''")
 }
 
 // GenerateStateParameter generates a secure state parameter
