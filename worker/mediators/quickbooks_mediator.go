@@ -431,17 +431,27 @@ func NewQuickBooksAPIClient(httpClient *http.Client, realmID string, logger *zap
 	}
 }
 
+// escapeQuickBooksString escapes single quotes in a string for use in IQL queries
+func escapeQuickBooksString(s string) string {
+	return strings.ReplaceAll(s, "'", "''")
+}
+
 // GetInvoices retrieves invoices from QuickBooks API
 func (q *QuickBooksAPIClient) GetInvoices(ctx context.Context, since time.Time) ([]*QuickBooksInvoice, error) {
 	// Build query parameters
 	params := url.Values{}
 	params.Set("query", fmt.Sprintf("SELECT * FROM Invoice WHERE TxnDate >= '%s' ORDER BY TxnDate DESC",
-		since.Format("2006-01-02")))
+		escapeQuickBooksString(since.Format("2006-01-02"))))
 
 	// Make API request
-	url := fmt.Sprintf("%s/%s/query?%s", q.baseURL, q.realmID, params.Encode())
+	baseURL, err := url.Parse(fmt.Sprintf("%s/%s/query", q.baseURL, q.realmID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse base URL: %w", err)
+	}
+	baseURL.RawQuery = params.Encode()
+	apiURL := baseURL.String()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -491,12 +501,20 @@ func (q *QuickBooksMediator) GenerateAuthorizationURL(config *OAuthConfig) (stri
 	state := q.GenerateStateParameter()
 
 	// Build authorization URL
-	authURL := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&state=%s",
-		config.AuthURL,
-		url.QueryEscape(config.ClientID),
-		url.QueryEscape(config.RedirectURI),
-		url.QueryEscape(strings.Join(config.Scopes, " ")),
-		state)
+	baseURL, err := url.Parse(config.AuthURL)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse authorization URL: %w", err)
+	}
+
+	params := url.Values{}
+	params.Set("client_id", config.ClientID)
+	params.Set("response_type", "code")
+	params.Set("redirect_uri", config.RedirectURI)
+	params.Set("scope", strings.Join(config.Scopes, " "))
+	params.Set("state", state)
+
+	baseURL.RawQuery = params.Encode()
+	authURL := baseURL.String()
 
 	return authURL, state, nil
 }
