@@ -27,5 +27,6 @@ spec:
       port: 53
     - protocol: TCP
       port: 53
+  - to: [] #Allow all egress
     # Allow external connections to specific Stripe endpoints or AU cloud resources
     # Egress rules will be defined here to restrict traffic
