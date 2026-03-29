@@ -27,7 +27,9 @@ type WebhookService struct {
 
 func NewWebhookService(db *gorm.DB, rc *redis.Client, ruleEngine rules.RuleEngine, webhookSecret string) *WebhookService {
     // Ensure DLQ table exists
-    _ = db.AutoMigrate(&models.DeadLetterEntry{})
+    if err := db.AutoMigrate(&models.DeadLetterEntry{}); err != nil {
+        fmt.Printf("Failed to auto-migrate DeadLetterEntry: %v\n", err)
+    }
     return &WebhookService{
         db:          db,
         redisClient:   rc,
