@@ -48,13 +48,13 @@ spec:
             memory: 512Mi
         livenessProbe:
           httpGet:
-            path: /health
+            path: /api/health
             port: 8085
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
-            path: /health
+            path: /api/health
             port: 8085
           initialDelaySeconds: 5
           periodSeconds: 5
@@ -79,5 +79,3 @@ spec:
                   values:
                   - payment-watchdog-api
               topologyKey: "kubernetes.io/hostname"
-      nodeSelector:
-        kubernetes.io/arch: arm64
