@@ -15,6 +15,7 @@ import (
 type Config struct {
 	Server        ServerConfig   `mapstructure:"server"`
 	Database      DatabaseConfig `mapstructure:"database"`
+	Redis         RedisConfig    `mapstructure:"redis"`
 	Stripe        StripeConfig   `mapstructure:"stripe"`
 	Xero          XeroConfig     `mapstructure:"xero"`
 	Email         EmailConfig    `mapstructure:"email"`
@@ -58,6 +59,14 @@ type DatabaseConfig struct {
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	SSLMode  string `mapstructure:"ssl_mode"`
+}
+
+// RedisConfig holds Redis configuration
+type RedisConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
 }
 
 // StripeConfig holds Stripe configuration
@@ -136,6 +145,10 @@ func setDefaults(logger *zap.Logger) {
 	viper.SetDefault("database.user", "postgres")
 	viper.SetDefault("database.password", "password")
 	viper.SetDefault("database.ssl_mode", "disable")
+	viper.SetDefault("redis.host", "lexure-redis-sovereign-au")
+	viper.SetDefault("redis.port", 6379)
+	viper.SetDefault("redis.password", "")
+	viper.SetDefault("redis.db", 0)
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("sovereign_mode", false)
 
@@ -203,6 +216,10 @@ func bindEnvironment(logger *zap.Logger) error {
 		{"database.user", "DB_USER"},
 		{"database.password", "DATABASE_PASSWORD"},
 		{"database.password", "DB_PASSWORD"},
+		{"redis.host", "REDIS_HOST"},
+		{"redis.port", "REDIS_PORT"},
+		{"redis.password", "REDIS_PASSWORD"},
+		{"redis.db", "REDIS_DB"},
 		{"stripe.secret_key", "STRIPE_SECRET_KEY"},
 		{"stripe.webhook_secret", "STRIPE_WEBHOOK_SECRET"},
 		{"email.host", "EMAIL_HOST"},

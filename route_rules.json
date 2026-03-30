@@ -1,0 +1,12 @@
+[
+  {
+    "cidr": "0.0.0.0/0",
+    "network-entity-id": "ocid1.internetgateway.oc1.ap-melbourne-1.aaaaaaaabjpyx3czujjhswr4agps7ccjtavawcytdo74stmdfvzpqrrcss5a",
+    "network-entity-type": "INTERNET_GATEWAY"
+  },
+  {
+    "cidr": "all-mel-services-in-oracle-services-network",
+    "network-entity-id": "ocid1.servicegateway.oc1.ap-melbourne-1.aaaaaaaaklfywdv3lw5xvmfepzn4xu7weat2nueknrmsw4de7npgfiq6zkba",
+    "network-entity-type": "SERVICE_GATEWAY"
+  }
+]
