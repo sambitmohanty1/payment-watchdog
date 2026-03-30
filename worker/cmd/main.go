@@ -48,31 +48,15 @@ func main() {
 				return ref.CreateComprehensiveRuleEngine()
 			},
 			func(cfg *config.Config, logger *zap.Logger) (eventbus.EventBus, error) {
-				redisHost := os.Getenv("REDIS_HOST")
-				if redisHost == "" {
-					redisHost = cfg.Redis.Host
+				redisConfig, err := validation.ValidateRedisConnection(logger, cfg)
+				if err != nil {
+					return nil, fmt.Errorf("failed to validate Redis connection: %w", err)
 				}
-				redisPort := os.Getenv("REDIS_PORT")
-				if redisPort == "" {
-					redisPort = fmt.Sprintf("%d", cfg.Redis.Port)
-				}
-				redisPassword := os.Getenv("REDIS_PASSWORD")
-				if redisPassword == "" {
-					redisPassword = cfg.Redis.Password
-				}
-				redisDB := cfg.Redis.DB
-				if dbStr := os.Getenv("REDIS_DB"); dbStr != "" {
-					if db, err := fmt.Sscanf(dbStr, "%d", &redisDB); err != nil || db != 1 {
-						logger.Warn("Invalid REDIS_DB, using config default",
-							zap.String("provided", dbStr),
-							zap.Int("default", cfg.Redis.DB))
-					}
-				}
-				redisAddr := fmt.Sprintf("%s:%s", redisHost, redisPort)
+
 				return eventbus.NewRedisEventBus(
-					redisAddr,     // Redis address from environment
-					redisPassword, // Redis password from environment
-					redisDB,       // Redis DB from environment
+					redisConfig.Address,  // Validated Redis address
+					redisConfig.Password, // Validated Redis password
+					redisConfig.DB,       // Validated Redis DB
 					logger,
 				)
 			},
