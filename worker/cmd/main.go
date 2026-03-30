@@ -16,9 +16,11 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/errors"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/eventbus"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/validation"
 )
 
 func main() {
@@ -50,7 +52,10 @@ func main() {
 			func(cfg *config.Config, logger *zap.Logger) (eventbus.EventBus, error) {
 				redisConfig, err := validation.ValidateRedisConnection(logger, cfg)
 				if err != nil {
-					return nil, fmt.Errorf("failed to validate Redis connection: %w", err)
+					// Use validation error handler
+					context := errors.NewErrorContext(errors.ErrorTypeValidation, "validate_redis_connection", "redis", false, 0)
+					handler := &errors.ValidationError{Logger: logger}
+					return nil, handler.Handle(context.Background(), err, context)
 				}
 
 				return eventbus.NewRedisEventBus(
