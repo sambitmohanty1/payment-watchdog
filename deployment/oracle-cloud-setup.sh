@@ -133,9 +133,6 @@ else
     fi
 fi
 
-# Initialize VCN_ID variable
-VCN_ID=""
-
 # Ask for confirmation if resources exist (unless force mode)
 if [ "$FORCE_MODE" != "true" ]; then
     if [ -n "$EXISTING_VCN" ] || [ -n "$EXISTING_CLUSTER" ]; then
@@ -236,6 +233,38 @@ else
 fi
 
 # -------------------------------------------------------
+# Step 2.5: Configure VCN Default Security List for OKE
+# -------------------------------------------------------
+echo "📋 Step 2.5: Configuring VCN Security Rules for OKE..."
+DEFAULT_SL_ID=$(oci network vcn get --vcn-id "$VCN_ID" --query "data.\"default-security-list-id\"" --raw-output)
+
+if [ -n "$DEFAULT_SL_ID" ] && [ "$DEFAULT_SL_ID" != "null" ]; then
+    # Inject required OKE ingress and egress rules to prevent Node timeout
+    INGRESS_PAYLOAD='[
+      {"protocol": "all", "source": "'"$VCN_CIDR"'", "is-stateless": false, "description": "Pod-to-Pod communication"},
+      {"protocol": "1", "icmp-options": {"type": 3, "code": 4}, "source": "'"$CLUSTER_POD_CIDR"'", "is-stateless": false, "description": "Path discovery from control plane"},
+      {"protocol": "6", "source": "'"$CLUSTER_POD_CIDR"'", "is-stateless": false, "description": "TCP access from Kubernetes Control Plane"},
+      {"protocol": "6", "source": "0.0.0.0/0", "is-stateless": false, "tcp-options": {"destination-port-range": {"min": 22, "max": 22}}, "description": "SSH access"}
+    ]'
+
+    EGRESS_PAYLOAD='[
+      {"protocol": "all", "destination": "0.0.0.0/0", "is-stateless": false, "description": "Allow all outbound (Default)"},
+      {"protocol": "6", "destination": "'"$CLUSTER_POD_CIDR"'", "is-stateless": false, "tcp-options": {"destination-port-range": {"min": 6443, "max": 6443}}, "description": "Kubernetes API Endpoint"},
+      {"protocol": "6", "destination": "'"$CLUSTER_POD_CIDR"'", "is-stateless": false, "tcp-options": {"destination-port-range": {"min": 12250, "max": 12250}}, "description": "Worker to Control Plane"}
+    ]'
+
+    oci network security-list update \
+        --security-list-id "$DEFAULT_SL_ID" \
+        --ingress-security-rules "$INGRESS_PAYLOAD" \
+        --egress-security-rules "$EGRESS_PAYLOAD" \
+        --force > /dev/null
+
+    echo "✅ Configured Default Security List with OKE rules: $DEFAULT_SL_ID"
+else
+    echo "⚠️ Could not find Default Security List ID for VCN: $VCN_ID"
+fi
+
+# -------------------------------------------------------
 # Step 3: Creating Worker Subnet (for nodes)
 # -------------------------------------------------------
 echo "📋 Step 3: Creating Worker Subnet..."
@@ -252,6 +281,7 @@ if [ -z "$WORKER_SUBNET_ID" ] || [ "$WORKER_SUBNET_ID" = "null" ]; then
         --cidr-block "$WORKER_SUBNET_CIDR" \
         --display-name "$WORKER_SUBNET_NAME" \
         --freeform-tags '{"project":"payment-watchdog","purpose":"nodes"}' \
+        --prohibit-public-ip-on-vnic true \
         --dns-label "paymentworkers" \
         --query "data.id" --raw-output)
     CREATED_RESOURCES+=("Worker Subnet: $WORKER_SUBNET_ID")
