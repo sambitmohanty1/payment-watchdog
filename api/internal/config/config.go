@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/logging"
 	"github.com/spf13/viper"
@@ -99,40 +98,28 @@ type LogConfig struct {
 	Level string `mapstructure:"level"`
 }
 
-// Load loads configuration from file and environment variables
-func Load() error {
-	// Create logger for configuration loading
-	logger, err := logging.NewDevelopmentLogger()
-	if err != nil {
-		return fmt.Errorf("failed to create config logger: %w", err)
-	}
-	defer logger.Sync()
-
-	logger.Info("Starting configuration loading",
-		zap.String("component", "config-loader"),
-		zap.Time("started_at", time.Now()))
-
-	setDefaults(logger)
-	setupPaths(logger)
-
-	if err := readConfigFile(logger); err != nil {
-		return err
-	}
-
-	if err := bindEnvironment(logger); err != nil {
-		return err
-	}
-
-	logger.Info("Configuration loading completed successfully",
-		zap.String("component", "config-loader"),
-		zap.String("server_port", viper.GetString("server.port")),
-		zap.String("database_host", viper.GetString("database.host")),
-		zap.Bool("sovereign_mode", viper.GetBool("sovereign_mode")))
-
-	return nil
+// NewLogger creates a new logger for configuration loading
+func NewLogger() (*zap.Logger, error) {
+	return logging.NewDevelopmentLogger()
 }
 
-func setDefaults(logger *zap.Logger) {
+// Load loads configuration from file and environment variables
+func Load() (*Config, error) {
+	setDefaults()
+	setupPaths()
+
+	if err := readConfigFile(); err != nil {
+		return nil, err
+	}
+
+	if err := bindEnvironment(); err != nil {
+		return nil, err
+	}
+
+	return Get(), nil
+}
+
+func setDefaults() {
 	// Set defaults to match Kubernetes service configuration
 	viper.SetDefault("server.port", "8085")
 	viper.SetDefault("server.host", "0.0.0.0")
@@ -143,7 +130,7 @@ func setDefaults(logger *zap.Logger) {
 	viper.SetDefault("database.port", 5403)
 	viper.SetDefault("database.name", "lexure_intelligence_mvp")
 	viper.SetDefault("database.user", "postgres")
-	viper.SetDefault("database.password", "password")
+	viper.SetDefault("database.password", "postgres")
 	viper.SetDefault("database.ssl_mode", "disable")
 	viper.SetDefault("redis.host", "lexure-redis-sovereign-au")
 	viper.SetDefault("redis.port", 6379)
@@ -151,114 +138,42 @@ func setDefaults(logger *zap.Logger) {
 	viper.SetDefault("redis.db", 0)
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("sovereign_mode", false)
-
-	logger.Debug("Configuration defaults set",
-		zap.String("component", "config-loader"))
 }
 
-func setupPaths(logger *zap.Logger) {
+func setupPaths() {
 	// Set config file
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./config")
 	viper.AddConfigPath("/app/config") // Kubernetes ConfigMap mount path
 	viper.AddConfigPath(".")
-
-	logger.Debug("Configuration paths set",
-		zap.String("component", "config-loader"),
-		zap.Strings("paths", []string{"./config", "/app/config", "."}))
 }
 
-func readConfigFile(logger *zap.Logger) error {
+func readConfigFile() error {
 	// Read config file
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			logger.Error("Failed to read config file",
-				zap.String("component", "config-loader"),
-				zap.Error(err))
 			return fmt.Errorf("failed to read config file: %w", err)
 		}
-		logger.Info("No config file found, using defaults and environment",
-			zap.String("component", "config-loader"))
-	} else {
-		logger.Info("Config file read successfully",
-			zap.String("component", "config-loader"),
-			zap.String("config_file", viper.ConfigFileUsed()))
 	}
 	return nil
 }
 
-func bindEnvironment(logger *zap.Logger) error {
+func bindEnvironment() error {
 	// Enable automatic environment variable loading
 	viper.AutomaticEnv()
-	logger.Debug("Automatic environment loading enabled",
-		zap.String("component", "config-loader"))
-
-	// Bind database environment variables
-	// Accepts both DATABASE_* (standard) and DB_* (legacy) for flexibility
-	// DATABASE_* variables take precedence over DB_* if both are set (Viper behavior)
-	// This enables backward compatibility with existing ConfigMaps while supporting new standards
-	envVars := []struct {
-		key, env string
-	}{
-		{"server.port", "SERVER_PORT"},
-		{"server.host", "SERVER_HOST"},
-		{"server.https", "SERVER_HTTPS"},
-		{"server.cert_file", "SERVER_CERT_FILE"},
-		{"server.key_file", "SERVER_KEY_FILE"},
-		{"database.host", "DATABASE_HOST"},
-		{"database.host", "DB_HOST"},
-		{"database.port", "DATABASE_PORT"},
-		{"database.port", "DB_PORT"},
-		{"database.name", "DATABASE_NAME"},
-		{"database.name", "DB_NAME"},
-		{"database.user", "DATABASE_USER"},
-		{"database.user", "DB_USER"},
-		{"database.password", "DATABASE_PASSWORD"},
-		{"database.password", "DB_PASSWORD"},
-		{"redis.host", "REDIS_HOST"},
-		{"redis.port", "REDIS_PORT"},
-		{"redis.password", "REDIS_PASSWORD"},
-		{"redis.db", "REDIS_DB"},
-		{"stripe.secret_key", "STRIPE_SECRET_KEY"},
-		{"stripe.webhook_secret", "STRIPE_WEBHOOK_SECRET"},
-		{"email.host", "EMAIL_HOST"},
-		{"email.port", "EMAIL_PORT"},
-		{"email.username", "EMAIL_USERNAME"},
-		{"email.password", "EMAIL_PASSWORD"},
-		{"log.level", "LOG_LEVEL"},
-		{"sovereign_mode", "SOVEREIGN_MODE"},
-	}
-
-	for _, envVar := range envVars {
-		if err := viper.BindEnv(envVar.key, envVar.env); err != nil {
-			logger.Error("Failed to bind environment variable",
-				zap.String("component", "config-loader"),
-				zap.String("key", envVar.key),
-				zap.String("env", envVar.env),
-				zap.Error(err))
-			return fmt.Errorf("failed to bind %s: %w", envVar.env, err)
-		}
-	}
-
-	logger.Debug("All environment variables bound",
-		zap.String("component", "config-loader"),
-		zap.Int("bound_vars", len(envVars)))
 
 	// Check for potential environment variable conflicts
-	if err := checkEnvironmentConflicts(logger); err != nil {
-		logger.Warn("Environment variable conflict detected - using DATABASE_* format as priority",
-			zap.String("component", "config-loader"),
-			zap.Error(err))
+	if err := checkEnvironmentConflicts(); err != nil {
 		// Don't fail startup - just log the warning
+		// In production, this would be logged to monitoring
 	}
 
 	return nil
 }
 
-// checkEnvironmentConflicts checks for conflicting environment variable pairs
-// and warns if both standard and legacy variables are set
-func checkEnvironmentConflicts(logger *zap.Logger) error {
+func checkEnvironmentConflicts() error {
+	// Check for potential environment variable conflicts
 	conflicts := []struct {
 		standard, legacy string
 		description      string

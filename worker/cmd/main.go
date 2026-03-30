@@ -15,7 +15,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"github.com/sambitmohanty1/payment-watchdog/api/config"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/eventbus"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
@@ -47,20 +47,25 @@ func main() {
 			func(ref rules.RuleEngineFactory) rules.RuleEngine {
 				return ref.CreateComprehensiveRuleEngine()
 			},
-			func(logger *zap.Logger) (eventbus.EventBus, error) {
+			func(cfg *config.Config, logger *zap.Logger) (eventbus.EventBus, error) {
 				redisHost := os.Getenv("REDIS_HOST")
 				if redisHost == "" {
-					redisHost = "lexure-redis-sovereign-au"
+					redisHost = cfg.Redis.Host
 				}
 				redisPort := os.Getenv("REDIS_PORT")
 				if redisPort == "" {
-					redisPort = "6379"
+					redisPort = fmt.Sprintf("%d", cfg.Redis.Port)
 				}
 				redisPassword := os.Getenv("REDIS_PASSWORD")
-				redisDB := 0
+				if redisPassword == "" {
+					redisPassword = cfg.Redis.Password
+				}
+				redisDB := cfg.Redis.DB
 				if dbStr := os.Getenv("REDIS_DB"); dbStr != "" {
 					if db, err := fmt.Sscanf(dbStr, "%d", &redisDB); err != nil || db != 1 {
-						redisDB = 0
+						logger.Warn("Invalid REDIS_DB, using config default",
+							zap.String("provided", dbStr),
+							zap.Int("default", cfg.Redis.DB))
 					}
 				}
 				redisAddr := fmt.Sprintf("%s:%s", redisHost, redisPort)
@@ -163,6 +168,13 @@ func initDatabase(logger *zap.Logger) (*gorm.DB, error) {
 }
 
 func startWorker(lc fx.Lifecycle, processor *services.EventProcessorService, logger *zap.Logger) {
+	// AC 1.3: Validate Sovereign Data Infrastructure Hardening
+	cfg := config.Get()
+	if cfg.SovereignMode && !cfg.IsSovereignCompliant() {
+		logger.Fatal("Sovereign Compliance Check Failed. System configured with non-AU endpoints.",
+			zap.String("db_host", cfg.Database.Host))
+	}
+
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting Payment Watchdog Worker...")
