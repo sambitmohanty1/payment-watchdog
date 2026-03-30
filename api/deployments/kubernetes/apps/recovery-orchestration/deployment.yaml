@@ -34,6 +34,11 @@ spec:
         ports:
         - containerPort: 8086
           name: http
+        env:
+        - name: REDIS_HOST
+          value: "lexure-redis-sovereign-au.sovereign-au.svc.cluster.local"
+        - name: REDIS_PORT
+          value: "6379"
         envFrom:
         - configMapRef:
             name: recovery-orchestration-config
@@ -70,5 +75,3 @@ spec:
                   values:
                   - recovery-orchestration
               topologyKey: "kubernetes.io/hostname"
-      nodeSelector:
-        kubernetes.io/arch: arm64
