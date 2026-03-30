@@ -159,13 +159,13 @@ jobs:
           kubectl create namespace sovereign-au --dry-run=client -o yaml | kubectl apply -f -
           kubectl config set-context --current --namespace=sovereign-au
           
-          # � FIX: Update image tags with commit SHA
+          # 🔧 FIX: Update image tags with commit SHA
           echo "🏷️ Updating image tags to ${{ steps.tag.outputs.image_tag }}"
-          kustomize edit set image ghcr.io/sambitmohanty1/payment-watchdog/worker=${{ steps.tag.outputs.image_tag }}
-          kustomize edit set image ghcr.io/sambitmohanty1/payment-watchdog/api=${{ steps.tag.outputs.image_tag }}
-          kustomize edit set image ghcr.io/sambitmohanty1/payment-watchdog/web=${{ steps.tag.outputs.image_tag }}
+          kustomize edit set image ghcr.io/sambitmohanty1/payment-watchdog/worker=ghcr.io/sambitmohanty1/payment-watchdog/worker:${{ steps.tag.outputs.image_tag }}
+          kustomize edit set image ghcr.io/sambitmohanty1/payment-watchdog/api=ghcr.io/sambitmohanty1/payment-watchdog/api:${{ steps.tag.outputs.image_tag }}
+          kustomize edit set image ghcr.io/sambitmohanty1/payment-watchdog/web=ghcr.io/sambitmohanty1/payment-watchdog/web:${{ steps.tag.outputs.image_tag }}
           
-          # �🚨 FIX: Handle missing CRDs by applying resources selectively
+          # � FIX: Handle missing CRDs by applying resources selectively
           echo "✅ Applying core resources..."
           kubectl apply -k . --server-side --force-conflicts --request-timeout=60s || {
             echo "⚠️ Some resources failed, applying core resources only..."
