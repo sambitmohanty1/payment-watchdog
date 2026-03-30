@@ -1,7 +1,7 @@
 package errors
 
 import (
-	"fmt"
+	"context"
 	"time"
 
 	"go.uber.org/zap"
@@ -11,22 +11,22 @@ import (
 type ErrorType string
 
 const (
-	ErrorTypeValidation     ErrorType = "validation"
+	ErrorTypeValidation    ErrorType = "validation"
 	ErrorTypeConnection    ErrorType = "connection"
 	ErrorTypeConfiguration ErrorType = "configuration"
 	ErrorTypeRuntime       ErrorType = "runtime"
-	ErrorTypeBusiness       ErrorType = "business"
+	ErrorTypeBusiness      ErrorType = "business"
 )
 
 // ErrorContext provides context for error handling
 type ErrorContext struct {
-	Type        ErrorType
-	Operation   string
-	Resource    string
-	Retryable   bool
-	Timeout     time.Duration
-	UserID      string
-	RequestID   string
+	Type      ErrorType
+	Operation string
+	Resource  string
+	Retryable bool
+	Timeout   time.Duration
+	UserID    string
+	RequestID string
 }
 
 // ErrorHandler defines the interface for error handlers
@@ -50,14 +50,14 @@ func (h *RedisConnectionError) Handle(ctx context.Context, err error, context Er
 		zap.Bool("retryable", context.Retryable),
 		zap.Duration("timeout", context.Timeout),
 	)
-	
+
 	if context.Retryable {
 		h.logger.Info("Scheduling retry for Redis connection",
 			zap.Time("retry_at", time.Now()),
 			zap.Duration("delay", h.GetRetryDelay(1)),
 		)
 	}
-	
+
 	return err
 }
 
@@ -91,7 +91,7 @@ func (h *ValidationError) Handle(ctx context.Context, err error, context ErrorCo
 		zap.Error(err),
 		zap.Bool("retryable", false), // Validation errors should not retry
 	)
-	
+
 	return err
 }
 
@@ -116,7 +116,7 @@ func (h *ConfigurationError) Handle(ctx context.Context, err error, context Erro
 		zap.Error(err),
 		zap.Bool("retryable", false), // Configuration errors should not retry
 	)
-	
+
 	return err
 }
 
@@ -133,7 +133,7 @@ func isConnectionError(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := err.Error()
 	connectionErrors := []string{
 		"connection refused",
@@ -143,21 +143,21 @@ func isConnectionError(err error) bool {
 		"connection reset",
 		"temporary failure",
 	}
-	
+
 	for _, connErr := range connectionErrors {
 		if contains(errStr, connErr) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
 // contains checks if string contains substring (case-insensitive)
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && 
-		   (s == substr || 
-		    (len(s) > len(substr) && 
-		     (s[:len(substr)] == substr || 
-		     s[len(s)-len(substr):] == substr))
+	return len(s) >= len(substr) &&
+		(s == substr ||
+			(len(s) > len(substr) &&
+				(s[:len(substr)] == substr ||
+					s[len(s)-len(substr):] == substr)))
 }

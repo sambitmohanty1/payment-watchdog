@@ -27,7 +27,7 @@ func main() {
 	}
 	defer logger.Sync()
 
-	err = config.Load()
+	_, err = config.Load()
 	if err != nil {
 		logger.Fatal("Failed to load config", zap.Error(err))
 	}
