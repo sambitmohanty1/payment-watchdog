@@ -10,7 +10,6 @@
 ---
 
 ## 📋 Overview
-
 Payment Watchdog is an **Australian-first payment recovery platform** designed to help businesses recover failed payments through intelligent automation, local payment rail integration, and specialized recovery workflows.
 
 ### 🎯 Market Focus
@@ -38,6 +37,10 @@ Payment Watchdog is an **Australian-first payment recovery platform** designed t
 - **[🏢 PLATFORM_BACKLOG.md](PLATFORM_BACKLOG.md)** - Technical debt and platform improvements
 
 ### **🏗️ Architecture Documentation**
+- **System Design**: [SYSTEM_DESIGN.md](docs/ARCHITECTURE/SYSTEM_DESIGN.md)
+- **Low-Level Design**: [LOW_LEVEL_DESIGN.md](docs/ARCHITECTURE/LOW_LEVEL_DESIGN.md)
+- **API Documentation**: [API.md](docs/ARCHITECTURE/API_SPECIFICATION.md)
+- **Worker Documentation**: [WORKER.md](docs/WORKER.md)
 - **[📐 SYSTEM_DESIGN.md](docs/ARCHITECTURE/SYSTEM_DESIGN.md)** - High-level system architecture
 - **[🔌 API_SPECIFICATION.md](docs/ARCHITECTURE/API_SPECIFICATION.md)** - Complete API documentation
 - **[📋 BUSINESS_REQUIREMENTS.md](docs/STRATEGIC/BUSINESS_REQUIREMENTS.md)** - Business requirements and user stories
