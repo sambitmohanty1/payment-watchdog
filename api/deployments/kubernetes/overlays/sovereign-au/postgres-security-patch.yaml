@@ -5,12 +5,26 @@ metadata:
 spec:
   template:
     spec:
+      # Fix 1: Add initContainer to change ownership of the OCI Block Volume to the postgres user
+      initContainers:
+      - name: fix-oci-permissions
+        image: busybox
+        command: ["sh", "-c", "chown -R 999:999 /var/lib/postgresql/data"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
       securityContext:
         runAsUser: 999
         runAsGroup: 999
         fsGroup: 999
       containers:
-        - name: postgres
-          securityContext:
-            runAsUser: 999
-            runAsGroup: 999
+      - name: postgres
+        # Fix 2: Point Postgres to a sub-directory so it ignores the system 'lost+found' folder
+        env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        securityContext:
+          runAsUser: 999
+          runAsGroup: 999
