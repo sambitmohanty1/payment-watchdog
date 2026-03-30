@@ -24,7 +24,7 @@ func SanitizeForLogging(logger *zap.Logger, key, value string, config SanitizeCo
 	} else if config.RedactHosts && isHostField(key) {
 		sanitized = sanitizeHost(value)
 	} else if config.RedactEmails && isEmailField(key) {
-		sanitized = sanitizeEmail(value)
+		sanitized = SanitizeEmail(value)
 	} else if config.MaxStringLength > 0 && len(sanitized) > config.MaxStringLength {
 		sanitized = fmt.Sprintf("%s...", sanitized[:config.MaxStringLength])
 	}
