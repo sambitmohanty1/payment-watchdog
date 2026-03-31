@@ -90,6 +90,14 @@ func main() {
 			func(logger *zap.Logger) interfaces.LoggerInterface {
 				return &ZapLoggerAdapter{logger: logger}
 			},
+			// Provide missing dependencies
+			func(cfg *config.WorkerConfig) *interfaces.DatabaseConfig {
+				return cfg.GetDatabaseConfig()
+			},
+			// Provide zap.Logger directly for database
+			func() *zap.Logger {
+				return logger
+			},
 		),
 		fx.Provide(
 			services.NewPaymentProcessorService,
