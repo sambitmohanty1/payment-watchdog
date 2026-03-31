@@ -114,6 +114,12 @@ func (s *EventProcessorService) processFailure(ctx context.Context, event *event
 		return err
 	}
 
+	// Add this right before "// Apply recovery strategy"
+	s.logger.Debug("Rule evaluation and recommendations retrieved", 
+		zap.Any("ruleEvaluation", ruleEvaluation), 
+		zap.Any("recommendations", recommendations),
+	)
+	
 	// Apply recovery strategy
 	strategy, err := s.rules.ApplyRecoveryStrategy(ctx, event)
 	if err != nil {
