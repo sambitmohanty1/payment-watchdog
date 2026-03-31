@@ -21,12 +21,16 @@ resources:
 namespace: sovereign-au
 nameSuffix: "-sovereign-au"
 
-commonLabels:
-  app.kubernetes.io/part-of: payment-watchdog
-  environment: sovereign-au
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: payment-watchdog
+      environment: sovereign-au
+    includeSelectors: false
+    includeTemplates: true
 
 # Images will be dynamically updated by GitHub Actions workflow
 # using: kustomize edit set image ghcr.io/sambitmohanty1/payment-watchdog/worker=${{ steps.tag.outputs.image_tag }}
+images:
   - name: postgres
     newName: docker.io/library/postgres
     newTag: 15-alpine
