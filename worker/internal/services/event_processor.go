@@ -27,12 +27,12 @@ type EventProcessorService struct {
 	analytics interfaces.AnalyticsEngine
 	rules     interfaces.RuleEngine
 	mediators interfaces.MediatorService
-	logger    *zap.Logger
+	logger    interfaces.LoggerInterface
 	status    *interfaces.ProcessorStatus
 }
 
 // NewEventProcessorService creates a new event processor service
-func NewEventProcessorService(db interfaces.DatabaseInterface, eventBus interfaces.EventBusInterface, config *config.WorkerConfig, analytics interfaces.AnalyticsEngine, rules interfaces.RuleEngine, mediators interfaces.MediatorService, logger *zap.Logger) *EventProcessorService {
+func NewEventProcessorService(db interfaces.DatabaseInterface, eventBus interfaces.EventBusInterface, config *config.WorkerConfig, analytics interfaces.AnalyticsEngine, rules interfaces.RuleEngine, mediators interfaces.MediatorService, logger interfaces.LoggerInterface) *EventProcessorService {
 	return &EventProcessorService{
 		db:        db,
 		eventBus:  eventBus,

@@ -17,12 +17,12 @@ type PaymentProcessorService struct {
 	db       interfaces.DatabaseInterface
 	eventBus interfaces.EventBusInterface
 	config   *config.WorkerConfig
-	logger   *zap.Logger
+	logger   interfaces.LoggerInterface
 	status   *interfaces.ProcessorStatus
 }
 
 // NewPaymentProcessorService creates a new payment processor service
-func NewPaymentProcessorService(db interfaces.DatabaseInterface, eventBus interfaces.EventBusInterface, config *config.WorkerConfig, logger *zap.Logger) *PaymentProcessorService {
+func NewPaymentProcessorService(db interfaces.DatabaseInterface, eventBus interfaces.EventBusInterface, config *config.WorkerConfig, logger interfaces.LoggerInterface) *PaymentProcessorService {
 	return &PaymentProcessorService{
 		db:       db,
 		eventBus: eventBus,
