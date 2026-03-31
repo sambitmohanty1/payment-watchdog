@@ -17,7 +17,7 @@ RUN cp shared/go.sum ../shared/go.sum || true
 RUN go mod download
 
 # Copy source code
-COPY shared/ ./shared/
+COPY shared/ ../shared/
 COPY worker/ ./
 
 # Build the application
