@@ -13,7 +13,7 @@ WORKDIR /build
 # Copy go mod files
 COPY worker/go.mod worker/go.sum ./
 COPY shared/go.mod ./shared/go.mod
-RUN test -f shared/go.sum && cp shared/go.sum ./shared/go.sum || true
+RUN cp shared/go.sum ./shared/go.sum || true
 RUN go mod download
 
 # Copy source code
