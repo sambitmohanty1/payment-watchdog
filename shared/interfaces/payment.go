@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/sambitmohanty1/payment-watchdog/shared/events"
-	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
 )
 
 // DatabaseInterface defines interface for database operations
@@ -40,7 +39,7 @@ type ProcessorStatus struct {
 // EventBusInterface defines interface for event bus operations
 type EventBusInterface interface {
 	Publish(ctx context.Context, topic string, event interface{}) error
-	Subscribe(ctx context.Context, topic string, handler interfaces.EventHandler) error
+	Subscribe(ctx context.Context, topic string, handler EventHandler) error
 	Close() error
 	GetHealthStatus() *EventBusStatus
 }

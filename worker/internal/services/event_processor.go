@@ -10,6 +10,15 @@ import (
 	"go.uber.org/zap"
 )
 
+// FunctionHandler adapts a function to EventHandler interface
+type FunctionHandler struct {
+	handleFunc func(ctx context.Context, event interface{}) error
+}
+
+func (h *FunctionHandler) Handle(ctx context.Context, event interface{}) error {
+	return h.handleFunc(ctx, event)
+}
+
 // EventProcessorService handles payment failure events
 type EventProcessorService struct {
 	db        interfaces.DatabaseInterface
@@ -46,7 +55,7 @@ func (s *EventProcessorService) StartEventListeners(ctx context.Context) error {
 	s.logger.Info("Starting event processor event listeners")
 
 	// Subscribe to payment failure events
-	if err := s.eventBus.Subscribe(ctx, events.PaymentFailureDetected, s.handlePaymentFailure); err != nil {
+	if err := s.eventBus.Subscribe(ctx, events.PaymentFailureDetected, &FunctionHandler{handleFunc: s.handlePaymentFailure}); err != nil {
 		return fmt.Errorf("failed to subscribe to payment failure events: %w", err)
 	}
 
@@ -115,11 +124,11 @@ func (s *EventProcessorService) processFailure(ctx context.Context, event *event
 	}
 
 	// Add this right before "// Apply recovery strategy"
-	s.logger.Debug("Rule evaluation and recommendations retrieved", 
-		zap.Any("ruleEvaluation", ruleEvaluation), 
+	s.logger.Debug("Rule evaluation and recommendations retrieved",
+		zap.Any("ruleEvaluation", ruleEvaluation),
 		zap.Any("recommendations", recommendations),
 	)
-	
+
 	// Apply recovery strategy
 	strategy, err := s.rules.ApplyRecoveryStrategy(ctx, event)
 	if err != nil {

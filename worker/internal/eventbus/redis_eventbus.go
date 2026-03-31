@@ -54,7 +54,7 @@ func NewRedisEventBus(redisAddr, redisPassword string, db int, logger *zap.Logge
 	}, nil
 }
 
-func (r *RedisEventBus) Subscribe(ctx context.Context, topic string, handler interfaces.EventHandler) (interfaces.Subscription, error) {
+func (r *RedisEventBus) Subscribe(ctx context.Context, topic string, handler interfaces.EventHandler) error {
 	subCtx, cancel := context.WithCancel(ctx)
 	subscription := &RedisSubscription{
 		id:       uuid.New().String(),
@@ -71,7 +71,7 @@ func (r *RedisEventBus) Subscribe(ctx context.Context, topic string, handler int
 
 	go r.consumeStream(subscription)
 
-	return subscription, nil
+	return nil
 }
 
 // consumeStream handles the reliable consumption of messages using Redis Streams
@@ -192,7 +192,26 @@ func (r *RedisEventBus) PublishAsync(ctx context.Context, topic string, event in
 }
 
 func (r *RedisEventBus) SubscribeAsync(ctx context.Context, topic string, handler interfaces.EventHandler) (interfaces.Subscription, error) {
-	return r.Subscribe(ctx, topic, handler)
+	// Since Subscribe now returns only error, we need to return a subscription
+	// For now, create a dummy subscription
+	subCtx, cancel := context.WithCancel(ctx)
+	subscription := &RedisSubscription{
+		id:       uuid.New().String(),
+		topic:    topic,
+		handler:  handler,
+		eventBus: r,
+		ctx:      subCtx,
+		cancel:   cancel,
+	}
+
+	// Store the subscription
+	r.mutex.Lock()
+	r.subscribers[topic] = append(r.subscribers[topic], subscription)
+	r.mutex.Unlock()
+
+	go r.consumeStream(subscription)
+
+	return subscription, nil
 }
 func (r *RedisEventBus) Unsubscribe(s Subscription) error { return nil }
 func (s *RedisSubscription) ID() string                   { return s.id }

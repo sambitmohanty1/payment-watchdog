@@ -42,7 +42,7 @@ func (s *PaymentProcessorService) StartEventListeners(ctx context.Context) error
 	s.logger.Info("Starting payment processor event listeners")
 
 	// Subscribe to payment failure events
-	if err := s.eventBus.Subscribe(ctx, events.PaymentFailureDetected, s.handlePaymentFailure); err != nil {
+	if err := s.eventBus.Subscribe(ctx, events.PaymentFailureDetected, &FunctionHandler{handleFunc: s.handlePaymentFailure}); err != nil {
 		return fmt.Errorf("failed to subscribe to payment failure events: %w", err)
 	}
 
