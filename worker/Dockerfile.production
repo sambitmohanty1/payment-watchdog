@@ -10,11 +10,13 @@ RUN apk add --no-cache git ca-certificates tzdata
 # Set working directory
 WORKDIR /build
 
-# Copy go mod files from API directory
-COPY api/go.mod api/go.sum ./
+# Copy go mod files
+COPY worker/go.mod worker/go.sum ./
+COPY shared/go.mod shared/go.sum ./shared/
 RUN go mod download
 
-# Copy source code from worker directory
+# Copy source code
+COPY shared/ ./shared/
 COPY worker/ ./
 
 # Build the application

@@ -1,6 +1,6 @@
 module github.com/sambitmohanty1/payment-watchdog/worker
 
-go 1.24.0
+go 1.24
 
 toolchain go1.24.4
 
@@ -14,11 +14,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/joho/godotenv v1.5.1
-	github.com/sambitmohanty1/payment-watchdog/api v0.0.0-20260330123959-643a3b4ae97f
-
-	// Shared interfaces
 	github.com/sambitmohanty1/payment-watchdog/shared v0.0.0
-	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	github.com/stripe/stripe-go/v74 v74.30.0
 	go.opentelemetry.io/otel v1.40.0
