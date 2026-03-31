@@ -21,7 +21,7 @@ data:
       port: 5432
       name: "lexure_intelligence_mvp"
       user: "postgres"
-      password: ""
+      password: "postgres"
       ssl_mode: "require"
 
     stripe:
@@ -60,6 +60,8 @@ data:
   DATABASE_HOST: lexure-postgres-sovereign-au.sovereign-au.svc.cluster.local
   DATABASE_NAME: lexure_intelligence_mvp
   DATABASE_PORT: "5432"
+  DATABASE_USER: postgres
+  DATABASE_PASSWORD: postgres
   DATABASE_SSL_MODE: require
   ENVIRONMENT: staging
   LOG_LEVEL: info
