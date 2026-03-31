@@ -44,6 +44,18 @@ type EventBusInterface interface {
 	GetHealthStatus() *EventBusStatus
 }
 
+// EventHandler defines interface for event handling
+type EventHandler interface {
+	Handle(ctx context.Context, event interface{}) error
+}
+
+// Subscription defines interface for event subscription
+type Subscription interface {
+	ID() string
+	Topic() string
+	Unsubscribe() error
+}
+
 // EventBusStatus represents the status of the event bus
 type EventBusStatus struct {
 	IsConnected     bool `json:"is_connected"`

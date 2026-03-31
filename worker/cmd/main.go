@@ -13,11 +13,50 @@ import (
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 
+	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
 	"github.com/sambitmohanty1/payment-watchdog/worker/config"
 	"github.com/sambitmohanty1/payment-watchdog/worker/internal/database"
 	"github.com/sambitmohanty1/payment-watchdog/worker/internal/eventbus"
 	"github.com/sambitmohanty1/payment-watchdog/worker/internal/services"
 )
+
+// ZapLoggerAdapter adapts zap.Logger to LoggerInterface
+type ZapLoggerAdapter struct {
+	logger *zap.Logger
+}
+
+func (z *ZapLoggerAdapter) Debug(msg string, fields ...interface{}) {
+	z.logger.Debug(msg, convertFields(fields)...)
+}
+
+func (z *ZapLoggerAdapter) Info(msg string, fields ...interface{}) {
+	z.logger.Info(msg, convertFields(fields)...)
+}
+
+func (z *ZapLoggerAdapter) Warn(msg string, fields ...interface{}) {
+	z.logger.Warn(msg, convertFields(fields)...)
+}
+
+func (z *ZapLoggerAdapter) Error(msg string, fields ...interface{}) {
+	z.logger.Error(msg, convertFields(fields)...)
+}
+
+func (z *ZapLoggerAdapter) Fatal(msg string, fields ...interface{}) {
+	z.logger.Fatal(msg, convertFields(fields)...)
+}
+
+func (z *ZapLoggerAdapter) Sync() error {
+	return z.logger.Sync()
+}
+
+// convertFields handles field conversion safely
+func convertFields(fields []interface{}) []zap.Field {
+	zapFields := make([]zap.Field, 0, len(fields))
+	for i, field := range fields {
+		zapFields[i] = zap.Any(fmt.Sprintf("field%d", i), field)
+	}
+	return zapFields
+}
 
 func main() {
 	// Initialize logger
@@ -39,6 +78,20 @@ func main() {
 			config.Load,
 			database.NewPostgresDatabase,
 			eventbus.NewRedisEventBus,
+		),
+		fx.Provide(
+			// Provide interfaces as concrete types
+			func(db *database.PostgresDatabase) interfaces.DatabaseInterface {
+				return db
+			},
+			func(eb *eventbus.RedisEventBus) interfaces.EventBusInterface {
+				return eb
+			},
+			func(logger *zap.Logger) interfaces.LoggerInterface {
+				return &ZapLoggerAdapter{logger: logger}
+			},
+		),
+		fx.Provide(
 			services.NewPaymentProcessorService,
 		),
 		fx.Invoke(func(processor *services.PaymentProcessorService) {

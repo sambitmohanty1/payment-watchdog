@@ -7,6 +7,16 @@ import (
 	"github.com/sambitmohanty1/payment-watchdog/shared/events"
 )
 
+// LoggerInterface defines interface for structured logging
+type LoggerInterface interface {
+	Debug(msg string, fields ...interface{})
+	Info(msg string, fields ...interface{})
+	Warn(msg string, fields ...interface{})
+	Error(msg string, fields ...interface{})
+	Fatal(msg string, fields ...interface{})
+	Sync() error
+}
+
 // AnalyticsEngine defines interface for payment analytics and pattern detection
 type AnalyticsEngine interface {
 	AnalyzePaymentPatterns(ctx context.Context, companyID string, timeRange string) (*AnalyticsResult, error)
