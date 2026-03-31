@@ -159,11 +159,11 @@ jobs:
           kubectl create namespace sovereign-au --dry-run=client -o yaml | kubectl apply -f -
           kubectl config set-context --current --namespace=sovereign-au
           
-          # 🔧 FIX: Update image tags with commit SHA
+          # 🔧 FIX: Update image tags with commit SHA using base image names
           echo "🏷️ Updating image tags to ${{ steps.tag.outputs.image_tag }}"
-          kustomize edit set image ghcr.io/sambitmohanty1/payment-watchdog/worker=ghcr.io/sambitmohanty1/payment-watchdog/worker:${{ steps.tag.outputs.image_tag }}
-          kustomize edit set image ghcr.io/sambitmohanty1/payment-watchdog/api=ghcr.io/sambitmohanty1/payment-watchdog/api:${{ steps.tag.outputs.image_tag }}
-          kustomize edit set image ghcr.io/sambitmohanty1/payment-watchdog/web=ghcr.io/sambitmohanty1/payment-watchdog/web:${{ steps.tag.outputs.image_tag }}
+          kustomize edit set image payment-watchdog-api=ghcr.io/sambitmohanty1/payment-watchdog/api:${{ steps.tag.outputs.image_tag }}
+          kustomize edit set image payment-watchdog-ui=ghcr.io/sambitmohanty1/payment-watchdog/web:${{ steps.tag.outputs.image_tag }}
+          kustomize edit set image payment-watchdog/recovery-orchestration=ghcr.io/sambitmohanty1/payment-watchdog/worker:${{ steps.tag.outputs.image_tag }}
           
           # � FIX: Handle missing CRDs by applying resources selectively
           echo "✅ Applying core resources..."
