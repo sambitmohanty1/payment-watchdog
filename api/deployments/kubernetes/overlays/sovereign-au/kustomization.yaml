@@ -25,13 +25,8 @@ commonLabels:
   app.kubernetes.io/part-of: payment-watchdog
   environment: sovereign-au
 
-images:
-  - name: ghcr.io/sambitmohanty1/payment-watchdog/api
-    newTag: latest
-  - name: ghcr.io/sambitmohanty1/payment-watchdog/web
-    newTag: latest
-  - name: ghcr.io/sambitmohanty1/payment-watchdog/worker
-    newTag: latest
+# Images will be dynamically updated by GitHub Actions workflow
+# using: kustomize edit set image ghcr.io/sambitmohanty1/payment-watchdog/worker=${{ steps.tag.outputs.image_tag }}
   - name: postgres
     newName: docker.io/library/postgres
     newTag: 15-alpine
