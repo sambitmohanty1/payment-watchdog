@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
-	"github.com/sambitmohanty1/payment-watchdog/worker/config"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/config"
 	"github.com/sambitmohanty1/payment-watchdog/worker/internal/database"
 	"github.com/sambitmohanty1/payment-watchdog/worker/internal/eventbus"
 	"github.com/sambitmohanty1/payment-watchdog/worker/internal/services"
@@ -97,6 +97,21 @@ func main() {
 			// Provide zap.Logger directly for database
 			func() *zap.Logger {
 				return logger
+			},
+			// Provide Redis configuration for EventBus
+			func(logger *zap.Logger) (*eventbus.RedisEventBus, error) {
+				// Read Redis configuration from environment variables
+				redisAddr := os.Getenv("REDIS_ADDR")
+				if redisAddr == "" {
+					redisAddr = os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
+				}
+				if redisAddr == ":" {
+					redisAddr = "lexure-redis-sovereign-au.sovereign-au.svc.cluster.local:6379"
+				}
+
+				redisPassword := os.Getenv("REDIS_PASSWORD")
+
+				return eventbus.NewRedisEventBus(redisAddr, redisPassword, 0, logger)
 			},
 		),
 		fx.Provide(
