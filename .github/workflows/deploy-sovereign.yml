@@ -207,15 +207,33 @@ jobs:
           kubectl config use-context $(kubectl config get-contexts -o name | head -1)
           kubectl config set-context --current --namespace=sovereign-au
           
-          # Changed to 8085 based on your deployment configurations
-          kubectl exec deployment/payment-watchdog-api-sovereign-au -- curl -s -f http://localhost:8085/health || echo "⚠️ API health check failed"
+          # Use wget instead of curl (more commonly available in containers)
+          echo "🔍 Testing API health endpoint..."
+          kubectl exec deployment/payment-watchdog-api-sovereign-au -- wget -q -O- http://localhost:8080/health || {
+            echo "⚠️ API health check failed with wget, trying alternative methods..."
+            # Try curl as fallback
+            kubectl exec deployment/payment-watchdog-api-sovereign-au -- curl -s -f http://localhost:8080/health || {
+              echo "⚠️ API health check failed with curl too, checking pod status..."
+              kubectl get pods -l app=payment-watchdog,component=api -n sovereign-au
+              echo "⚠️ API health check failed"
+            }
+          }
 
-          # Changed to 3001 based on your deployment configurations
+          # Check web service health
+          echo "🔍 Testing Web health endpoint..."
           WEB_POD=$(kubectl get pods -l app=payment-watchdog,component=ui -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
           if [ -n "$WEB_POD" ]; then
-            kubectl exec $WEB_POD -- curl -s -f http://localhost:3001 || echo "⚠️ Web health check failed"
+            kubectl exec $WEB_POD -- wget -q -O- http://localhost:3001 || {
+              echo "⚠️ Web health check failed with wget, trying curl..."
+              kubectl exec $WEB_POD -- curl -s -f http://localhost:3001 || {
+                echo "⚠️ Web health check failed with curl too, checking pod status..."
+                kubectl get pods -l app=payment-watchdog,component=ui -n sovereign-au
+                echo "⚠️ Web health check failed"
+              }
+            }
           else
             echo "⚠️ No UI pod found for health check"
+            kubectl get pods -l app=payment-watchdog,component=ui -n sovereign-au
           fi
           
           echo "✅ Smoke tests complete"
