@@ -21,6 +21,9 @@ fi
 echo "📊 Checking for conflicting deployments in namespace: $NAMESPACE"
 CONFLICTING_DEPS=$(kubectl get deployments -n "$NAMESPACE" -o name 2>/dev/null | grep -v "sovereign-au" | wc -l || echo "0")
 
+# Ensure CONFLICTING_DEPS is a number
+CONFLICTING_DEPS=${CONFLICTING_DEPS//[^0-9]/}
+
 if [[ "$CONFLICTING_DEPS" -gt 0 ]]; then
     echo "❌ Found $CONFLICTING_DEPS base deployments in $NAMESPACE namespace:"
     kubectl get deployments -n "$NAMESPACE" -o name | grep -v "sovereign-au" || true
@@ -79,8 +82,8 @@ if [[ "$BEHAVIOR_CHECK" -eq 0 ]]; then
     exit 1
 fi
 
-# Validate patch files exist
-PATCH_FILES=("deployment-patch.yaml" "configmap-patch.yaml")
+# Validate patch files exist (deployment-patch.yaml removed in Phase 1)
+PATCH_FILES=("configmap-patch.yaml" "postgres-security-patch.yaml")
 for patch_file in "${PATCH_FILES[@]}"; do
     if [[ ! -f "$OVERLAY_DIR/$patch_file" ]]; then
         echo "❌ Error: Patch file not found: $OVERLAY_DIR/$patch_file"
@@ -88,19 +91,18 @@ for patch_file in "${PATCH_FILES[@]}"; do
     fi
 done
 
-# Check deployment patch references correct secret names
-DEPLOYMENT_PATCH="$OVERLAY_DIR/deployment-patch.yaml"
-SECRET_REF_CHECK=$(grep -c "name: recovery-orchestration-secrets" "$DEPLOYMENT_PATCH" || echo "0")
-if [[ "$SECRET_REF_CHECK" -lt 2 ]]; then
-    echo "❌ Error: deployment-patch.yaml should reference recovery-orchestration-secrets (without suffix)"
-    exit 1
-fi
-
 # Check configmap patch references correct names
 CONFIGMAP_PATCH="$OVERLAY_DIR/configmap-patch.yaml"
 CONFIG_REF_CHECK=$(grep -c "name: recovery-orchestration-config" "$CONFIGMAP_PATCH" || echo "0")
 if [[ "$CONFIG_REF_CHECK" -lt 1 ]]; then
     echo "❌ Error: configmap-patch.yaml should reference recovery-orchestration-config (without suffix)"
+    exit 1
+fi
+
+# Check postgres security patch exists and is valid
+POSTGRES_PATCH="$OVERLAY_DIR/postgres-security-patch.yaml"
+if [[ ! -f "$POSTGRES_PATCH" ]]; then
+    echo "❌ Error: postgres-security-patch.yaml not found"
     exit 1
 fi
 
