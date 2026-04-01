@@ -68,5 +68,3 @@ spec:
       - name: config-volume
         configMap:
           name: payment-watchdog-web-config
-      nodeSelector:
-        kubernetes.io/arch: arm64
