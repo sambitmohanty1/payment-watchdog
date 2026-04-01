@@ -173,7 +173,7 @@ jobs:
             # Apply individual resources that should work
             kubectl apply -f namespace.yaml --server-side --force-conflicts || echo "⚠️ Namespace already exists"
             kubectl apply -f configmap-patch.yaml --server-side --force-conflicts || echo "⚠️ ConfigMap patch failed"
-            kubectl apply -f deployment-patch.yaml --server-side --force-conflicts || echo "⚠️ Deployment patch failed"
+            # ❌ REMOVED: deployment-patch.yaml (was creating duplicate deployments)
             kubectl apply -f network-policy.yaml --server-side --force-conflicts || echo "⚠️ Network policy failed"
             echo "ℹ️ Skipping monitoring components - CRDs may not be installed"
           }
