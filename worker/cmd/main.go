@@ -91,8 +91,15 @@ func main() {
 				return &ZapLoggerAdapter{logger: logger}
 			},
 			// Provide missing dependencies
-			func(cfg *config.WorkerConfig) *interfaces.DatabaseConfig {
-				return cfg.GetDatabaseConfig()
+			func(cfg *config.Config) *interfaces.DatabaseConfig {
+				return &interfaces.DatabaseConfig{
+					Host:     cfg.Database.Host,
+					Port:     cfg.Database.Port,
+					Name:     cfg.Database.Name,
+					User:     cfg.Database.User,
+					Password: cfg.Database.Password,
+					SSLMode:  cfg.Database.SSLMode,
+				}
 			},
 			// Provide zap.Logger directly for database
 			func() *zap.Logger {
