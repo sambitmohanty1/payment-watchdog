@@ -30,7 +30,7 @@ jobs:
           echo "Latest commit: $(git rev-parse HEAD)"
 
       - name: Set up Python (for OCI CLI)
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
