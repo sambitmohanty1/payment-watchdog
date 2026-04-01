@@ -77,7 +77,7 @@ func main() {
 		fx.Provide(
 			config.Load,
 			database.NewPostgresDatabase,
-			eventbus.NewRedisEventBus,
+			// ❌ REMOVED: eventbus.NewRedisEventBus (using configured provider below)
 		),
 		fx.Provide(
 			// Provide interfaces as concrete types
