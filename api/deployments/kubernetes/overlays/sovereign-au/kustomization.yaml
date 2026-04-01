@@ -61,7 +61,6 @@ secretGenerator:
 
 patches:
   # 1. File-based patches for Architecture, Resources, and Secrets
-  - path: deployment-patch.yaml
   - path: configmap-patch.yaml
   - path: postgres-security-patch.yaml
   

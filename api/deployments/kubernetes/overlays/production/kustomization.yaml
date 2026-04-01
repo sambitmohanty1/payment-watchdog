@@ -12,11 +12,10 @@ resources:
   - ../../apps/recovery-orchestration
   - namespace.yaml
 
-# Strategic merge patches for existing deployments
+# Strategic merge patches for production-specific configurations
 patches:
-  - path: api-deployment-patch.yaml
-  - path: web-deployment-patch.yaml
-  - path: worker-deployment-patch.yaml
+  - path: configmap-patch.yaml
+  - path: resource-limits-patch.yaml
 
 # Production namespace for Oracle Cloud
 namespace: production
