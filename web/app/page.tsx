@@ -150,7 +150,11 @@ export default function HomePage() {
                   {detailModal.title} Details
                 </h3>
                 <div className="mt-2 px-7 py-3">
-                  <StatusDetail status={detailModal.status} />
+                  <StatusDetail 
+                    status={detailModal.status} 
+                    title={detailModal.title}
+                    onClose={closeDetail}
+                  />
                 </div>
                 <div className="items-center px-4 py-3">
                   <button

@@ -161,7 +161,7 @@ export const useSystemStatus = (options: UseSystemStatusOptions = {}): UseSystem
           errorMessage = 'Request timeout - please check your connection'
         } else if (error.response?.status === 404) {
           errorMessage = 'Health check endpoint not available'
-        } else if (error.response?.status >= 500) {
+        } else if (error.response?.status && error.response.status >= 500) {
           errorMessage = 'Server error - please try again later'
         } else if (error.code === 'NETWORK_ERROR') {
           errorMessage = 'Network error - please check your connection'
@@ -257,7 +257,7 @@ export const useSystemStatus = (options: UseSystemStatusOptions = {}): UseSystem
     isRefreshing,
     refresh,
     toggleAutoRefresh,
-    autoRefreshEnabled,
+    autoRefreshEnabled: autoRefreshEnabled || false,
   }
 }
 

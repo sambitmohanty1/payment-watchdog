@@ -1,4 +1,4 @@
-// File: /app/web/app/(dashboard)/workflows/page.tsx
+// File: /Users/mohants5/Documents/personal/projects/payment-watchdog/web/app/(dashboard)/workflows/page.tsx
 import * as entry from '../../../../../app/(dashboard)/workflows/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
@@ -16,12 +16,12 @@ checkFields<Diff<{
   preferredRegion?: 'auto' | 'global' | 'home' | string | string[]
   runtime?: 'nodejs' | 'experimental-edge' | 'edge'
   maxDuration?: number
-
+  
   metadata?: any
   generateMetadata?: Function
   viewport?: any
   generateViewport?: Function
-
+  
 }, TEntry, ''>>()
 
 // Check the prop type of the entry function

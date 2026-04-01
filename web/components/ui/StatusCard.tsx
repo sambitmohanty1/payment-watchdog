@@ -1,5 +1,5 @@
 import React from 'react'
-import { ServiceStatus, getStatusColor, getStatusIcon } from '../hooks/useSystemStatus'
+import { ServiceStatus, getStatusColor, getStatusIcon } from '../../hooks/useSystemStatus'
 
 interface StatusCardProps {
   title: string
