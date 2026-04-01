@@ -19,6 +19,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for latest commit
+          ref: main       # Explicitly checkout main branch for latest commits
+
+      - name: Get latest commit hash
+        id: commit
+        run: |
+          echo "commit_hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "Latest commit: $(git rev-parse HEAD)"
 
       - name: Set up Python (for OCI CLI)
         uses: actions/setup-python@v5
@@ -159,11 +168,11 @@ jobs:
           kubectl create namespace sovereign-au --dry-run=client -o yaml | kubectl apply -f -
           kubectl config set-context --current --namespace=sovereign-au
           
-          # 🔧 FIX: Update image tags with commit SHA using base image names
-          echo "🏷️ Updating image tags to ${{ steps.tag.outputs.image_tag }}"
-          kustomize edit set image payment-watchdog-api=ghcr.io/sambitmohanty1/payment-watchdog/api:${{ steps.tag.outputs.image_tag }}
-          kustomize edit set image payment-watchdog-ui=ghcr.io/sambitmohanty1/payment-watchdog/web:${{ steps.tag.outputs.image_tag }}
-          kustomize edit set image payment-watchdog/recovery-orchestration=ghcr.io/sambitmohanty1/payment-watchdog/worker:${{ steps.tag.outputs.image_tag }}
+          # 🔧 FIX: Update image tags with latest commit SHA using base image names
+          echo "🏷️ Updating image tags to latest commit: ${{ steps.commit.outputs.commit_hash }}"
+          kustomize edit set image payment-watchdog-api=ghcr.io/sambitmohanty1/payment-watchdog/api:${{ steps.commit.outputs.commit_hash }}
+          kustomize edit set image payment-watchdog-ui=ghcr.io/sambitmohanty1/payment-watchdog/web:${{ steps.commit.outputs.commit_hash }}
+          kustomize edit set image payment-watchdog/recovery-orchestration=ghcr.io/sambitmohanty1/payment-watchdog/worker:${{ steps.commit.outputs.commit_hash }}
           
           # � FIX: Handle missing CRDs by applying resources selectively
           echo "✅ Applying core resources..."
