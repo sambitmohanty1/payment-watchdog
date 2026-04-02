@@ -22,6 +22,7 @@ spec:
         app.kubernetes.io/name: recovery-orchestration
         app.kubernetes.io/component: backend
         app.kubernetes.io/part-of: payment-watchdog
+        environment: sovereign-au
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8086"
@@ -36,7 +37,7 @@ spec:
           name: http
         env:
         - name: REDIS_HOST
-          value: "lexure-redis-sovereign-au.sovereign-au.svc.cluster.local"
+          value: lexure-redis-sovereign-au.sovereign-au.svc.cluster.local
         - name: REDIS_PORT
           value: "6379"
         envFrom:
