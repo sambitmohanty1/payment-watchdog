@@ -31,19 +31,19 @@ labels:
 # Images will be dynamically updated by GitHub Actions workflow
 # using: kustomize edit set image with base app names
 images:
-  - name: postgres
-    newName: docker.io/library/postgres
-    newTag: 15-alpine
   # Base app images (will be updated by GitHub Actions)
+  - name: payment-watchdog/recovery-orchestration
+    newName: ghcr.io/sambitmohanty1/payment-watchdog/worker
+    newTag: 8643886d
   - name: payment-watchdog-api
     newName: ghcr.io/sambitmohanty1/payment-watchdog/api
     newTag: latest
   - name: payment-watchdog-ui
     newName: ghcr.io/sambitmohanty1/payment-watchdog/web
     newTag: latest
-  - name: payment-watchdog/recovery-orchestration
-    newName: ghcr.io/sambitmohanty1/payment-watchdog/worker
-    newTag: latest
+  - name: postgres
+    newName: docker.io/library/postgres
+    newTag: 15-alpine
 
 secretGenerator:
   - name: recovery-orchestration-secrets

@@ -30,7 +30,7 @@ spec:
       serviceAccountName: recovery-orchestration
       containers:
       - name: recovery-orchestration
-        image: payment-watchdog/recovery-orchestration:latest
+        image: payment-watchdog/recovery-orchestration
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8086
