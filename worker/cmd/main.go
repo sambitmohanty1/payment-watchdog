@@ -110,14 +110,23 @@ func main() {
 				// Read Redis configuration from environment variables
 				redisAddr := os.Getenv("REDIS_ADDR")
 				if redisAddr == "" {
-					redisAddr = os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
-				}
-				if redisAddr == ":" {
-					redisAddr = "lexure-redis-sovereign-au.sovereign-au.svc.cluster.local:6379"
+					redisHost := os.Getenv("REDIS_HOST")
+					redisPort := os.Getenv("REDIS_PORT")
+					
+					// Default values if environment variables are not set
+					if redisHost == "" {
+						redisHost = "lexure-redis-sovereign-au.sovereign-au.svc.cluster.local"
+					}
+					if redisPort == "" {
+						redisPort = "6379"
+					}
+					
+					redisAddr = redisHost + ":" + redisPort
 				}
 
 				redisPassword := os.Getenv("REDIS_PASSWORD")
 
+				logger.Info("Connecting to Redis", zap.String("addr", redisAddr))
 				return eventbus.NewRedisEventBus(redisAddr, redisPassword, 0, logger)
 			},
 		),
