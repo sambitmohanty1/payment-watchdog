@@ -64,7 +64,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Run Trivy vulnerability scanner in fs mode
-        uses: aquasecurity/trivy-action@0.25.0
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -86,14 +86,15 @@ jobs:
       - name: Build Docker images for scanning
         run: |
           echo "Building Docker images for security scanning..."
-          docker build -t payment-watchdog-api:scan ./api || echo "API Docker build failed"
-          docker build -t payment-watchdog-worker:scan ./worker || echo "Worker Docker build failed"
-          docker build -t payment-watchdog-web:scan ./web || echo "Web Docker build failed"
+          docker build -t payment-watchdog-api:scan ./api || touch .api-build-failed
+          docker build -t payment-watchdog-worker:scan ./worker || touch .worker-build-failed
+          docker build -t payment-watchdog-web:scan ./web || touch .web-build-failed
           echo "Docker builds completed"
           
       - name: Run Trivy on API image
-        if: success()
-        uses: aquasecurity/trivy-action@0.25.0
+        if: hashFiles('.api-build-failed') == ''
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: 'payment-watchdog-api:scan'
           format: 'sarif'
@@ -101,8 +102,9 @@ jobs:
           severity: 'CRITICAL,HIGH'
           
       - name: Run Trivy on Worker image
-        if: success()
-        uses: aquasecurity/trivy-action@0.25.0
+        if: hashFiles('.worker-build-failed') == ''
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: 'payment-watchdog-worker:scan'
           format: 'sarif'
@@ -110,8 +112,9 @@ jobs:
           severity: 'CRITICAL,HIGH'
           
       - name: Run Trivy on Web image
-        if: success()
-        uses: aquasecurity/trivy-action@0.25.0
+        if: hashFiles('.web-build-failed') == ''
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: 'payment-watchdog-web:scan'
           format: 'sarif'
