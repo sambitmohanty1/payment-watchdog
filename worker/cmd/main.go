@@ -112,7 +112,7 @@ func main() {
 				if redisAddr == "" {
 					redisHost := os.Getenv("REDIS_HOST")
 					redisPort := os.Getenv("REDIS_PORT")
-					
+
 					// Default values if environment variables are not set
 					if redisHost == "" {
 						redisHost = "lexure-redis-sovereign-au.sovereign-au.svc.cluster.local"
@@ -120,7 +120,7 @@ func main() {
 					if redisPort == "" {
 						redisPort = "6379"
 					}
-					
+
 					redisAddr = redisHost + ":" + redisPort
 				}
 
