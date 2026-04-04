@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
-	"github.com/sambitmohanty1/payment-watchdog/worker/internal/config"
+	"github.com/sambitmohanty1/payment-watchdog/worker/config"
 	"github.com/sambitmohanty1/payment-watchdog/worker/internal/database"
 	"github.com/sambitmohanty1/payment-watchdog/worker/internal/eventbus"
 	"github.com/sambitmohanty1/payment-watchdog/worker/internal/services"
@@ -99,6 +100,36 @@ func main() {
 					User:     cfg.Database.User,
 					Password: cfg.Database.Password,
 					SSLMode:  cfg.Database.SSLMode,
+				}
+			},
+			// Provide WorkerConfig for PaymentProcessorService
+			func(cfg *config.Config) *config.WorkerConfig {
+				// Convert Redis port from string to int with safe default
+				redisPort := 6379 // default
+				if redisPortStr := os.Getenv("REDIS_PORT"); redisPortStr != "" {
+					if port, err := strconv.Atoi(redisPortStr); err == nil {
+						redisPort = port
+					}
+				}
+
+				return &config.WorkerConfig{
+					Database: &interfaces.DatabaseConfig{
+						Host:     cfg.Database.Host,
+						Port:     cfg.Database.Port,
+						Name:     cfg.Database.Name,
+						User:     cfg.Database.User,
+						Password: cfg.Database.Password,
+						SSLMode:  cfg.Database.SSLMode,
+					},
+					Redis: &interfaces.RedisConfig{
+						Host:     os.Getenv("REDIS_HOST"),
+						Port:     redisPort,
+						Password: os.Getenv("REDIS_PASSWORD"),
+						DB:       0,
+					},
+					Logging: &interfaces.LoggingConfig{
+						Level: cfg.Log.Level,
+					},
 				}
 			},
 			// Provide zap.Logger directly for database
