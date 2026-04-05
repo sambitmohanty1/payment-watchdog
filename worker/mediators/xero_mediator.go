@@ -118,9 +118,9 @@ func (x *XeroMediator) GetAuthorizationURL(state string) (string, error) {
 }
 
 // ExchangeCodeForTokens exchanges authorization code for access tokens
-func (x *XeroMediator) ExchangeCodeForTokens(ctx context.Context, code, state string) (*OAuthTokens, error) {
-	if x.oauthConfig == nil {
-		return nil, fmt.Errorf("OAuth configuration not set")
+func (x *XeroMediator) ExchangeCodeForTokens(ctx context.Context, config *OAuthConfig, authCode string) (*OAuthTokens, error) {
+	if config == nil {
+		return nil, fmt.Errorf("OAuth configuration is required")
 	}
 
 	// Prepare token exchange request
@@ -128,18 +128,17 @@ func (x *XeroMediator) ExchangeCodeForTokens(ctx context.Context, code, state st
 
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
-	data.Set("client_id", x.oauthConfig.ClientID)
-	data.Set("client_secret", x.oauthConfig.ClientSecret)
-	data.Set("code", code)
-	data.Set("redirect_uri", x.oauthConfig.RedirectURI)
+	data.Set("client_id", config.ClientID)
+	data.Set("client_secret", config.ClientSecret)
+	data.Set("code", authCode)
+	data.Set("redirect_uri", config.RedirectURI)
 
 	// Debug logging
 	x.logger.Info("Token exchange request",
 		zap.String("token_url", tokenURL),
-		zap.String("client_id", x.oauthConfig.ClientID),
-		zap.String("redirect_uri", x.oauthConfig.RedirectURI),
-		zap.String("code", code[:10]+"..."), // Log only first 10 chars of code
-		zap.String("state", state))
+		zap.String("client_id", config.ClientID),
+		zap.String("redirect_uri", config.RedirectURI),
+		zap.String("code", authCode[:10]+"..."))
 
 	// Make token exchange request
 	req, err := http.NewRequestWithContext(ctx, "POST", tokenURL, strings.NewReader(data.Encode()))
@@ -248,8 +247,98 @@ func (x *XeroMediator) GetOrganizations(ctx context.Context, accessToken, tenant
 	return response.Organisations, nil
 }
 
-// GetPaymentFailures retrieves payment failures from Xero (overloaded method)
-func (x *XeroMediator) GetPaymentFailures(ctx context.Context, accessToken, tenantID string) ([]XeroPaymentFailureInfo, error) {
+// GetPaymentFailures retrieves payment failures from Xero (implements standard interface)
+func (x *XeroMediator) GetPaymentFailures(ctx context.Context, since time.Time) ([]*interfaces.PaymentFailure, error) {
+	// Get invoices from Xero
+	invoices, err := x.GetInvoices(ctx, since)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get invoices: %w", err)
+	}
+
+	// Convert to payment failures
+	var failures []*interfaces.PaymentFailure
+	for _, invoice := range invoices {
+		// Type assert to get the actual invoice struct
+		inv, ok := invoice.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		status, _ := inv["Status"].(string)
+		if status == "AUTHORISED" || status == "PAID" {
+			continue // Skip successful invoices
+		}
+
+		// Extract basic fields
+		invoiceID, _ := inv["InvoiceID"].(string)
+		invoiceNumber, _ := inv["InvoiceNumber"].(string)
+		total, _ := inv["Total"].(float64)
+		currencyCode, _ := inv["CurrencyCode"].(string)
+
+		// Extract contact information
+		contact, _ := inv["Contact"].(map[string]interface{})
+		var contactID, contactName, contactEmail string
+		if contact != nil {
+			contactID, _ = contact["ContactID"].(string)
+			contactName, _ = contact["Name"].(string)
+			contactEmail, _ = contact["Email"].(string)
+		}
+
+		// Extract dates
+		var issueDate, dueDate, updatedDate time.Time
+		if dateStr, ok := inv["Date"].(string); ok {
+			issueDate, _ = time.Parse(time.RFC3339, dateStr)
+		}
+		if dateStr, ok := inv["DueDate"].(string); ok {
+			dueDate, _ = time.Parse(time.RFC3339, dateStr)
+		}
+		if dateStr, ok := inv["UpdatedDateUTC"].(string); ok {
+			updatedDate, _ = time.Parse(time.RFC3339, dateStr)
+		}
+
+		// Create payment failure
+		failure := &interfaces.PaymentFailure{
+			ID:                uuid.New(),
+			ProviderID:        x.config.ProviderID,
+			ProviderEventID:   invoiceID,
+			ProviderEventType: "invoice.failed",
+			CompanyID:         x.config.CompanyID,
+			CustomerID:        contactID,
+			CustomerName:      contactName,
+			CustomerEmail:     contactEmail,
+			PaymentID:         invoiceID,
+			TransactionID:     invoiceID,
+			InvoiceID:         invoiceID,
+			InvoiceNumber:     invoiceNumber,
+			Amount:            total,
+			Currency:          currencyCode,
+			FailureReason:     status,
+			FailureCode:       status,
+			FailureMessage:    fmt.Sprintf("Invoice status: %s", status),
+			Status:            interfaces.PaymentFailureStatusReceived,
+			Priority:          interfaces.PaymentFailurePriorityMedium,
+			RiskScore:         0.5, // Default risk score
+			BusinessCategory:  "general",
+			IssueDate:         &issueDate,
+			DueDate:           &dueDate,
+			OccurredAt:        updatedDate,
+			DetectedAt:        time.Now(),
+			ProviderMetadata: map[string]interface{}{
+				"invoice": invoice,
+			},
+			SyncSource: "xero",
+			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
+		}
+
+		failures = append(failures, failure)
+	}
+
+	return failures, nil
+}
+
+// GetPaymentFailuresWithToken retrieves payment failures from Xero with OAuth tokens (overloaded method)
+func (x *XeroMediator) GetPaymentFailuresWithToken(ctx context.Context, accessToken, tenantID string) ([]XeroPaymentFailureInfo, error) {
 	// Get invoices from Xero
 	invoices, err := x.GetInvoicesWithToken(ctx, accessToken, tenantID)
 	if err != nil {
