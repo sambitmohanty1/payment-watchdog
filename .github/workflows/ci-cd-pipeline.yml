@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build-success: ${{ steps.build.outputs.success }}
-      tests-passed: ${{ steps.test.outputs.result }}
+      tests-passed: ${{ steps.test.outputs.tests-passed }}
     
     steps:
     - name: Checkout
