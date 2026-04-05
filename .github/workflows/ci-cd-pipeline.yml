@@ -281,16 +281,26 @@ jobs:
   notify:
     name: Notify Deployment Status
     runs-on: ubuntu-latest
-    needs: [deploy-staging]
+    needs: [build-and-test, build-services, validate-infrastructure, security-scan]
     if: always()
     
     steps:
-    - name: Notify Success
+    - name: Notify Build Success
+      if: needs.build-and-test.result == 'success'
+      run: |
+        echo "✅ Build and test completed successfully"
+        
+    - name: Notify Staging Success
       if: needs.deploy-staging.result == 'success'
       run: |
         echo "✅ Staging deployment successful"
         
-    - name: Notify Failure
+    - name: Notify Staging Failure
       if: needs.deploy-staging.result == 'failure'
       run: |
         echo "❌ Staging deployment failed"
+        
+    - name: Notify Sovereign Ready
+      if: needs.manual-sovereign-au.result == 'success'
+      run: |
+        echo "🛡️ Sovereign-AU deployment ready for manual execution"
