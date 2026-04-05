@@ -64,8 +64,8 @@ jobs:
         echo "🧪 Running comprehensive test suite..."
         
         # Run tests for all services (exclude OAuth integration tests in CI)
-        cd api && go test ./cmd ./internal ./config -v -race -cover
-        cd ../worker && go test ./cmd ./internal ./analytics ./config ./database ./eventbus ./services -v -race -cover
+        cd api && go test ./cmd ./internal/... ./config/... -v -race -cover
+        cd ../worker && go test ./cmd ./internal/... ./analytics/... ./config/... ./database/... ./eventbus/... ./services/... -v -race -cover
         cd ../web && npm test
         
         echo "tests-passed=true" >> $GITHUB_OUTPUT
