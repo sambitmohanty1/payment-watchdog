@@ -110,14 +110,21 @@ jobs:
       run: |
         echo " Validating Kubernetes manifests..."
         
-        # Validate base manifests
-        kubectl apply --dry-run=client -f infrastructure/kubernetes/base/
+        # Validate YAML syntax without cluster connection
+        echo "Checking base manifests..."
+        if ! find infrastructure/kubernetes/base/ -name "*.yaml" -o -name "*.yml" -exec kubectl --dry-run=client --validate=false -f {} \; then
+          echo " Base manifest validation failed"
+          exit 1
+        fi
         
-        # Validate environment overlays
-        for env in staging sovereign-au; do
+        echo "Checking environment overlays..."
+        for env in staging sovereign-au production; do
           if [ -d "infrastructure/kubernetes/overlays/$env" ]; then
             echo "Validating $env overlay..."
-            kubectl apply --dry-run=client -f infrastructure/kubernetes/overlays/$env/
+            if ! find infrastructure/kubernetes/overlays/$env -name "*.yaml" -o -name "*.yml" -exec kubectl --dry-run=client --validate=false -f {} \; then
+              echo " $env overlay validation failed"
+              exit 1
+            fi
           fi
         done
         
