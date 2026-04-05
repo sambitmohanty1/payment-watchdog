@@ -110,9 +110,9 @@ jobs:
       run: |
         echo " Validating Kubernetes manifests..."
         
-        # Validate YAML syntax without cluster connection
+        # Validate YAML syntax using yq (proven approach from payment-watchdog-ci.yml)
         echo "Checking base manifests..."
-        if ! find infrastructure/kubernetes/base/ -name "*.yaml" -o -name "*.yml" -exec kubectl --dry-run=client --validate=false -f /dev/null \; then
+        if ! yq eval '.' infrastructure/kubernetes/base > /dev/null 2>&1; then
           echo " Base manifest validation failed"
           exit 1
         fi
@@ -121,7 +121,7 @@ jobs:
         for env in staging sovereign-au production; do
           if [ -d "infrastructure/kubernetes/overlays/$env" ]; then
             echo "Validating $env overlay..."
-            if ! find infrastructure/kubernetes/overlays/$env -name "*.yaml" -o -name "*.yml" -exec kubectl --dry-run=client --validate=false -f /dev/null \; then
+            if ! yq eval '.' infrastructure/kubernetes/overlays/$env > /dev/null 2>&1; then
               echo " $env overlay validation failed"
               exit 1
             fi
