@@ -57,7 +57,6 @@ func TestRedisEventBus_Publish(t *testing.T) {
 	}
 }
 
-/*
 func TestRedisEventBus_Subscribe(t *testing.T) {
 	logger := zap.NewNop()
 	eventBus, err := NewRedisEventBus("localhost:6379", "", 0, logger)
