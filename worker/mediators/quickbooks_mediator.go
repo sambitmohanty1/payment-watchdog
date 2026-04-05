@@ -17,7 +17,8 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/google/uuid"
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
+	"github.com/sambitmohanty1/payment-watchdog/worker/internal/architecture"
 )
 
 // QuickBooksMediator implements PaymentProvider for QuickBooks
@@ -151,7 +152,7 @@ func (q *QuickBooksMediator) Disconnect(ctx context.Context) error {
 }
 
 // GetPaymentFailures retrieves payment failures from QuickBooks
-func (q *QuickBooksMediator) GetPaymentFailures(ctx context.Context, since time.Time) ([]*architecture.PaymentFailure, error) {
+func (q *QuickBooksMediator) GetPaymentFailures(ctx context.Context, since time.Time) ([]*interfaces.PaymentFailure, error) {
 	if !q.isConnected {
 		return nil, fmt.Errorf("QuickBooks mediator not connected")
 	}
@@ -162,7 +163,7 @@ func (q *QuickBooksMediator) GetPaymentFailures(ctx context.Context, since time.
 		return nil, fmt.Errorf("failed to get invoices from QuickBooks: %w", err)
 	}
 
-	var failures []*architecture.PaymentFailure
+	var failures []*interfaces.PaymentFailure
 
 	// Process invoices to find payment failures
 	for _, invoice := range invoices {
@@ -301,7 +302,7 @@ func (q *QuickBooksMediator) isPaymentFailure(invoice *QuickBooksInvoice) bool {
 }
 
 // mapInvoiceToFailure maps a QuickBooks invoice to a unified PaymentFailure
-func (q *QuickBooksMediator) mapInvoiceToFailure(invoice *QuickBooksInvoice) *architecture.PaymentFailure {
+func (q *QuickBooksMediator) mapInvoiceToFailure(invoice *QuickBooksInvoice) *interfaces.PaymentFailure {
 	// Generate unique event ID
 	eventID := q.generateEventID()
 
@@ -310,7 +311,7 @@ func (q *QuickBooksMediator) mapInvoiceToFailure(invoice *QuickBooksInvoice) *ar
 	riskScore := q.calculateRiskScore(invoice.Balance, overdueDays)
 
 	// Map to unified PaymentFailure model
-	failure := &architecture.PaymentFailure{
+	failure := &interfaces.PaymentFailure{
 		ProviderID:        "quickbooks",
 		ProviderEventID:   eventID,
 		ProviderEventType: "invoice.payment_failed",
@@ -331,7 +332,15 @@ func (q *QuickBooksMediator) mapInvoiceToFailure(invoice *QuickBooksInvoice) *ar
 		OccurredAt: invoice.DueDate,
 		DetectedAt: time.Now(),
 		SyncSource: "api_poll",
-		RawData:    invoice.RawData,
+		RawData: func() map[string]interface{} {
+			if len(invoice.RawData) > 0 {
+				var data map[string]interface{}
+				if err := json.Unmarshal(invoice.RawData, &data); err == nil {
+					return data
+				}
+			}
+			return make(map[string]interface{})
+		}(),
 		ProviderMetadata: map[string]interface{}{
 			"quickbooks_invoice_id":  invoice.ID,
 			"quickbooks_customer_id": invoice.CustomerRef.Value,
@@ -409,15 +418,15 @@ func (q *QuickBooksMediator) calculateRiskScore(amount float64, overdueDays int)
 }
 
 // mapRiskScoreToPriority maps risk score to priority
-func (q *QuickBooksMediator) mapRiskScoreToPriority(riskScore float64) architecture.PaymentFailurePriority {
+func (q *QuickBooksMediator) mapRiskScoreToPriority(riskScore float64) interfaces.PaymentFailurePriority {
 	if riskScore >= 80 {
-		return architecture.PaymentFailurePriorityCritical
+		return interfaces.PaymentFailurePriorityCritical
 	} else if riskScore >= 60 {
-		return architecture.PaymentFailurePriorityHigh
+		return interfaces.PaymentFailurePriorityHigh
 	} else if riskScore >= 40 {
-		return architecture.PaymentFailurePriorityMedium
+		return interfaces.PaymentFailurePriorityMedium
 	} else {
-		return architecture.PaymentFailurePriorityLow
+		return interfaces.PaymentFailurePriorityLow
 	}
 }
 
@@ -692,7 +701,7 @@ func (q *QuickBooksMediator) DeleteTokens() error {
 }
 
 // mapQuickBooksInvoiceToPaymentFailure maps a QuickBooks invoice to a PaymentFailure
-func (q *QuickBooksMediator) mapQuickBooksInvoiceToPaymentFailure(invoice *QuickBooksInvoice) *architecture.PaymentFailure {
+func (q *QuickBooksMediator) mapQuickBooksInvoiceToPaymentFailure(invoice *QuickBooksInvoice) *interfaces.PaymentFailure {
 	if invoice == nil {
 		return nil
 	}
@@ -716,7 +725,7 @@ func (q *QuickBooksMediator) mapQuickBooksInvoiceToPaymentFailure(invoice *Quick
 	}
 
 	// Map to unified PaymentFailure model
-	paymentFailure := &architecture.PaymentFailure{
+	paymentFailure := &interfaces.PaymentFailure{
 		ID:              uuid.New(),
 		ProviderEventID: invoice.ID,
 		Amount:          invoice.Balance,
@@ -726,7 +735,7 @@ func (q *QuickBooksMediator) mapQuickBooksInvoiceToPaymentFailure(invoice *Quick
 		FailureReason:   failureReason,
 		SyncSource:      "quickbooks",
 		RiskScore:       riskScore,
-		Status:          architecture.PaymentFailureStatusReceived,
+		Status:          interfaces.PaymentFailureStatusReceived,
 		Priority:        q.mapRiskScoreToPriority(riskScore),
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
@@ -736,7 +745,7 @@ func (q *QuickBooksMediator) mapQuickBooksInvoiceToPaymentFailure(invoice *Quick
 }
 
 // publishPaymentFailureEvent publishes a payment failure event to the event bus
-func (q *QuickBooksMediator) publishPaymentFailureEvent(paymentFailure *architecture.PaymentFailure) error {
+func (q *QuickBooksMediator) publishPaymentFailureEvent(paymentFailure *interfaces.PaymentFailure) error {
 	if paymentFailure == nil {
 		return fmt.Errorf("payment failure cannot be nil")
 	}

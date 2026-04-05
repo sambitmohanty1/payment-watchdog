@@ -6,11 +6,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 )
 
 // TestQuickBooksAPIIntegration tests the complete QuickBooks API integration
@@ -238,7 +237,7 @@ func TestQuickBooksDataMapping(t *testing.T) {
 		assert.Equal(t, "customer-001", paymentFailure.CustomerID)
 		assert.Equal(t, "Test Customer", paymentFailure.CustomerName)
 		assert.Equal(t, "invoice_unpaid", paymentFailure.FailureReason)
-		assert.Equal(t, architecture.PaymentFailureStatusReceived, paymentFailure.Status)
+		assert.Equal(t, interfaces.PaymentFailureStatusReceived, paymentFailure.Status)
 		assert.True(t, paymentFailure.RiskScore > 0)
 		assert.Equal(t, "quickbooks", paymentFailure.SyncSource)
 	})
@@ -270,13 +269,13 @@ func TestQuickBooksDataMapping(t *testing.T) {
 		// Test priority mapping based on risk score
 		testCases := []struct {
 			riskScore   float64
-			expected    architecture.PaymentFailurePriority
+			expected    interfaces.PaymentFailurePriority
 			description string
 		}{
-			{30.0, architecture.PaymentFailurePriorityLow, "Low risk"},
-			{50.0, architecture.PaymentFailurePriorityMedium, "Medium risk"},
-			{70.0, architecture.PaymentFailurePriorityHigh, "High risk"},
-			{90.0, architecture.PaymentFailurePriorityCritical, "Critical risk"},
+			{30.0, interfaces.PaymentFailurePriorityLow, "Low risk"},
+			{50.0, interfaces.PaymentFailurePriorityMedium, "Medium risk"},
+			{70.0, interfaces.PaymentFailurePriorityHigh, "High risk"},
+			{90.0, interfaces.PaymentFailurePriorityCritical, "Critical risk"},
 		}
 
 		for _, tc := range testCases {
@@ -306,7 +305,7 @@ func TestQuickBooksEventBusIntegration(t *testing.T) {
 
 	t.Run("Payment Failure Event Publishing", func(t *testing.T) {
 		// Create test payment failure
-		paymentFailure := &architecture.PaymentFailure{
+		paymentFailure := &interfaces.PaymentFailure{
 			ID:              uuid.New(),
 			CompanyID:       "company-123",
 			ProviderID:      "quickbooks",
@@ -317,8 +316,8 @@ func TestQuickBooksEventBusIntegration(t *testing.T) {
 			CustomerName:    "Test Customer",
 			CustomerEmail:   "test@example.com",
 			FailureReason:   "invoice_unpaid",
-			Status:          architecture.PaymentFailureStatusReceived,
-			Priority:        architecture.PaymentFailurePriorityHigh,
+			Status:          interfaces.PaymentFailureStatusReceived,
+			Priority:        interfaces.PaymentFailurePriorityHigh,
 			RiskScore:       75.0,
 			OccurredAt:      time.Now(),
 			DetectedAt:      time.Now(),
@@ -335,7 +334,7 @@ func TestQuickBooksEventBusIntegration(t *testing.T) {
 
 		// Verify event content
 		event := events[0].(map[string]interface{})
-		paymentFailureData := event["payment_failure"].(*architecture.PaymentFailure)
+		paymentFailureData := event["payment_failure"].(*interfaces.PaymentFailure)
 		assert.Equal(t, "inv-001", paymentFailureData.ProviderEventID)
 		assert.Equal(t, "quickbooks", paymentFailureData.ProviderID)
 		assert.Equal(t, 2500.00, paymentFailureData.Amount)
@@ -344,7 +343,7 @@ func TestQuickBooksEventBusIntegration(t *testing.T) {
 
 	t.Run("Event Serialization", func(t *testing.T) {
 		// Test that events can be properly serialized
-		paymentFailure := &architecture.PaymentFailure{
+		paymentFailure := &interfaces.PaymentFailure{
 			ID:              uuid.New(),
 			CompanyID:       "company-123",
 			ProviderID:      "quickbooks",
@@ -355,8 +354,8 @@ func TestQuickBooksEventBusIntegration(t *testing.T) {
 			CustomerName:    "Test Customer 2",
 			CustomerEmail:   "test2@example.com",
 			FailureReason:   "invoice_unpaid",
-			Status:          architecture.PaymentFailureStatusReceived,
-			Priority:        architecture.PaymentFailurePriorityMedium,
+			Status:          interfaces.PaymentFailureStatusReceived,
+			Priority:        interfaces.PaymentFailurePriorityMedium,
 			RiskScore:       60.0,
 			OccurredAt:      time.Now(),
 			DetectedAt:      time.Now(),
@@ -380,7 +379,7 @@ func TestQuickBooksEventBusIntegration(t *testing.T) {
 
 	t.Run("Event Metadata and Tracing", func(t *testing.T) {
 		// Test that events include proper metadata and tracing
-		paymentFailure := &architecture.PaymentFailure{
+		paymentFailure := &interfaces.PaymentFailure{
 			ID:              uuid.New(),
 			CompanyID:       "company-123",
 			ProviderID:      "quickbooks",
@@ -391,8 +390,8 @@ func TestQuickBooksEventBusIntegration(t *testing.T) {
 			CustomerName:    "Test Customer 3",
 			CustomerEmail:   "test3@example.com",
 			FailureReason:   "invoice_unpaid",
-			Status:          architecture.PaymentFailureStatusReceived,
-			Priority:        architecture.PaymentFailurePriorityHigh,
+			Status:          interfaces.PaymentFailureStatusReceived,
+			Priority:        interfaces.PaymentFailurePriorityHigh,
 			RiskScore:       80.0,
 			OccurredAt:      time.Now(),
 			DetectedAt:      time.Now(),

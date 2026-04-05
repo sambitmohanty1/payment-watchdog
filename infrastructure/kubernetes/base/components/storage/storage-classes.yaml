@@ -1,0 +1,69 @@
+# Cloud-Agnostic Storage Classes
+# This file defines storage classes that work across different cloud providers
+# Current deployment uses OCI, but structure supports future cloud migrations
+
+---
+# OCI Storage Class (Current)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: oci-bv
+  labels:
+    cloud-provider: oci
+    storage-tier: standard
+provisioner: oci.com/oci
+parameters:
+  compartmentId: COMPARTMENT_ID_PLACEHOLDER  # Will be replaced by overlay
+  availabilityDomain: AVAILABILITY_DOMAIN_PLACEHOLDER  # Will be replaced by overlay
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+
+---
+# AWS Storage Class (Future Migration)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: aws-gp3
+  labels:
+    cloud-provider: aws
+    storage-tier: standard
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp3
+  iops: "3000"
+  throughput: "125"
+  fsType: ext4
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+
+---
+# GCP Storage Class (Future Migration)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gcp-standard
+  labels:
+    cloud-provider: gcp
+    storage-tier: standard
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-standard
+  replication-type: regional-pd
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+
+---
+# Azure Storage Class (Future Migration)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: azure-standard
+  labels:
+    cloud-provider: azure
+    storage-tier: standard
+provisioner: kubernetes.io/azure-disk
+parameters:
+  skuName: Standard_LRS
+  kind: Managed
+reclaimPolicy: Retain
+allowVolumeExpansion: true

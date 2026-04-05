@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +23,7 @@ func NewDefaultPatternDetector(logger *zap.Logger) *DefaultPatternDetector {
 }
 
 // DetectPatterns detects various patterns in payment failure events
-func (pd *DefaultPatternDetector) DetectPatterns(events []*architecture.PaymentFailure) []Pattern {
+func (pd *DefaultPatternDetector) DetectPatterns(events []*interfaces.PaymentFailure) []Pattern {
 	patterns := make([]Pattern, 0)
 
 	if len(events) == 0 {
@@ -50,7 +50,7 @@ func (pd *DefaultPatternDetector) DetectPatterns(events []*architecture.PaymentF
 }
 
 // DetectCustomerPatterns detects patterns specific to a customer
-func (pd *DefaultPatternDetector) DetectCustomerPatterns(customerID string, events []*architecture.PaymentFailure) []CustomerPattern {
+func (pd *DefaultPatternDetector) DetectCustomerPatterns(customerID string, events []*interfaces.PaymentFailure) []CustomerPattern {
 	customerEvents := pd.filterEventsByCustomer(events, customerID)
 	if len(customerEvents) == 0 {
 		return []CustomerPattern{}
@@ -75,7 +75,7 @@ func (pd *DefaultPatternDetector) DetectCustomerPatterns(customerID string, even
 }
 
 // DetectTemporalPatterns detects time-based patterns in the data
-func (pd *DefaultPatternDetector) DetectTemporalPatterns(events []*architecture.PaymentFailure, timeRange time.Duration) []TemporalPattern {
+func (pd *DefaultPatternDetector) DetectTemporalPatterns(events []*interfaces.PaymentFailure, timeRange time.Duration) []TemporalPattern {
 	temporalPatterns := make([]TemporalPattern, 0)
 
 	if len(events) == 0 {
@@ -112,7 +112,7 @@ func (pd *DefaultPatternDetector) DetectTemporalPatterns(events []*architecture.
 }
 
 // DetectBusinessPatterns detects business-related patterns in payment failures
-func (pd *DefaultPatternDetector) DetectBusinessPatterns(events []*architecture.PaymentFailure) []Pattern {
+func (pd *DefaultPatternDetector) DetectBusinessPatterns(events []*interfaces.PaymentFailure) []Pattern {
 	patterns := make([]Pattern, 0)
 
 	if len(events) == 0 {
@@ -145,7 +145,7 @@ func (pd *DefaultPatternDetector) DetectBusinessPatterns(events []*architecture.
 }
 
 // detectRecurringPatterns detects recurring patterns in payment failures
-func (pd *DefaultPatternDetector) detectRecurringPatterns(events []*architecture.PaymentFailure) []Pattern {
+func (pd *DefaultPatternDetector) detectRecurringPatterns(events []*interfaces.PaymentFailure) []Pattern {
 	patterns := make([]Pattern, 0)
 
 	// Group events by customer and detect recurring patterns
@@ -174,7 +174,7 @@ func (pd *DefaultPatternDetector) detectRecurringPatterns(events []*architecture
 }
 
 // detectAmountPatterns detects patterns based on payment amounts
-func (pd *DefaultPatternDetector) detectAmountPatterns(events []*architecture.PaymentFailure) []Pattern {
+func (pd *DefaultPatternDetector) detectAmountPatterns(events []*interfaces.PaymentFailure) []Pattern {
 	patterns := make([]Pattern, 0)
 
 	if len(events) == 0 {
@@ -210,7 +210,7 @@ func (pd *DefaultPatternDetector) detectAmountPatterns(events []*architecture.Pa
 }
 
 // detectTimePatterns detects time-based patterns
-func (pd *DefaultPatternDetector) detectTimePatterns(events []*architecture.PaymentFailure) []Pattern {
+func (pd *DefaultPatternDetector) detectTimePatterns(events []*interfaces.PaymentFailure) []Pattern {
 	patterns := make([]Pattern, 0)
 
 	// Detect day-of-week pattern
@@ -229,8 +229,8 @@ func (pd *DefaultPatternDetector) detectTimePatterns(events []*architecture.Paym
 }
 
 // Helper methods for pattern detection
-func (pd *DefaultPatternDetector) groupEventsByCustomer(events []*architecture.PaymentFailure) map[string][]*architecture.PaymentFailure {
-	groups := make(map[string][]*architecture.PaymentFailure)
+func (pd *DefaultPatternDetector) groupEventsByCustomer(events []*interfaces.PaymentFailure) map[string][]*interfaces.PaymentFailure {
+	groups := make(map[string][]*interfaces.PaymentFailure)
 
 	for _, event := range events {
 		if event.CustomerID != "" {
@@ -242,8 +242,8 @@ func (pd *DefaultPatternDetector) groupEventsByCustomer(events []*architecture.P
 	return groups
 }
 
-func (pd *DefaultPatternDetector) groupEventsByBusinessCategory(events []*architecture.PaymentFailure) map[string][]*architecture.PaymentFailure {
-	groups := make(map[string][]*architecture.PaymentFailure)
+func (pd *DefaultPatternDetector) groupEventsByBusinessCategory(events []*interfaces.PaymentFailure) map[string][]*interfaces.PaymentFailure {
+	groups := make(map[string][]*interfaces.PaymentFailure)
 
 	for _, event := range events {
 		if event.BusinessCategory != "" {
@@ -254,8 +254,8 @@ func (pd *DefaultPatternDetector) groupEventsByBusinessCategory(events []*archit
 	return groups
 }
 
-func (pd *DefaultPatternDetector) filterEventsByCustomer(events []*architecture.PaymentFailure, customerID string) []*architecture.PaymentFailure {
-	filtered := make([]*architecture.PaymentFailure, 0)
+func (pd *DefaultPatternDetector) filterEventsByCustomer(events []*interfaces.PaymentFailure, customerID string) []*interfaces.PaymentFailure {
+	filtered := make([]*interfaces.PaymentFailure, 0)
 
 	for _, event := range events {
 		if event.CustomerID == customerID {
@@ -266,7 +266,7 @@ func (pd *DefaultPatternDetector) filterEventsByCustomer(events []*architecture.
 	return filtered
 }
 
-func (pd *DefaultPatternDetector) extractAmounts(events []*architecture.PaymentFailure) []float64 {
+func (pd *DefaultPatternDetector) extractAmounts(events []*interfaces.PaymentFailure) []float64 {
 	amounts := make([]float64, 0, len(events))
 
 	for _, event := range events {
@@ -290,8 +290,8 @@ func (pd *DefaultPatternDetector) calculateHighValueThreshold(amounts []float64)
 	return amounts[index]
 }
 
-func (pd *DefaultPatternDetector) filterHighValueEvents(events []*architecture.PaymentFailure, threshold float64) []*architecture.PaymentFailure {
-	filtered := make([]*architecture.PaymentFailure, 0)
+func (pd *DefaultPatternDetector) filterHighValueEvents(events []*interfaces.PaymentFailure, threshold float64) []*interfaces.PaymentFailure {
+	filtered := make([]*interfaces.PaymentFailure, 0)
 
 	for _, event := range events {
 		if event.Amount >= threshold {
@@ -302,7 +302,7 @@ func (pd *DefaultPatternDetector) filterHighValueEvents(events []*architecture.P
 	return filtered
 }
 
-func (pd *DefaultPatternDetector) calculateConfidence(events []*architecture.PaymentFailure) float64 {
+func (pd *DefaultPatternDetector) calculateConfidence(events []*interfaces.PaymentFailure) float64 {
 	if len(events) < 3 {
 		return 0.3
 	}
@@ -320,7 +320,7 @@ func (pd *DefaultPatternDetector) calculateConfidence(events []*architecture.Pay
 	return confidence
 }
 
-func (pd *DefaultPatternDetector) calculateAmountConfidence(highValueEvents []*architecture.PaymentFailure, totalEvents []*architecture.PaymentFailure) float64 {
+func (pd *DefaultPatternDetector) calculateAmountConfidence(highValueEvents []*interfaces.PaymentFailure, totalEvents []*interfaces.PaymentFailure) float64 {
 	if len(totalEvents) == 0 {
 		return 0
 	}
@@ -330,7 +330,7 @@ func (pd *DefaultPatternDetector) calculateAmountConfidence(highValueEvents []*a
 	return proportion*0.8 + 0.2 // Base confidence of 0.2
 }
 
-func (pd *DefaultPatternDetector) calculateBusinessCategoryConfidence(categoryEvents []*architecture.PaymentFailure, totalEvents []*architecture.PaymentFailure) float64 {
+func (pd *DefaultPatternDetector) calculateBusinessCategoryConfidence(categoryEvents []*interfaces.PaymentFailure, totalEvents []*interfaces.PaymentFailure) float64 {
 	if len(totalEvents) == 0 {
 		return 0
 	}
@@ -340,7 +340,7 @@ func (pd *DefaultPatternDetector) calculateBusinessCategoryConfidence(categoryEv
 	return proportion*0.7 + 0.3 // Base confidence of 0.3
 }
 
-func (pd *DefaultPatternDetector) calculateConsistencyBonus(events []*architecture.PaymentFailure) float64 {
+func (pd *DefaultPatternDetector) calculateConsistencyBonus(events []*interfaces.PaymentFailure) float64 {
 	if len(events) < 2 {
 		return 0
 	}
@@ -383,12 +383,12 @@ func (pd *DefaultPatternDetector) calculateMeanDuration(durations []time.Duratio
 	return total / time.Duration(len(durations))
 }
 
-func (pd *DefaultPatternDetector) calculateFrequency(events []*architecture.PaymentFailure, patternType PatternType) int {
+func (pd *DefaultPatternDetector) calculateFrequency(events []*interfaces.PaymentFailure, patternType PatternType) int {
 	// Simple frequency calculation - count events
 	return len(events)
 }
 
-func (pd *DefaultPatternDetector) calculateTotalAmount(events []*architecture.PaymentFailure) float64 {
+func (pd *DefaultPatternDetector) calculateTotalAmount(events []*interfaces.PaymentFailure) float64 {
 	total := 0.0
 	for _, event := range events {
 		total += event.Amount
@@ -396,7 +396,7 @@ func (pd *DefaultPatternDetector) calculateTotalAmount(events []*architecture.Pa
 	return total
 }
 
-func (pd *DefaultPatternDetector) calculateCustomerRiskLevel(events []*architecture.PaymentFailure) string {
+func (pd *DefaultPatternDetector) calculateCustomerRiskLevel(events []*interfaces.PaymentFailure) string {
 	if len(events) == 0 {
 		return "low"
 	}
@@ -414,7 +414,7 @@ func (pd *DefaultPatternDetector) calculateCustomerRiskLevel(events []*architect
 	return "low"
 }
 
-func (pd *DefaultPatternDetector) calculateTimeSpan(events []*architecture.PaymentFailure) time.Duration {
+func (pd *DefaultPatternDetector) calculateTimeSpan(events []*interfaces.PaymentFailure) time.Duration {
 	if len(events) < 2 {
 		return 0
 	}
@@ -435,7 +435,7 @@ func (pd *DefaultPatternDetector) calculateTimeSpan(events []*architecture.Payme
 	return latest.Sub(earliest)
 }
 
-func (pd *DefaultPatternDetector) detectDayOfWeekPattern(events []*architecture.PaymentFailure) *Pattern {
+func (pd *DefaultPatternDetector) detectDayOfWeekPattern(events []*interfaces.PaymentFailure) *Pattern {
 	if len(events) < 7 {
 		return nil
 	}
@@ -477,7 +477,7 @@ func (pd *DefaultPatternDetector) detectDayOfWeekPattern(events []*architecture.
 	return nil
 }
 
-func (pd *DefaultPatternDetector) detectTimeOfDayPattern(events []*architecture.PaymentFailure) *Pattern {
+func (pd *DefaultPatternDetector) detectTimeOfDayPattern(events []*interfaces.PaymentFailure) *Pattern {
 	if len(events) < 24 {
 		return nil
 	}
@@ -519,7 +519,7 @@ func (pd *DefaultPatternDetector) detectTimeOfDayPattern(events []*architecture.
 	return nil
 }
 
-func (pd *DefaultPatternDetector) findPeakTimes(events []*architecture.PaymentFailure, patternType string) []time.Time {
+func (pd *DefaultPatternDetector) findPeakTimes(events []*interfaces.PaymentFailure, patternType string) []time.Time {
 	if len(events) == 0 {
 		return []time.Time{}
 	}

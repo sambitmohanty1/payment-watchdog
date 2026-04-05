@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: worker-config
+  labels:
+    app.kubernetes.io/name: recovery-orchestration
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: payment-watchdog
+data:
+  config.yaml: |
+    # Payment Watchdog Worker Configuration
+    # This configuration uses the unified structure
+    
+    service:
+      name: recovery-orchestration
+      port: 8086
+      environment: production
+      log_level: info
+      host: 0.0.0.0
+      
+    database:
+      host: postgres.production.svc.cluster.local
+      port: 5432
+      name: payment_watchdog
+      user: postgres
+      ssl_mode: require
+      max_idle_conns: 10
+      max_open_conns: 100
+      conn_max_lifetime: 1h
+      
+    redis:
+      addr: redis.production.svc.cluster.local:6379
+      password: redis
+      db: 0
+      pool_size: 100
+      connect_timeout: 10s
+      max_retries: 3
+      
+    sovereign:
+      mode: false
+      validate_endpoints: false
+      data_residency: ""
+      allowed_regions: []
+      
+    workflow:
+      max_concurrent_workflows: 100
+      max_retry_attempts: 3
+      retry_delay: 5m
+      timeout: 30m
+      
+    observability:
+      metrics:
+        enabled: true
+        path: /metrics
+        port: 9090
+      tracing:
+        enabled: true
+        sample_rate: 1.0
+        exporter: otlp
+        endpoint: http://otel-collector.observability.svc.cluster.local:4317
+        
+    notifications:
+      email:
+        enabled: true
+        from: noreply@paymentwatchdog.com
+        smtp_host: localhost
+        smtp_port: 1025
+        retry_attempts: 3
+      sms:
+        enabled: true
+        from: PAYMENT_WATCHDOG
+        provider: twilio
+        retry_attempts: 3

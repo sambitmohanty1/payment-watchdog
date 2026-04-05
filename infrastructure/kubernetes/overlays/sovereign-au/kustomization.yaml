@@ -1,0 +1,143 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: sovereign-au-overlay
+
+# Include all base components and services
+resources:
+  - ../../base
+  - namespace.yaml
+  - network-policy.yaml
+  - global-config.yaml
+
+# Environment-specific namespace
+namespace: sovereign-au
+
+# Name suffix for all resources
+nameSuffix: "-sovereign-au"
+
+# Environment-specific labels
+labels:
+  - pairs:
+      environment: sovereign-au
+      data-residency: australia
+    includeSelectors: true
+    includeTemplates: true
+
+# Images for sovereign environment
+images:
+  - name: payment-watchdog/api
+    newName: ghcr.io/sambitmohanty1/payment-watchdog/api
+    newTag: latest
+  - name: payment-watchdog/worker
+    newName: ghcr.io/sambitmohanty1/payment-watchdog/worker
+    newTag: latest
+  - name: payment-watchdog/web
+    newName: ghcr.io/sambitmohanty1/payment-watchdog/web
+    newTag: latest
+
+# Patches for sovereign-specific configurations
+patches:
+  # Storage class configuration for OCI (current deployment)
+  - target:
+      kind: PersistentVolumeClaim
+      name: postgres-pvc
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: oci-bv  # Current: OCI, can be overridden for future migrations
+  - target:
+      kind: PersistentVolumeClaim
+      name: redis-pvc
+    patch: |-
+      - op: replace
+        path: /spec/storageClassName
+        value: oci-bv  # Current: OCI, can be overridden for future migrations
+
+  # Worker service configuration patch - CRITICAL for fixing pod crashes
+  - target:
+      kind: ConfigMap
+      name: worker-config
+    patch: |-
+      - op: replace
+        path: /data/config.yaml
+        value: |
+          service:
+            name: recovery-orchestration
+            port: 8086
+            environment: sovereign-au
+            log_level: info
+            host: 0.0.0.0
+            
+          database:
+            host: postgres-sovereign-au.sovereign-au.svc.cluster.local
+            port: 5432
+            name: payment_watchdog
+            user: postgres
+            ssl_mode: require
+            max_idle_conns: 10
+            max_open_conns: 100
+            conn_max_lifetime: 1h
+            
+          redis:
+            addr: redis-sovereign-au.sovereign-au.svc.cluster.local:6379
+            password: redis
+            db: 0
+            pool_size: 100
+            connect_timeout: 10s
+            max_retries: 3
+            
+          sovereign:
+            mode: true
+            validate_endpoints: true
+            data_residency: australia
+            allowed_regions:
+              - ap-southeast-2
+              - ap-southeast-3
+              
+          workflow:
+            max_concurrent_workflows: 100
+            max_retry_attempts: 3
+            retry_delay: 5m
+            timeout: 30m
+            
+          observability:
+            metrics:
+              enabled: true
+              path: /metrics
+              port: 9090
+            tracing:
+              enabled: true
+              sample_rate: 1.0
+              exporter: otlp
+              endpoint: http://otel-collector.observability.svc.cluster.local:4317
+
+  # Patch for postgres secrets
+  - target:
+      kind: Secret
+      name: postgres-secrets
+    patch: |-
+      - op: replace
+        path: /data
+        value:
+          database_password: cG9zdGdyZXM=  # postgres
+
+  # Patch for redis secrets  
+  - target:
+      kind: Secret
+      name: redis-secrets
+    patch: |-
+      - op: replace
+        path: /data
+        value:
+          redis_password: cmVkaXM=  # redis
+
+# Replicas for sovereign environment
+replicas:
+  - name: postgres
+    count: 1
+  - name: redis
+    count: 1
+  - name: recovery-orchestration
+    count: 2

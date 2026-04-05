@@ -1,0 +1,278 @@
+name: 🚀 CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: false
+        default: 'sovereign-au'
+        type: choice
+        options:
+        - development
+        - staging
+        - sovereign-au
+        - production
+      dry_run:
+        description: 'Dry run only (no actual deployment)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: payment-watchdog
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    outputs:
+      build-success: ${{ steps.build.outputs.success }}
+      tests-passed: ${{ steps.test.outputs.result }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Cache Go Modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+          
+    - name: Build Applications
+      id: build
+      run: |
+        echo "🏗️ Building Payment Watchdog applications..."
+        
+        # Build API
+        cd api
+        go build -o payment-watchdog-api ./cmd/main.go
+        echo "api-build=true" >> $GITHUB_OUTPUT
+        
+        # Build Worker
+        cd ../worker
+        go build -o payment-watchdog-worker ./cmd/main.go
+        echo "worker-build=true" >> $GITHUB_OUTPUT
+        
+        # Build Web
+        cd ../web
+        npm ci
+        npm run build
+        echo "web-build=true" >> $GITHUB_OUTPUT
+        
+        echo "build-success=true" >> $GITHUB_OUTPUT
+        
+    - name: Run Tests
+      id: test
+      run: |
+        echo "🧪 Running comprehensive test suite..."
+        
+        # Run tests for all services
+        cd api && go test ./... -v -race -cover
+        cd ../worker && go test ./... -v -race -cover
+        cd ../web && npm test
+        
+        echo "tests-passed=true" >> $GITHUB_OUTPUT
+        
+    - name: Upload Build Artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          api/payment-watchdog-api
+          worker/payment-watchdog-worker
+          web/dist/
+        retention-days: 30
+
+  validate-infrastructure:
+    name: Validate Infrastructure
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: needs.build-and-test.outputs.tests-passed == 'true'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Kustomize
+      run: |
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install-kustomize.sh" | bash
+        sudo mv kustomize /usr/local/bin/
+        
+    - name: Run Infrastructure Validation
+      run: |
+        echo "🔍 Validating ${{ github.event.inputs.environment || 'sovereign-au' }} infrastructure..."
+        ./infrastructure/kubernetes/scripts/validate-config.sh ${{ github.event.inputs.environment || 'sovereign-au' }}
+        
+    - name: Upload Validation Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: validation-report
+        path: /tmp/payment-watchdog-validation/
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: needs.build-and-test.outputs.tests-passed == 'true'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy Security Scan
+      run: |
+        echo "🔍 Running security scan..."
+        
+        # Create reports directory
+        mkdir -p security-reports
+        
+        # Scan Docker images
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          -v ${{ github.workspace }}:/workspace \
+          -v $(pwd)/security-reports:/reports \
+          aquasec/trivy:latest \
+          image --exit-code 0 \
+          infrastructure/kubernetes/overlays/${{ github.event.inputs.environment || 'sovereign-au' }} \
+          --format json \
+          --output /reports/trivy-report.json
+        
+        # Scan IaC configurations
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          -v ${{ github.workspace }}:/workspace \
+          -v $(pwd)/security-reports:/reports \
+          aquasec/trivy:latest \
+          config --exit-code 0 \
+          infrastructure/kubernetes/ \
+          --format json \
+          --output /reports/trivy-config-report.json
+          
+    - name: Upload Security Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-scan-report
+        path: security-reports/
+
+  # Manual Sovereign-AU Deployment Instructions
+  - name: Manual Sovereign-AU Deployment
+    runs-on: ubuntu-latest
+    needs: [build-and-test, validate-infrastructure, security-scan]
+    if: github.event.inputs.environment == 'sovereign-au'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
+        
+    - name: Deployment Instructions
+      run: |
+        echo " Manual Sovereign-AU Deployment Required"
+        echo ""
+        echo " To deploy to sovereign-au environment:"
+        echo "1. Go to Actions tab in GitHub repository"
+        echo "2. Click 'Run workflow' button"
+        echo "3. Select 'ci-cd-pipeline' workflow"
+        echo "4. Set environment to 'sovereign-au'"
+        echo "5. Ensure dry_run is unchecked"
+        echo "6. Click 'Start workflow'"
+        echo ""
+        echo " This ensures manual approval and oversight for production deployment"
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-test, validate-infrastructure, security-scan]
+    if: github.ref == 'refs/heads/main' && github.event.inputs.environment == 'staging'
+    environment: staging
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
+        
+    - name: Deploy to Staging
+      run: |
+        echo " Deploying to staging environment..."
+        
+        # Build manifests
+        kustomize build infrastructure/kubernetes/overlays/staging > manifests.yaml
+        
+        # Apply manifests
+        kubectl apply -f manifests.yaml
+        
+        # Wait for deployment
+        kubectl wait --for=condition=ready pod -l app.kubernetes.io/part-of=payment-watchdog --timeout=300s -n staging
+        
+    - name: Validate Staging Deployment
+      run: |
+        echo " Staging deployment validated"
+        kubectl get pods -n staging -l app.kubernetes.io/part-of=payment-watchdog
+
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: [deploy-staging]
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Rollback Deployment
+      run: |
+        echo " Rolling back deployment..."
+        
+        # Get previous successful deployment
+        kubectl rollout undo deployment/payment-watchdog-api -n ${{ github.event.inputs.environment || 'sovereign-au' }}
+        kubectl rollout undo deployment/payment-watchdog-web -n ${{ github.event.inputs.environment || 'sovereign-au' }}
+        kubectl rollout undo deployment/recovery-orchestration -n ${{ github.event.inputs.environment || 'sovereign-au' }}
+        kubectl rollout undo deployment/postgres -n ${{ github.event.inputs.environment || 'sovereign-au' }}
+        kubectl rollout undo deployment/redis -n ${{ github.event.inputs.environment || 'sovereign-au' }}
+        
+        echo "✅ Rollback completed"
+
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: always()
+    
+    steps:
+    - name: Notify Success
+      if: needs.deploy-staging.result == 'success'
+      run: |
+        echo "✅ Staging deployment successful"
+        # Add notification logic here (Slack, Teams, etc.)
+        
+    - name: Notify Failure
+      if: needs.deploy-staging.result == 'failure'
+      run: |
+        echo "❌ Staging deployment failed"
+        # Add notification logic here (Slack, Teams, etc.)

@@ -21,6 +21,32 @@ import (
 	"github.com/sambitmohanty1/payment-watchdog/worker/internal/services"
 )
 
+// Helper functions for environment variable handling
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+func getEnvIntOrDefault(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+	}
+	return defaultValue
+}
+
+func getEnvBoolOrDefault(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			return boolValue
+		}
+	}
+	return defaultValue
+}
+
 // ZapLoggerAdapter adapts zap.Logger to LoggerInterface
 type ZapLoggerAdapter struct {
 	logger *zap.Logger
@@ -76,9 +102,49 @@ func main() {
 			return &fxevent.ZapLogger{Logger: logger}
 		}),
 		fx.Provide(
-			config.Load,
+			// Provide WorkerConfig from environment variables
+			func() *config.WorkerConfig {
+				// Get database configuration from environment
+				dbHost := getEnvOrDefault("DATABASE_HOST", "lexure-mvp-postgres")
+				dbPort := getEnvIntOrDefault("DATABASE_PORT", 5403)
+				dbName := getEnvOrDefault("DATABASE_NAME", "lexure_intelligence_mvp")
+				dbUser := getEnvOrDefault("DATABASE_USER", "postgres")
+				dbPassword := getEnvOrDefault("DATABASE_PASSWORD", "password")
+				dbSSLMode := getEnvOrDefault("DATABASE_SSL_MODE", "disable")
+
+				// Get Redis configuration from environment
+				redisHost := getEnvOrDefault("REDIS_HOST", "lexure-redis-sovereign-au.sovereign-au.svc.cluster.local")
+				redisPort := getEnvIntOrDefault("REDIS_PORT", 6379)
+				redisPassword := getEnvOrDefault("REDIS_PASSWORD", "")
+
+				// Get logging configuration from environment
+				logLevel := getEnvOrDefault("LOG_LEVEL", "info")
+
+				// Get sovereign mode from environment
+				sovereignMode := getEnvBoolOrDefault("SOVEREIGN_MODE", false)
+
+				return &config.WorkerConfig{
+					Database: &interfaces.DatabaseConfig{
+						Host:     dbHost,
+						Port:     dbPort,
+						Name:     dbName,
+						User:     dbUser,
+						Password: dbPassword,
+						SSLMode:  dbSSLMode,
+					},
+					Redis: &interfaces.RedisConfig{
+						Host:     redisHost,
+						Port:     redisPort,
+						Password: redisPassword,
+						DB:       0,
+					},
+					Logging: &interfaces.LoggingConfig{
+						Level: logLevel,
+					},
+					Sovereign: sovereignMode,
+				}
+			},
 			database.NewPostgresDatabase,
-			// ❌ REMOVED: eventbus.NewRedisEventBus (using configured provider below)
 		),
 		fx.Provide(
 			// Provide interfaces as concrete types
@@ -91,46 +157,9 @@ func main() {
 			func(logger *zap.Logger) interfaces.LoggerInterface {
 				return &ZapLoggerAdapter{logger: logger}
 			},
-			// Provide missing dependencies
-			func(cfg *config.Config) *interfaces.DatabaseConfig {
-				return &interfaces.DatabaseConfig{
-					Host:     cfg.Database.Host,
-					Port:     cfg.Database.Port,
-					Name:     cfg.Database.Name,
-					User:     cfg.Database.User,
-					Password: cfg.Database.Password,
-					SSLMode:  cfg.Database.SSLMode,
-				}
-			},
-			// Provide WorkerConfig for PaymentProcessorService
-			func(cfg *config.Config) *config.WorkerConfig {
-				// Convert Redis port from string to int with safe default
-				redisPort := 6379 // default
-				if redisPortStr := os.Getenv("REDIS_PORT"); redisPortStr != "" {
-					if port, err := strconv.Atoi(redisPortStr); err == nil {
-						redisPort = port
-					}
-				}
-
-				return &config.WorkerConfig{
-					Database: &interfaces.DatabaseConfig{
-						Host:     cfg.Database.Host,
-						Port:     cfg.Database.Port,
-						Name:     cfg.Database.Name,
-						User:     cfg.Database.User,
-						Password: cfg.Database.Password,
-						SSLMode:  cfg.Database.SSLMode,
-					},
-					Redis: &interfaces.RedisConfig{
-						Host:     os.Getenv("REDIS_HOST"),
-						Port:     redisPort,
-						Password: os.Getenv("REDIS_PASSWORD"),
-						DB:       0,
-					},
-					Logging: &interfaces.LoggingConfig{
-						Level: cfg.Log.Level,
-					},
-				}
+			// Provide DatabaseConfig from WorkerConfig
+			func(cfg *config.WorkerConfig) *interfaces.DatabaseConfig {
+				return cfg.Database
 			},
 			// Provide zap.Logger directly for database
 			func() *zap.Logger {

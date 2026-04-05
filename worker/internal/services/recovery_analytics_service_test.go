@@ -1,6 +1,9 @@
 package services_test
 
 import (
+package services_test
+
+import (
 	"context"
 	"testing"
 	"time"
@@ -204,13 +207,16 @@ func TestCalculateRecoveryScore(t *testing.T) {
 		// Add more test cases
 	}
 
-	service := &svc.RecoveryAnalyticsService{}
+	service, _, mock := MockRecoveryAnalyticsService(t)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			score, err := service.calculateRecoveryScore(tt.metrics)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, score)
+
+			// Verify mock expectations
+			mock.ExpectationsWereMet()
 		})
 	}
 }

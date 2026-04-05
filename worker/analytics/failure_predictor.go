@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
 	"go.uber.org/zap"
 )
 
@@ -22,7 +22,7 @@ func NewDefaultFailurePredictor(logger *zap.Logger) *DefaultFailurePredictor {
 }
 
 // PredictFailure predicts the likelihood of future payment failures for a customer
-func (fp *DefaultFailurePredictor) PredictFailure(customerID string, history []*architecture.PaymentFailure) *Prediction {
+func (fp *DefaultFailurePredictor) PredictFailure(customerID string, history []*interfaces.PaymentFailure) *Prediction {
 	if len(history) == 0 {
 		return nil
 	}
@@ -72,7 +72,7 @@ func (fp *DefaultFailurePredictor) PredictFailure(customerID string, history []*
 }
 
 // PredictRiskScore calculates a risk score for a customer based on their payment failure history
-func (fp *DefaultFailurePredictor) PredictRiskScore(customerID string, history []*architecture.PaymentFailure) float64 {
+func (fp *DefaultFailurePredictor) PredictRiskScore(customerID string, history []*interfaces.PaymentFailure) float64 {
 	if len(history) == 0 {
 		return 0.0
 	}
@@ -107,7 +107,7 @@ func (fp *DefaultFailurePredictor) PredictRiskScore(customerID string, history [
 }
 
 // PredictNextFailureDate predicts when the next payment failure is likely to occur
-func (fp *DefaultFailurePredictor) PredictNextFailureDate(customerID string, history []*architecture.PaymentFailure) *time.Time {
+func (fp *DefaultFailurePredictor) PredictNextFailureDate(customerID string, history []*interfaces.PaymentFailure) *time.Time {
 	if len(history) < 2 {
 		return nil
 	}
@@ -142,7 +142,7 @@ func (fp *DefaultFailurePredictor) PredictNextFailureDate(customerID string, his
 }
 
 // Helper methods for risk calculation
-func (fp *DefaultFailurePredictor) calculateFrequencyScore(history []*architecture.PaymentFailure) float64 {
+func (fp *DefaultFailurePredictor) calculateFrequencyScore(history []*interfaces.PaymentFailure) float64 {
 	eventCount := len(history)
 
 	// Exponential scoring: more events = exponentially higher risk
@@ -162,7 +162,7 @@ func (fp *DefaultFailurePredictor) calculateFrequencyScore(history []*architectu
 	return math.Min(100.0, baseScore)
 }
 
-func (fp *DefaultFailurePredictor) calculateAmountScore(history []*architecture.PaymentFailure) float64 {
+func (fp *DefaultFailurePredictor) calculateAmountScore(history []*interfaces.PaymentFailure) float64 {
 	if len(history) == 0 {
 		return 0.0
 	}
@@ -182,7 +182,7 @@ func (fp *DefaultFailurePredictor) calculateAmountScore(history []*architecture.
 	return math.Min(100.0, amountScore)
 }
 
-func (fp *DefaultFailurePredictor) calculateRecencyScore(history []*architecture.PaymentFailure) float64 {
+func (fp *DefaultFailurePredictor) calculateRecencyScore(history []*interfaces.PaymentFailure) float64 {
 	if len(history) == 0 {
 		return 0.0
 	}
@@ -210,7 +210,7 @@ func (fp *DefaultFailurePredictor) calculateRecencyScore(history []*architecture
 	}
 }
 
-func (fp *DefaultFailurePredictor) calculateConsistencyScore(history []*architecture.PaymentFailure) float64 {
+func (fp *DefaultFailurePredictor) calculateConsistencyScore(history []*interfaces.PaymentFailure) float64 {
 	if len(history) < 2 {
 		return 0.0
 	}
@@ -244,7 +244,7 @@ func (fp *DefaultFailurePredictor) calculateConsistencyScore(history []*architec
 	return math.Max(0.0, math.Min(100.0, consistencyScore))
 }
 
-func (fp *DefaultFailurePredictor) calculateBusinessCategoryScore(history []*architecture.PaymentFailure) float64 {
+func (fp *DefaultFailurePredictor) calculateBusinessCategoryScore(history []*interfaces.PaymentFailure) float64 {
 	if len(history) == 0 {
 		return 0.0
 	}
@@ -287,7 +287,7 @@ func (fp *DefaultFailurePredictor) calculateBusinessCategoryScore(history []*arc
 	return totalScore
 }
 
-func (fp *DefaultFailurePredictor) calculateFailureProbability(riskScore float64, history []*architecture.PaymentFailure) float64 {
+func (fp *DefaultFailurePredictor) calculateFailureProbability(riskScore float64, history []*interfaces.PaymentFailure) float64 {
 	// Convert risk score (0-100) to probability (0-1)
 	// Use sigmoid function for smooth probability curve
 	baseProbability := riskScore / 100.0
@@ -304,7 +304,7 @@ func (fp *DefaultFailurePredictor) calculateFailureProbability(riskScore float64
 	return math.Min(0.95, adjustedProbability)
 }
 
-func (fp *DefaultFailurePredictor) calculatePredictionConfidence(history []*architecture.PaymentFailure) float64 {
+func (fp *DefaultFailurePredictor) calculatePredictionConfidence(history []*interfaces.PaymentFailure) float64 {
 	if len(history) == 0 {
 		return 0.0
 	}
@@ -327,7 +327,7 @@ func (fp *DefaultFailurePredictor) calculatePredictionConfidence(history []*arch
 	return math.Min(1.0, totalConfidence)
 }
 
-func (fp *DefaultFailurePredictor) calculateRecencyConfidence(history []*architecture.PaymentFailure) float64 {
+func (fp *DefaultFailurePredictor) calculateRecencyConfidence(history []*interfaces.PaymentFailure) float64 {
 	if len(history) == 0 {
 		return 0.0
 	}
@@ -355,7 +355,7 @@ func (fp *DefaultFailurePredictor) calculateRecencyConfidence(history []*archite
 	}
 }
 
-func (fp *DefaultFailurePredictor) calculateConsistencyConfidence(history []*architecture.PaymentFailure) float64 {
+func (fp *DefaultFailurePredictor) calculateConsistencyConfidence(history []*interfaces.PaymentFailure) float64 {
 	if len(history) < 2 {
 		return 0.0
 	}
@@ -386,7 +386,7 @@ func (fp *DefaultFailurePredictor) calculateConsistencyConfidence(history []*arc
 	return confidenceBonus
 }
 
-func (fp *DefaultFailurePredictor) identifyRiskFactors(customerID string, history []*architecture.PaymentFailure) []string {
+func (fp *DefaultFailurePredictor) identifyRiskFactors(customerID string, history []*interfaces.PaymentFailure) []string {
 	factors := make([]string, 0)
 
 	// Factor 1: High frequency
@@ -454,8 +454,8 @@ func (fp *DefaultFailurePredictor) identifyRiskFactors(customerID string, histor
 	return factors
 }
 
-func (fp *DefaultFailurePredictor) sortByTimestamp(history []*architecture.PaymentFailure) []*architecture.PaymentFailure {
-	sorted := make([]*architecture.PaymentFailure, len(history))
+func (fp *DefaultFailurePredictor) sortByTimestamp(history []*interfaces.PaymentFailure) []*interfaces.PaymentFailure {
+	sorted := make([]*interfaces.PaymentFailure, len(history))
 	copy(sorted, history)
 
 	// Simple bubble sort for small datasets
@@ -470,7 +470,7 @@ func (fp *DefaultFailurePredictor) sortByTimestamp(history []*architecture.Payme
 	return sorted
 }
 
-func (fp *DefaultFailurePredictor) calculateTimeGaps(history []*architecture.PaymentFailure) []time.Duration {
+func (fp *DefaultFailurePredictor) calculateTimeGaps(history []*interfaces.PaymentFailure) []time.Duration {
 	if len(history) < 2 {
 		return []time.Duration{}
 	}

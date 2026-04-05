@@ -9,23 +9,88 @@
 
 ---
 
-## 📋 Overview
-Payment Watchdog is an **Australian-first payment recovery platform** designed to help businesses recover failed payments through intelligent automation, local payment rail integration, and specialized recovery workflows.
+## � Quick Start
 
-### 🎯 Market Focus
-- **Micro-Merchant Recovery Engine**: Specialized for tap-on-phone businesses
-- **AU/NZ Rail Integration**: PayTo, NPP, and BECS payment rails
-- **Vertical Intelligence**: Education, gig economy, and healthcare specialization.
-- **Sovereign Data Compliance**: Australian data residency and privacy compliance.
+### **Prerequisites**
+- Go 1.21+
+- Node.js 18+
+- Docker & Docker Compose
+- PostgreSQL 15+
+- Redis 7+
 
-### 🚀 Key Features
-- **🔄 Intelligent Recovery Workflows**: Automated payment failure recovery
-- **💳 PayTo Integration**: NPP/PayTo rail integration for insufficient funds
-- **🔄 Cross-Method Reconciliation**: Xero integration for manual payments
-- **💰 Cost Optimization**: Micro-transaction routing for <$100 transactions
-- **🤖 AI-Powered Analytics**: Machine learning for recovery optimization
-- **🔒 Sovereign Compliance**: Australian data residency and security
-- **📊 Real-Time Dashboard**: Comprehensive analytics and monitoring
+### **Development Setup**
+
+```bash
+# Clone repository
+git clone https://github.com/sambitmohanty1/payment-watchdog.git
+cd payment-watchdog
+
+# Start development environment
+docker-compose up -d
+
+# Access services
+# API: http://localhost:8080
+# Web: http://localhost:4896
+# Database: localhost:5432
+# Redis: localhost:6379
+```
+
+### **Environment Configuration**
+
+| Environment | Docker Compose File | Ports | Database |
+|-------------|-------------------|-------|----------|
+| Development | `docker-compose.yml` | API:8080, Web:4896, DB:5432, Redis:6379 | `payment_watchdog` |
+| Staging | `docker-compose.staging.yml` | API:8091, Web:3011, DB:5443, Redis:6390 | `payment_watchdog_staging` |
+| Local | `docker-compose.local.yml` | API:8096, Web:4896, DB:5432, Redis:6379 | `payment_watchdog_local` |
+
+### **🏗️ Building Services**
+
+```bash
+# Build API
+cd api && go build -o payment-watchdog-api ./cmd/main.go
+
+# Build Worker  
+cd worker && go build -o payment-watchdog-worker ./cmd/main.go
+
+# Build Web
+cd web && npm run build
+```
+
+### **🧪 Testing**
+
+```bash
+# Run all tests
+go test ./... -v -race -cover
+
+# Run service-specific tests
+cd api && go test ./... -v
+cd worker && go test ./... -v
+```
+
+### **🚀 Deployment**
+
+#### **Development**
+```bash
+docker-compose up -d
+```
+
+#### **Staging**
+```bash
+docker-compose -f docker-compose.staging.yml up -d
+```
+
+#### **Production**
+```bash
+# Manual deployment via GitHub Actions
+# See .github/workflows/ci-cd-pipeline.yml
+```
+
+### **�️ Sovereign Compliance**
+
+- Australian data residency enforced
+- Network isolation policies
+- PCI-DSS compliance
+- Secure secret management
 
 ---
 

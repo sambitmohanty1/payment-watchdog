@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +23,7 @@ func NewDefaultTrendAnalyzer(logger *zap.Logger) *DefaultTrendAnalyzer {
 }
 
 // AnalyzeTrends analyzes trends in payment failure data over a specified time range
-func (ta *DefaultTrendAnalyzer) AnalyzeTrends(data []*architecture.PaymentFailure, timeRange time.Duration) []Trend {
+func (ta *DefaultTrendAnalyzer) AnalyzeTrends(data []*interfaces.PaymentFailure, timeRange time.Duration) []Trend {
 	trends := make([]Trend, 0)
 
 	if len(data) == 0 {
@@ -61,7 +61,7 @@ func (ta *DefaultTrendAnalyzer) AnalyzeTrends(data []*architecture.PaymentFailur
 }
 
 // AnalyzeSeasonalPatterns analyzes seasonal patterns in the data
-func (ta *DefaultTrendAnalyzer) AnalyzeSeasonalPatterns(data []*architecture.PaymentFailure) []SeasonalPattern {
+func (ta *DefaultTrendAnalyzer) AnalyzeSeasonalPatterns(data []*interfaces.PaymentFailure) []SeasonalPattern {
 	seasonalPatterns := make([]SeasonalPattern, 0)
 
 	if len(data) == 0 {
@@ -94,7 +94,7 @@ func (ta *DefaultTrendAnalyzer) AnalyzeSeasonalPatterns(data []*architecture.Pay
 }
 
 // AnalyzeBusinessCyclePatterns analyzes business cycle patterns
-func (ta *DefaultTrendAnalyzer) AnalyzeBusinessCyclePatterns(data []*architecture.PaymentFailure) []BusinessCyclePattern {
+func (ta *DefaultTrendAnalyzer) AnalyzeBusinessCyclePatterns(data []*interfaces.PaymentFailure) []BusinessCyclePattern {
 	businessCyclePatterns := make([]BusinessCyclePattern, 0)
 
 	if len(data) == 0 {
@@ -123,8 +123,8 @@ func (ta *DefaultTrendAnalyzer) AnalyzeBusinessCyclePatterns(data []*architectur
 }
 
 // Helper methods for trend analysis
-func (ta *DefaultTrendAnalyzer) sortByTimestamp(data []*architecture.PaymentFailure) []*architecture.PaymentFailure {
-	sorted := make([]*architecture.PaymentFailure, len(data))
+func (ta *DefaultTrendAnalyzer) sortByTimestamp(data []*interfaces.PaymentFailure) []*interfaces.PaymentFailure {
+	sorted := make([]*interfaces.PaymentFailure, len(data))
 	copy(sorted, data)
 
 	sort.Slice(sorted, func(i, j int) bool {
@@ -134,7 +134,7 @@ func (ta *DefaultTrendAnalyzer) sortByTimestamp(data []*architecture.PaymentFail
 	return sorted
 }
 
-func (ta *DefaultTrendAnalyzer) analyzeFailureRateTrend(data []*architecture.PaymentFailure, timeRange time.Duration) *Trend {
+func (ta *DefaultTrendAnalyzer) analyzeFailureRateTrend(data []*interfaces.PaymentFailure, timeRange time.Duration) *Trend {
 	if len(data) < 2 {
 		return nil
 	}
@@ -162,7 +162,7 @@ func (ta *DefaultTrendAnalyzer) analyzeFailureRateTrend(data []*architecture.Pay
 	}
 }
 
-func (ta *DefaultTrendAnalyzer) analyzeAmountTrend(data []*architecture.PaymentFailure, timeRange time.Duration) *Trend {
+func (ta *DefaultTrendAnalyzer) analyzeAmountTrend(data []*interfaces.PaymentFailure, timeRange time.Duration) *Trend {
 	if len(data) < 2 {
 		return nil
 	}
@@ -190,7 +190,7 @@ func (ta *DefaultTrendAnalyzer) analyzeAmountTrend(data []*architecture.PaymentF
 	}
 }
 
-func (ta *DefaultTrendAnalyzer) analyzeFrequencyTrend(data []*architecture.PaymentFailure, timeRange time.Duration) *Trend {
+func (ta *DefaultTrendAnalyzer) analyzeFrequencyTrend(data []*interfaces.PaymentFailure, timeRange time.Duration) *Trend {
 	if len(data) < 2 {
 		return nil
 	}
@@ -218,7 +218,7 @@ func (ta *DefaultTrendAnalyzer) analyzeFrequencyTrend(data []*architecture.Payme
 	}
 }
 
-func (ta *DefaultTrendAnalyzer) analyzeCustomerTrend(data []*architecture.PaymentFailure, timeRange time.Duration) *Trend {
+func (ta *DefaultTrendAnalyzer) analyzeCustomerTrend(data []*interfaces.PaymentFailure, timeRange time.Duration) *Trend {
 	if len(data) < 2 {
 		return nil
 	}
@@ -246,7 +246,7 @@ func (ta *DefaultTrendAnalyzer) analyzeCustomerTrend(data []*architecture.Paymen
 	}
 }
 
-func (ta *DefaultTrendAnalyzer) calculateFailureRates(data []*architecture.PaymentFailure, windowSize time.Duration) []float64 {
+func (ta *DefaultTrendAnalyzer) calculateFailureRates(data []*interfaces.PaymentFailure, windowSize time.Duration) []float64 {
 	rates := make([]float64, 0)
 
 	if len(data) == 0 {
@@ -277,7 +277,7 @@ func (ta *DefaultTrendAnalyzer) calculateFailureRates(data []*architecture.Payme
 	return rates
 }
 
-func (ta *DefaultTrendAnalyzer) calculateAverageAmounts(data []*architecture.PaymentFailure, windowSize time.Duration) []float64 {
+func (ta *DefaultTrendAnalyzer) calculateAverageAmounts(data []*interfaces.PaymentFailure, windowSize time.Duration) []float64 {
 	amounts := make([]float64, 0)
 
 	if len(data) == 0 {
@@ -314,7 +314,7 @@ func (ta *DefaultTrendAnalyzer) calculateAverageAmounts(data []*architecture.Pay
 	return amounts
 }
 
-func (ta *DefaultTrendAnalyzer) calculateEventFrequencies(data []*architecture.PaymentFailure, windowSize time.Duration) []float64 {
+func (ta *DefaultTrendAnalyzer) calculateEventFrequencies(data []*interfaces.PaymentFailure, windowSize time.Duration) []float64 {
 	frequencies := make([]float64, 0)
 
 	if len(data) == 0 {
@@ -343,7 +343,7 @@ func (ta *DefaultTrendAnalyzer) calculateEventFrequencies(data []*architecture.P
 	return frequencies
 }
 
-func (ta *DefaultTrendAnalyzer) calculateCustomerCounts(data []*architecture.PaymentFailure, windowSize time.Duration) []float64 {
+func (ta *DefaultTrendAnalyzer) calculateCustomerCounts(data []*interfaces.PaymentFailure, windowSize time.Duration) []float64 {
 	customerCounts := make([]float64, 0)
 
 	if len(data) == 0 {
@@ -513,8 +513,8 @@ func (ta *DefaultTrendAnalyzer) generateTrendDescription(trendType TrendType, di
 	}
 }
 
-func (ta *DefaultTrendAnalyzer) groupByMonth(data []*architecture.PaymentFailure) map[int][]*architecture.PaymentFailure {
-	monthlyGroups := make(map[int][]*architecture.PaymentFailure)
+func (ta *DefaultTrendAnalyzer) groupByMonth(data []*interfaces.PaymentFailure) map[int][]*interfaces.PaymentFailure {
+	monthlyGroups := make(map[int][]*interfaces.PaymentFailure)
 
 	for _, event := range data {
 		month := int(event.OccurredAt.Month())
@@ -524,8 +524,8 @@ func (ta *DefaultTrendAnalyzer) groupByMonth(data []*architecture.PaymentFailure
 	return monthlyGroups
 }
 
-func (ta *DefaultTrendAnalyzer) groupByDayOfMonth(data []*architecture.PaymentFailure) map[int][]*architecture.PaymentFailure {
-	dayGroups := make(map[int][]*architecture.PaymentFailure)
+func (ta *DefaultTrendAnalyzer) groupByDayOfMonth(data []*interfaces.PaymentFailure) map[int][]*interfaces.PaymentFailure {
+	dayGroups := make(map[int][]*interfaces.PaymentFailure)
 
 	for _, event := range data {
 		day := event.OccurredAt.Day()
@@ -535,7 +535,7 @@ func (ta *DefaultTrendAnalyzer) groupByDayOfMonth(data []*architecture.PaymentFa
 	return dayGroups
 }
 
-func (ta *DefaultTrendAnalyzer) createSeasonalPattern(month int, monthData []*architecture.PaymentFailure) SeasonalPattern {
+func (ta *DefaultTrendAnalyzer) createSeasonalPattern(month int, monthData []*interfaces.PaymentFailure) SeasonalPattern {
 	// Create a base pattern for the month
 	pattern := Pattern{
 		ID:          uuid.New().String(),
@@ -570,7 +570,7 @@ func (ta *DefaultTrendAnalyzer) createSeasonalPattern(month int, monthData []*ar
 	}
 }
 
-func (ta *DefaultTrendAnalyzer) createDayOfMonthPattern(day int, dayData []*architecture.PaymentFailure) SeasonalPattern {
+func (ta *DefaultTrendAnalyzer) createDayOfMonthPattern(day int, dayData []*interfaces.PaymentFailure) SeasonalPattern {
 	// Create a base pattern for the day
 	pattern := Pattern{
 		ID:          uuid.New().String(),
@@ -617,7 +617,7 @@ func (ta *DefaultTrendAnalyzer) determineSeason(month int) string {
 	}
 }
 
-func (ta *DefaultTrendAnalyzer) calculateSeasonalConfidence(monthData []*architecture.PaymentFailure) float64 {
+func (ta *DefaultTrendAnalyzer) calculateSeasonalConfidence(monthData []*interfaces.PaymentFailure) float64 {
 	if len(monthData) < 2 {
 		return 0.3
 	}
@@ -634,7 +634,7 @@ func (ta *DefaultTrendAnalyzer) calculateSeasonalConfidence(monthData []*archite
 	return confidence
 }
 
-func (ta *DefaultTrendAnalyzer) calculateSeasonalStrength(monthData []*architecture.PaymentFailure) float64 {
+func (ta *DefaultTrendAnalyzer) calculateSeasonalStrength(monthData []*interfaces.PaymentFailure) float64 {
 	if len(monthData) == 0 {
 		return 0.0
 	}
@@ -650,7 +650,7 @@ func (ta *DefaultTrendAnalyzer) calculateSeasonalStrength(monthData []*architect
 	return baseStrength
 }
 
-func (ta *DefaultTrendAnalyzer) findPeakDaysInMonth(monthData []*architecture.PaymentFailure) []int {
+func (ta *DefaultTrendAnalyzer) findPeakDaysInMonth(monthData []*interfaces.PaymentFailure) []int {
 	if len(monthData) == 0 {
 		return []int{}
 	}
@@ -689,13 +689,13 @@ func (ta *DefaultTrendAnalyzer) findPeakDaysInMonth(monthData []*architecture.Pa
 	return peakDays
 }
 
-func (ta *DefaultTrendAnalyzer) analyzeWeeklyBusinessCycle(data []*architecture.PaymentFailure) *BusinessCyclePattern {
+func (ta *DefaultTrendAnalyzer) analyzeWeeklyBusinessCycle(data []*interfaces.PaymentFailure) *BusinessCyclePattern {
 	if len(data) < 7 {
 		return nil
 	}
 
 	// Group by day of week
-	dayGroups := make(map[time.Weekday][]*architecture.PaymentFailure)
+	dayGroups := make(map[time.Weekday][]*interfaces.PaymentFailure)
 	for _, event := range data {
 		day := event.OccurredAt.Weekday()
 		dayGroups[day] = append(dayGroups[day], event)
@@ -741,13 +741,13 @@ func (ta *DefaultTrendAnalyzer) analyzeWeeklyBusinessCycle(data []*architecture.
 	}
 }
 
-func (ta *DefaultTrendAnalyzer) analyzeMonthlyBusinessCycle(data []*architecture.PaymentFailure) *BusinessCyclePattern {
+func (ta *DefaultTrendAnalyzer) analyzeMonthlyBusinessCycle(data []*interfaces.PaymentFailure) *BusinessCyclePattern {
 	if len(data) < 30 {
 		return nil
 	}
 
 	// Group by week of month
-	weekGroups := make(map[int][]*architecture.PaymentFailure)
+	weekGroups := make(map[int][]*interfaces.PaymentFailure)
 	for _, event := range data {
 		week := ta.getWeekOfMonth(event.OccurredAt)
 		weekGroups[week] = append(weekGroups[week], event)
@@ -793,13 +793,13 @@ func (ta *DefaultTrendAnalyzer) analyzeMonthlyBusinessCycle(data []*architecture
 	}
 }
 
-func (ta *DefaultTrendAnalyzer) analyzeQuarterlyBusinessCycle(data []*architecture.PaymentFailure) *BusinessCyclePattern {
+func (ta *DefaultTrendAnalyzer) analyzeQuarterlyBusinessCycle(data []*interfaces.PaymentFailure) *BusinessCyclePattern {
 	if len(data) < 90 {
 		return nil
 	}
 
 	// Group by month
-	monthGroups := make(map[int][]*architecture.PaymentFailure)
+	monthGroups := make(map[int][]*interfaces.PaymentFailure)
 	for _, event := range data {
 		month := int(event.OccurredAt.Month())
 		monthGroups[month] = append(monthGroups[month], event)
@@ -876,7 +876,7 @@ func (ta *DefaultTrendAnalyzer) calculateBusinessCycleStrength(groups interface{
 	return strength
 }
 
-func (ta *DefaultTrendAnalyzer) findWeeklyPeakPeriods(dayGroups map[time.Weekday][]*architecture.PaymentFailure) []time.Time {
+func (ta *DefaultTrendAnalyzer) findWeeklyPeakPeriods(dayGroups map[time.Weekday][]*interfaces.PaymentFailure) []time.Time {
 	var peakPeriods []time.Time
 
 	// Find the day with most events
@@ -901,7 +901,7 @@ func (ta *DefaultTrendAnalyzer) findWeeklyPeakPeriods(dayGroups map[time.Weekday
 	return peakPeriods
 }
 
-func (ta *DefaultTrendAnalyzer) findMonthlyPeakPeriods(weekGroups map[int][]*architecture.PaymentFailure) []time.Time {
+func (ta *DefaultTrendAnalyzer) findMonthlyPeakPeriods(weekGroups map[int][]*interfaces.PaymentFailure) []time.Time {
 	var peakPeriods []time.Time
 
 	// Find the week with most events
@@ -924,7 +924,7 @@ func (ta *DefaultTrendAnalyzer) findMonthlyPeakPeriods(weekGroups map[int][]*arc
 	return peakPeriods
 }
 
-func (ta *DefaultTrendAnalyzer) findQuarterlyPeakPeriods(monthGroups map[int][]*architecture.PaymentFailure) []time.Time {
+func (ta *DefaultTrendAnalyzer) findQuarterlyPeakPeriods(monthGroups map[int][]*interfaces.PaymentFailure) []time.Time {
 	var peakPeriods []time.Time
 
 	// Find the month with most events

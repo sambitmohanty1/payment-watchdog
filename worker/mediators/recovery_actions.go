@@ -5,18 +5,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 )
 
 // RecoveryActionInterface defines recovery actions for payment providers
 type RecoveryActionInterface interface {
-	RetryPayment(ctx context.Context, paymentFailure *models.PaymentFailureEvent, config *PaymentRetryConfig) (*RecoveryActionResult, error)
-	UpdatePaymentMethod(ctx context.Context, paymentFailure *models.PaymentFailureEvent, config *UpdatePaymentMethodConfig) (*RecoveryActionResult, error)
-	SendPaymentLink(ctx context.Context, paymentFailure *models.PaymentFailureEvent, config *PaymentLinkConfig) (*RecoveryActionResult, error)
+	RetryPayment(ctx context.Context, paymentFailure *interfaces.PaymentFailure, config *PaymentRetryConfig) (*RecoveryActionResult, error)
+	UpdatePaymentMethod(ctx context.Context, paymentFailure *interfaces.PaymentFailure, config *UpdatePaymentMethodConfig) (*RecoveryActionResult, error)
+	SendPaymentLink(ctx context.Context, paymentFailure *interfaces.PaymentFailure, config *PaymentLinkConfig) (*RecoveryActionResult, error)
 	GetRecoveryCapabilities() []string
 }
 
@@ -83,7 +82,7 @@ func (s *StripeRecoveryActions) GetRecoveryCapabilities() []string {
 }
 
 // RetryPayment retries a failed payment in Stripe
-func (s *StripeRecoveryActions) RetryPayment(ctx context.Context, paymentFailure *models.PaymentFailureEvent, config *PaymentRetryConfig) (*RecoveryActionResult, error) {
+func (s *StripeRecoveryActions) RetryPayment(ctx context.Context, paymentFailure *interfaces.PaymentFailure, config *PaymentRetryConfig) (*RecoveryActionResult, error) {
 	ctx, span := s.tracer.Start(ctx, "stripe_retry_payment")
 	defer span.End()
 
@@ -136,7 +135,7 @@ func (s *StripeRecoveryActions) RetryPayment(ctx context.Context, paymentFailure
 }
 
 // UpdatePaymentMethod updates the payment method for a customer in Stripe
-func (s *StripeRecoveryActions) UpdatePaymentMethod(ctx context.Context, paymentFailure *models.PaymentFailureEvent, config *UpdatePaymentMethodConfig) (*RecoveryActionResult, error) {
+func (s *StripeRecoveryActions) UpdatePaymentMethod(ctx context.Context, paymentFailure *interfaces.PaymentFailure, config *UpdatePaymentMethodConfig) (*RecoveryActionResult, error) {
 	ctx, span := s.tracer.Start(ctx, "stripe_update_payment_method")
 	defer span.End()
 
@@ -164,7 +163,7 @@ func (s *StripeRecoveryActions) UpdatePaymentMethod(ctx context.Context, payment
 }
 
 // SendPaymentLink creates and sends a payment link via Stripe
-func (s *StripeRecoveryActions) SendPaymentLink(ctx context.Context, paymentFailure *models.PaymentFailureEvent, config *PaymentLinkConfig) (*RecoveryActionResult, error) {
+func (s *StripeRecoveryActions) SendPaymentLink(ctx context.Context, paymentFailure *interfaces.PaymentFailure, config *PaymentLinkConfig) (*RecoveryActionResult, error) {
 	ctx, span := s.tracer.Start(ctx, "stripe_send_payment_link")
 	defer span.End()
 
@@ -222,7 +221,7 @@ func (x *XeroRecoveryActions) GetRecoveryCapabilities() []string {
 }
 
 // RetryPayment for Xero focuses on invoice-based recovery
-func (x *XeroRecoveryActions) RetryPayment(ctx context.Context, paymentFailure *models.PaymentFailureEvent, config *PaymentRetryConfig) (*RecoveryActionResult, error) {
+func (x *XeroRecoveryActions) RetryPayment(ctx context.Context, paymentFailure *interfaces.PaymentFailure, config *PaymentRetryConfig) (*RecoveryActionResult, error) {
 	ctx, span := x.tracer.Start(ctx, "xero_retry_payment")
 	defer span.End()
 
@@ -253,7 +252,7 @@ func (x *XeroRecoveryActions) RetryPayment(ctx context.Context, paymentFailure *
 }
 
 // UpdatePaymentMethod for Xero updates invoice payment terms
-func (x *XeroRecoveryActions) UpdatePaymentMethod(ctx context.Context, paymentFailure *models.PaymentFailureEvent, config *UpdatePaymentMethodConfig) (*RecoveryActionResult, error) {
+func (x *XeroRecoveryActions) UpdatePaymentMethod(ctx context.Context, paymentFailure *interfaces.PaymentFailure, config *UpdatePaymentMethodConfig) (*RecoveryActionResult, error) {
 	ctx, span := x.tracer.Start(ctx, "xero_update_payment_terms")
 	defer span.End()
 
@@ -275,7 +274,7 @@ func (x *XeroRecoveryActions) UpdatePaymentMethod(ctx context.Context, paymentFa
 }
 
 // SendPaymentLink creates a payment link for Xero invoice
-func (x *XeroRecoveryActions) SendPaymentLink(ctx context.Context, paymentFailure *models.PaymentFailureEvent, config *PaymentLinkConfig) (*RecoveryActionResult, error) {
+func (x *XeroRecoveryActions) SendPaymentLink(ctx context.Context, paymentFailure *interfaces.PaymentFailure, config *PaymentLinkConfig) (*RecoveryActionResult, error) {
 	ctx, span := x.tracer.Start(ctx, "xero_send_payment_link")
 	defer span.End()
 
@@ -318,7 +317,7 @@ func NewRecoveryActionMediator(stripeMediator *StripeMediator, xeroMediator *Xer
 }
 
 // ExecuteRecoveryAction executes a recovery action based on the provider
-func (r *RecoveryActionMediator) ExecuteRecoveryAction(ctx context.Context, provider, actionType string, paymentFailure *models.PaymentFailureEvent, config map[string]interface{}) (*RecoveryActionResult, error) {
+func (r *RecoveryActionMediator) ExecuteRecoveryAction(ctx context.Context, provider, actionType string, paymentFailure *interfaces.PaymentFailure, config map[string]interface{}) (*RecoveryActionResult, error) {
 	ctx, span := r.tracer.Start(ctx, "execute_recovery_action")
 	defer span.End()
 

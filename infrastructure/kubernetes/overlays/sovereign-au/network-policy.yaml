@@ -1,0 +1,54 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sovereign-au-network-policy
+  namespace: sovereign-au
+  labels:
+    app.kubernetes.io/part-of: payment-watchdog
+    environment: sovereign-au
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  # Allow traffic within the same namespace
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: sovereign-au
+    - podSelector: {}
+  
+  # Allow traffic to DNS
+  - from: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  
+  # Allow traffic within the same namespace
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: sovereign-au
+    - podSelector: {}
+  
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  
+  # Allow traffic to Australian endpoints only (for sovereign compliance)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+    # Note: In practice, this would be enforced with service mesh or egress gateways

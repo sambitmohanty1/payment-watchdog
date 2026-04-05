@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: global-config
+  labels:
+    app.kubernetes.io/part-of: payment-watchdog
+    environment: sovereign-au
+data:
+  namespace: sovereign-au
+  environment: sovereign-au
+  data_residency: australia

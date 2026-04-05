@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -39,7 +39,7 @@ func TestAnalyticsEngineEmptyData(t *testing.T) {
 		logger,
 	)
 
-	result, err := engine.AnalyzePaymentFailures([]*architecture.PaymentFailure{})
+	result, err := engine.AnalyzePaymentFailures([]*interfaces.PaymentFailure{})
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, 0, len(result.Patterns))
@@ -168,7 +168,7 @@ func TestPatternDetector(t *testing.T) {
 	detector := NewDefaultPatternDetector(logger)
 
 	// Test with empty data
-	patterns := detector.DetectPatterns([]*architecture.PaymentFailure{})
+	patterns := detector.DetectPatterns([]*interfaces.PaymentFailure{})
 	assert.Equal(t, 0, len(patterns))
 
 	// Test with sample data
@@ -198,7 +198,7 @@ func TestTrendAnalyzer(t *testing.T) {
 	analyzer := NewDefaultTrendAnalyzer(logger)
 
 	// Test with empty data
-	trends := analyzer.AnalyzeTrends([]*architecture.PaymentFailure{}, 30*24*time.Hour)
+	trends := analyzer.AnalyzeTrends([]*interfaces.PaymentFailure{}, 30*24*time.Hour)
 	assert.Equal(t, 0, len(trends))
 
 	// Test with sample data
@@ -236,12 +236,12 @@ func TestFailurePredictor(t *testing.T) {
 
 	// Test with empty history
 	customerID := "test-customer"
-	prediction := predictor.PredictFailure(customerID, []*architecture.PaymentFailure{})
+	prediction := predictor.PredictFailure(customerID, []*interfaces.PaymentFailure{})
 	assert.Nil(t, prediction, "Should return nil for empty history")
 
 	// Test with single event
 	singleEvent := createSingleTestEvent()
-	prediction = predictor.PredictFailure(customerID, []*architecture.PaymentFailure{singleEvent})
+	prediction = predictor.PredictFailure(customerID, []*interfaces.PaymentFailure{singleEvent})
 	assert.Nil(t, prediction, "Should return nil for single event (need at least 2 for prediction)")
 
 	// Test with multiple events
@@ -317,12 +317,12 @@ func TestAnalyticsEngineIntegration(t *testing.T) {
 }
 
 // Helper functions to create test data
-func createTestPaymentFailures() []*architecture.PaymentFailure {
+func createTestPaymentFailures() []*interfaces.PaymentFailure {
 	now := time.Now()
 	customer1ID := "customer-1"
 	customer2ID := "customer-2"
 
-	return []*architecture.PaymentFailure{
+	return []*interfaces.PaymentFailure{
 		{
 			ID:         uuid.New(),
 			Amount:     1000.0,
@@ -361,8 +361,8 @@ func createTestPaymentFailures() []*architecture.PaymentFailure {
 	}
 }
 
-func createSingleTestEvent() *architecture.PaymentFailure {
-	return &architecture.PaymentFailure{
+func createSingleTestEvent() *interfaces.PaymentFailure {
+	return &interfaces.PaymentFailure{
 		ID:         uuid.New(),
 		Amount:     1000.0,
 		OccurredAt: time.Now().Add(-24 * time.Hour),
@@ -371,16 +371,16 @@ func createSingleTestEvent() *architecture.PaymentFailure {
 	}
 }
 
-func createComprehensiveTestData() []*architecture.PaymentFailure {
+func createComprehensiveTestData() []*interfaces.PaymentFailure {
 	now := time.Now()
-	events := make([]*architecture.PaymentFailure, 0)
+	events := make([]*interfaces.PaymentFailure, 0)
 
 	// Create multiple customers with different patterns
-	customers := []*architecture.Customer{
-		{ID: uuid.MustParse("00000000-0000-0000-0000-000000000001")},
-		{ID: uuid.MustParse("00000000-0000-0000-0000-000000000002")},
-		{ID: uuid.MustParse("00000000-0000-0000-0000-000000000003")},
-		{ID: uuid.MustParse("00000000-0000-0000-0000-000000000004")},
+	customers := []*interfaces.Customer{
+		{ID: "00000000-0000-0000-0000-000000000001"},
+		{ID: "00000000-0000-0000-0000-000000000002"},
+		{ID: "00000000-0000-0000-0000-000000000003"},
+		{ID: "00000000-0000-0000-0000-000000000004"},
 	}
 
 	categories := []string{"retail", "finance", "healthcare", "technology"}
@@ -390,11 +390,12 @@ func createComprehensiveTestData() []*architecture.PaymentFailure {
 		for j, customer := range customers {
 			// Create events with some patterns
 			if i%7 == 0 || i%30 == 0 { // Weekly and monthly patterns
-				events = append(events, &architecture.PaymentFailure{
-					ID:         uuid.New(),
-					Amount:     1000.0 + float64(i*100),
-					OccurredAt: now.AddDate(0, 0, -i),
-					CustomerID: customer.ID.String(), CustomerName: "Customer " + customer.ID.String(),
+				events = append(events, &interfaces.PaymentFailure{
+					ID:               uuid.New(),
+					Amount:           1000.0 + float64(i*100),
+					OccurredAt:       now.AddDate(0, 0, -i),
+					CustomerID:       customer.ID,
+					CustomerName:     "Customer " + customer.ID,
 					BusinessCategory: categories[j%len(categories)],
 				})
 			}

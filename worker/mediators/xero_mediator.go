@@ -11,10 +11,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
-
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 )
 
 // OAuthTokens represents OAuth 2.0 tokens
@@ -412,7 +411,7 @@ func (x *XeroMediator) Disconnect(ctx context.Context) error {
 // Data Mapping and Event Publishing Methods
 
 // mapXeroInvoiceToPaymentFailure maps a Xero invoice to a PaymentFailure
-func (x *XeroMediator) mapXeroInvoiceToPaymentFailure(xeroInvoice *XeroInvoice) *architecture.PaymentFailure {
+func (x *XeroMediator) mapXeroInvoiceToPaymentFailure(xeroInvoice *XeroInvoice) *interfaces.PaymentFailure {
 	if xeroInvoice == nil {
 		return nil
 	}
@@ -428,7 +427,7 @@ func (x *XeroMediator) mapXeroInvoiceToPaymentFailure(xeroInvoice *XeroInvoice) 
 	}
 
 	// Create PaymentFailure
-	paymentFailure := &architecture.PaymentFailure{
+	paymentFailure := &interfaces.PaymentFailure{
 		CompanyID:         x.config.CompanyID,
 		ProviderID:        x.config.ProviderID,
 		ProviderEventID:   xeroInvoice.ID,
@@ -442,13 +441,21 @@ func (x *XeroMediator) mapXeroInvoiceToPaymentFailure(xeroInvoice *XeroInvoice) 
 		InvoiceID:         xeroInvoice.ID,
 		InvoiceNumber:     xeroInvoice.InvoiceNumber,
 		DueDate:           &xeroInvoice.DueDate,
-		Status:            architecture.PaymentFailureStatusReceived,
-		Priority:          architecture.PaymentFailurePriority(priority),
+		Status:            interfaces.PaymentFailureStatusReceived,
+		Priority:          interfaces.PaymentFailurePriority(priority),
 		RiskScore:         riskScore,
 		OccurredAt:        xeroInvoice.Date,
 		DetectedAt:        time.Now(),
 		SyncSource:        "xero",
-		RawData:           xeroInvoice.RawData,
+		RawData: func() map[string]interface{} {
+			if len(xeroInvoice.RawData) > 0 {
+				var data map[string]interface{}
+				if err := json.Unmarshal(xeroInvoice.RawData, &data); err == nil {
+					return data
+				}
+			}
+			return make(map[string]interface{})
+		}(),
 	}
 
 	return paymentFailure
@@ -489,7 +496,7 @@ func (x *XeroMediator) calculateRiskScore(amount float64, dueDate time.Time) flo
 }
 
 // publishPaymentFailureEvent publishes a payment failure event to the event bus
-func (x *XeroMediator) publishPaymentFailureEvent(paymentFailure *architecture.PaymentFailure) error {
+func (x *XeroMediator) publishPaymentFailureEvent(paymentFailure *interfaces.PaymentFailure) error {
 	if paymentFailure == nil {
 		return fmt.Errorf("payment failure cannot be nil")
 	}
@@ -620,7 +627,7 @@ func (x *XeroMediator) performSync(ctx context.Context) error {
 
 	// Publish events for new failures
 	for _, failureInterface := range failures {
-		if failure, ok := failureInterface.(*architecture.PaymentFailure); ok {
+		if failure, ok := failureInterface.(*interfaces.PaymentFailure); ok {
 			if err := x.publishEvent(ctx, "payment.failure.detected", failure); err != nil {
 				x.logger.Error("Failed to publish payment failure event",
 					zap.String("failure_id", failure.ID.String()),
@@ -666,7 +673,7 @@ func (x *XeroMediator) isPaymentFailure(invoice *XeroInvoice) bool {
 }
 
 // mapInvoiceToFailure maps a Xero invoice to a unified PaymentFailure
-func (x *XeroMediator) mapInvoiceToFailure(invoice *XeroInvoice) *architecture.PaymentFailure {
+func (x *XeroMediator) mapInvoiceToFailure(invoice *XeroInvoice) *interfaces.PaymentFailure {
 	// Generate unique event ID
 	eventID := x.generateEventID()
 
@@ -674,7 +681,7 @@ func (x *XeroMediator) mapInvoiceToFailure(invoice *XeroInvoice) *architecture.P
 	riskScore := x.calculateRiskScore(invoice.AmountDue, invoice.DueDate)
 
 	// Map to unified PaymentFailure model
-	failure := &architecture.PaymentFailure{
+	failure := &interfaces.PaymentFailure{
 		ProviderID:        "xero",
 		ProviderEventID:   eventID,
 		ProviderEventType: "invoice.payment_failed",
@@ -690,13 +697,21 @@ func (x *XeroMediator) mapInvoiceToFailure(invoice *XeroInvoice) *architecture.P
 		FailureCode:       "INVOICE_OVERDUE",
 		FailureMessage: fmt.Sprintf("Invoice %s is overdue",
 			invoice.InvoiceNumber),
-		Status:     architecture.PaymentFailureStatusReceived,
+		Status:     interfaces.PaymentFailureStatusReceived,
 		Priority:   x.mapRiskScoreToPriority(riskScore),
 		RiskScore:  riskScore,
 		OccurredAt: invoice.DueDate,
 		DetectedAt: time.Now(),
 		SyncSource: "api_poll",
-		RawData:    invoice.RawData,
+		RawData: func() map[string]interface{} {
+			if len(invoice.RawData) > 0 {
+				var data map[string]interface{}
+				if err := json.Unmarshal(invoice.RawData, &data); err == nil {
+					return data
+				}
+			}
+			return make(map[string]interface{})
+		}(),
 		ProviderMetadata: map[string]interface{}{
 			"xero_invoice_id": invoice.ID,
 			"xero_contact_id": invoice.Contact.ID,
@@ -736,15 +751,15 @@ func (x *XeroMediator) mapXeroInvoiceToInvoice(xeroInvoice *XeroInvoice) *Invoic
 }
 
 // mapRiskScoreToPriority maps risk score to priority
-func (x *XeroMediator) mapRiskScoreToPriority(riskScore float64) architecture.PaymentFailurePriority {
+func (x *XeroMediator) mapRiskScoreToPriority(riskScore float64) interfaces.PaymentFailurePriority {
 	if riskScore >= 80 {
-		return architecture.PaymentFailurePriorityCritical
+		return interfaces.PaymentFailurePriorityCritical
 	} else if riskScore >= 60 {
-		return architecture.PaymentFailurePriorityHigh
+		return interfaces.PaymentFailurePriorityHigh
 	} else if riskScore >= 40 {
-		return architecture.PaymentFailurePriorityMedium
+		return interfaces.PaymentFailurePriorityMedium
 	} else {
-		return architecture.PaymentFailurePriorityLow
+		return interfaces.PaymentFailurePriorityLow
 	}
 }
 

@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recovery-orchestration
+  labels:
+    app.kubernetes.io/name: recovery-orchestration
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: payment-watchdog
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: recovery-orchestration
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: recovery-orchestration
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/part-of: payment-watchdog
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: recovery-orchestration
+      containers:
+      - name: recovery-orchestration
+        image: payment-watchdog/worker:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8086
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        # Service configuration
+        - name: SERVICE_NAME
+          value: "recovery-orchestration"
+        - name: PORT
+          value: "8086"
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        
+        # Database configuration
+        - name: DATABASE_HOST
+          value: "$(POSTGRES_SERVICE_NAME).$(NAMESPACE).svc.cluster.local"
+        - name: DATABASE_PORT
+          value: "$(POSTGRES_SERVICE_PORT)"
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: database_name
+        - name: DATABASE_USER
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: database_user
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: database_password
+        - name: DATABASE_SSL_MODE
+          value: "require"
+        
+        # Redis configuration
+        - name: REDIS_ADDR
+          value: "$(REDIS_SERVICE_NAME).$(NAMESPACE).svc.cluster.local:$(REDIS_SERVICE_PORT)"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secrets
+              key: redis_password
+        
+        # Sovereign configuration
+        - name: SOVEREIGN_MODE
+          value: "false"
+        
+        # Observability
+        - name: OTEL_SERVICE_NAME
+          value: "recovery-orchestration"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector.observability.svc.cluster.local:4317"
+        
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/payment-watchdog
+          readOnly: true
+        
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8086
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8086
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      
+      volumes:
+      - name: config-volume
+        configMap:
+          name: worker-config
+      
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000

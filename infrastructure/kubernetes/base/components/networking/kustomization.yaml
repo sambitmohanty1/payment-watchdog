@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: networking-components
+
+# Common labels for networking components
+labels:
+  - pairs:
+      app.kubernetes.io/component: networking
+      app.kubernetes.io/part-of: payment-watchdog
+    includeSelectors: true
+    includeTemplates: true
+
+# Networking configuration
+configMapGenerator:
+  - name: networking-config
+    literals:
+      - network_policy_enabled=true
+      - ingress_enabled=false

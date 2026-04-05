@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: storage-components
+
+resources:
+  - storage-classes.yaml
+
+# Common labels for storage components
+labels:
+  - pairs:
+      app.kubernetes.io/component: storage
+      app.kubernetes.io/part-of: payment-watchdog
+    includeSelectors: true
+    includeTemplates: true
+
+# Cloud provider configuration (can be overridden by overlays)
+configMapGenerator:
+  - name: cloud-config
+    literals:
+      - cloud_provider=oci
+      - storage_class=oci-bv
+      - region=ap-southeast-2

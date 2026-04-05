@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: payment-watchdog
+data:
+  redis.conf: |
+    # Redis configuration file
+    
+    # Network
+    bind 0.0.0.0
+    port 6379
+    protected-mode yes
+    
+    # Memory management
+    maxmemory 256mb
+    maxmemory-policy allkeys-lru
+    
+    # Persistence
+    save 900 1
+    save 300 10
+    save 60 10000
+    rdbcompression yes
+    rdbchecksum yes
+    dbfilename dump.rdb
+    dir /data
+    
+    # Logging
+    loglevel notice
+    logfile ""
+    
+    # Security
+    # Password will be set via command line argument
+    
+    # Performance
+    tcp-keepalive 300
+    timeout 0
+    
+    # Client settings
+    tcp-backlog 511
+    databases 16

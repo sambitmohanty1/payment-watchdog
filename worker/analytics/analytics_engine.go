@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
 	"go.uber.org/zap"
 )
 
@@ -20,24 +20,24 @@ type AnalyticsEngine struct {
 
 // PatternDetector interface for detecting patterns in payment failures
 type PatternDetector interface {
-	DetectPatterns(events []*architecture.PaymentFailure) []Pattern
-	DetectCustomerPatterns(customerID string, events []*architecture.PaymentFailure) []CustomerPattern
-	DetectTemporalPatterns(events []*architecture.PaymentFailure, timeRange time.Duration) []TemporalPattern
-	DetectBusinessPatterns(events []*architecture.PaymentFailure) []Pattern
+	DetectPatterns(events []*interfaces.PaymentFailure) []Pattern
+	DetectCustomerPatterns(customerID string, events []*interfaces.PaymentFailure) []CustomerPattern
+	DetectTemporalPatterns(events []*interfaces.PaymentFailure, timeRange time.Duration) []TemporalPattern
+	DetectBusinessPatterns(events []*interfaces.PaymentFailure) []Pattern
 }
 
 // TrendAnalyzer interface for analyzing trends in payment failures
 type TrendAnalyzer interface {
-	AnalyzeTrends(events []*architecture.PaymentFailure, timeRange time.Duration) []Trend
-	AnalyzeSeasonalPatterns(events []*architecture.PaymentFailure) []SeasonalPattern
-	AnalyzeBusinessCyclePatterns(events []*architecture.PaymentFailure) []BusinessCyclePattern
+	AnalyzeTrends(events []*interfaces.PaymentFailure, timeRange time.Duration) []Trend
+	AnalyzeSeasonalPatterns(events []*interfaces.PaymentFailure) []SeasonalPattern
+	AnalyzeBusinessCyclePatterns(events []*interfaces.PaymentFailure) []BusinessCyclePattern
 }
 
 // FailurePredictor interface for predicting future payment failures
 type FailurePredictor interface {
-	PredictFailure(customerID string, history []*architecture.PaymentFailure) *Prediction
-	PredictRiskScore(customerID string, history []*architecture.PaymentFailure) float64
-	PredictNextFailureDate(customerID string, history []*architecture.PaymentFailure) *time.Time
+	PredictFailure(customerID string, history []*interfaces.PaymentFailure) *Prediction
+	PredictRiskScore(customerID string, history []*interfaces.PaymentFailure) float64
+	PredictNextFailureDate(customerID string, history []*interfaces.PaymentFailure) *time.Time
 }
 
 // Pattern represents a detected pattern in payment failures
@@ -184,7 +184,7 @@ func NewAnalyticsEngine(
 }
 
 // AnalyzePaymentFailures performs comprehensive analysis of payment failure events
-func (ae *AnalyticsEngine) AnalyzePaymentFailures(events []*architecture.PaymentFailure) (*AnalysisResult, error) {
+func (ae *AnalyticsEngine) AnalyzePaymentFailures(events []*interfaces.PaymentFailure) (*AnalysisResult, error) {
 	ae.mutex.Lock()
 	defer ae.mutex.Unlock()
 
@@ -236,7 +236,7 @@ func (ae *AnalyticsEngine) AnalyzePaymentFailures(events []*architecture.Payment
 }
 
 // extractUniqueCustomers extracts unique customer IDs from events
-func (ae *AnalyticsEngine) extractUniqueCustomers(events []*architecture.PaymentFailure) []string {
+func (ae *AnalyticsEngine) extractUniqueCustomers(events []*interfaces.PaymentFailure) []string {
 	customerSet := make(map[string]bool)
 
 	for _, event := range events {
@@ -254,8 +254,8 @@ func (ae *AnalyticsEngine) extractUniqueCustomers(events []*architecture.Payment
 }
 
 // filterEventsByCustomer filters events for a specific customer
-func (ae *AnalyticsEngine) filterEventsByCustomer(events []*architecture.PaymentFailure, customerID string) []*architecture.PaymentFailure {
-	filtered := make([]*architecture.PaymentFailure, 0)
+func (ae *AnalyticsEngine) filterEventsByCustomer(events []*interfaces.PaymentFailure, customerID string) []*interfaces.PaymentFailure {
+	filtered := make([]*interfaces.PaymentFailure, 0)
 
 	for _, event := range events {
 		if event.CustomerID == customerID {
