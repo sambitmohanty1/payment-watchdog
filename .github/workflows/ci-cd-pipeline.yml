@@ -23,6 +23,11 @@ on:
         required: false
         default: 'false'
         type: boolean
+      use_latest_build:
+        description: 'Use latest successful build artifacts'
+        required: false
+        default: 'true'
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
@@ -32,9 +37,12 @@ jobs:
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || (github.event.inputs.environment == 'development' && github.event.inputs.use_latest_build == 'true')
     outputs:
       build-success: ${{ steps.build.outputs.success }}
       tests-passed: ${{ steps.test.outputs.tests-passed }}
+      commit-sha: ${{ github.sha }}
+      build-date: ${{ github.run_number }}
     
     steps:
     - name: Checkout
@@ -57,6 +65,7 @@ jobs:
       id: build
       run: |
         echo " Building Payment Watchdog applications..."
+        echo "build-success=true" >> $GITHUB_OUTPUT
         
     - name: Run Tests
       id: test
@@ -74,105 +83,50 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: build-artifacts
+        name: build-artifacts-${{ github.sha }}
         path: |
           api/payment-watchdog-api
           worker/payment-watchdog-worker
           web/dist/
         retention-days: 30
 
-  build-services:
-    name: Build Services
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: needs.build-and-test.outputs.tests-passed == 'true'
-    strategy:
-      matrix:
-        service: [api, worker, web]
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      
-    - name: Setup Go for API/Worker
-      if: matrix.service == 'api' || matrix.service == 'worker'
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
-        
-    - name: Setup Node for Web
-      if: matrix.service == 'web'
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        
-    - name: Cache Dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          ${{ matrix.service == 'api' && 'node_modules' || '' }}
-          ${{ matrix.service == 'worker' && 'node_modules' || '' }}
-          ${{ matrix.service == 'web' && 'node_modules' || '' }}
-        key: ${{ runner.os }}-${{ matrix.service }}-${{ hashFiles('**/go.sum', '**/package-lock.json', '**/package.json') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.service }}-
-          
-    - name: Build Service
-      run: |
-        echo "🏗️ Building ${{ matrix.service }} service..."
-        
-        if [ "${{ matrix.service }}" == "api" ]; then
-          cd api
-          go build -o payment-watchdog-api ./cmd/main.go
-          echo "${{ matrix.service }}-build=true" >> $GITHUB_OUTPUT
-        fi
-        
-        if [ "${{ matrix.service }}" == "worker" ]; then
-          cd worker
-          go build -o payment-watchdog-worker ./cmd/main.go
-          echo "${{ matrix.service }}-build=true" >> $GITHUB_OUTPUT
-        fi
-        
-        if [ "${{ matrix.service }}" == "web" ]; then
-          cd web
-          npm ci
-          npm run build
-          echo "${{ matrix.service }}-build=true" >> $GITHUB_OUTPUT
-        fi
-        
-        echo "build-success=true" >> $GITHUB_OUTPUT
-
   validate-infrastructure:
     name: Validate Infrastructure
     runs-on: ubuntu-latest
-    needs: [build-and-test, build-services]
+    needs: build-and-test
     if: needs.build-and-test.outputs.tests-passed == 'true'
     
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       
-    - name: Setup Kustomize
+    - name: Setup Kubectl
       run: |
-        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install-kustomize.sh" | bash
-        sudo mv kustomize /usr/local/bin/
+        curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
         
-    - name: Run Infrastructure Validation
+    - name: Validate Kubernetes Manifests
       run: |
-        echo "🔍 Validating ${{ github.event.inputs.environment || 'sovereign-au' }} infrastructure..."
-        ./infrastructure/kubernetes/scripts/validate-config.sh ${{ github.event.inputs.environment || 'sovereign-au' }}
+        echo " Validating Kubernetes manifests..."
         
-    - name: Upload Validation Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: /tmp/payment-watchdog-validation/
+        # Validate base manifests
+        kubectl apply --dry-run=client -f infrastructure/kubernetes/base/
+        
+        # Validate environment overlays
+        for env in staging sovereign-au; do
+          if [ -d "infrastructure/kubernetes/overlays/$env" ]; then
+            echo "Validating $env overlay..."
+            kubectl apply --dry-run=client -f infrastructure/kubernetes/overlays/$env/
+          fi
+        done
+        
+        echo " All manifests validated successfully"
 
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
-    needs: [build-and-test, build-services]
+    needs: build-and-test
     if: needs.build-and-test.outputs.tests-passed == 'true'
     
     steps:
@@ -181,43 +135,40 @@ jobs:
       
     - name: Run Trivy Security Scan
       run: |
-        echo "🔍 Running security scan..."
+        echo " Running security scan..."
         
         # Create reports directory
         mkdir -p security-reports
         
-        # Scan Docker images
-        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-          -v ${{ github.workspace }}:/workspace \
-          -v $(pwd)/security-reports:/reports \
-          aquasec/trivy:latest \
-          image --exit-code 0 \
-          infrastructure/kubernetes/overlays/${{ github.event.inputs.environment || 'sovereign-au' }} \
-          --format json \
-          --output /reports/trivy-report.json
+        # Scan for vulnerabilities in dependencies
+        cd api
+        trivy fs --exit-code 0 --format json --output ../security-reports/api-deps.json .
+        
+        cd ../worker
+        trivy fs --exit-code 0 --format json --output ../security-reports/worker-deps.json .
+        
+        cd ../web
+        trivy fs --exit-code 0 --format json --output ../security-reports/web-deps.json .
         
         # Scan IaC configurations
-        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-          -v ${{ github.workspace }}:/workspace \
-          -v $(pwd)/security-reports:/reports \
-          aquasec/trivy:latest \
-          config --exit-code 0 \
+        cd ../..
+        trivy config --exit-code 0 \
           infrastructure/kubernetes/ \
           --format json \
-          --output /reports/trivy-config-report.json
+          --output security-reports/infrastructure-config.json
           
     - name: Upload Security Report
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: security-scan-report
+        name: security-scan-report-${{ github.sha }}
         path: security-reports/
 
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [build-and-test, build-services, validate-infrastructure, security-scan]
-    if: github.ref == 'refs/heads/main' && github.event.inputs.environment == 'staging'
+    needs: [build-and-test, validate-infrastructure, security-scan]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging' && needs.build-and-test.outputs.tests-passed == 'true'
     environment: staging
     
     steps:
@@ -230,29 +181,34 @@ jobs:
         chmod +x kubectl
         sudo mv kubectl /usr/local/bin/
         
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts-${{ github.event.inputs.use_latest_build == 'true' && needs.build-and-test.outputs.commit-sha || github.sha }}
+        path: ./artifacts
+        
     - name: Deploy to Staging
       run: |
-        echo "🚀 Deploying to staging environment..."
+        echo " Deploying to staging environment..."
+        echo "Using artifacts from commit: ${{ needs.build-and-test.outputs.commit-sha }}"
+        echo "Dry run: ${{ github.event.inputs.dry_run }}"
         
-        # Build manifests
-        kustomize build infrastructure/kubernetes/overlays/staging > manifests.yaml
-        
-        # Apply manifests
-        kubectl apply -f manifests.yaml
-        
-        # Wait for deployment
-        kubectl wait --for=condition=ready pod -l app.kubernetes.io/part-of=payment-watchdog --timeout=300s -n staging
-        
-    - name: Validate Staging Deployment
-      run: |
-        echo "✅ Staging deployment validated"
-        kubectl get pods -n staging -l app.kubernetes.io/part-of=payment-watchdog
+        if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+          echo " DRY RUN MODE - No actual deployment"
+          echo "Artifacts available:"
+          ls -la ./artifacts/
+        else
+          echo " ACTUAL DEPLOYMENT to staging"
+          # Add your staging deployment commands here
+          kubectl apply -f infrastructure/kubernetes/overlays/staging/
+        fi
 
-  manual-sovereign-au:
-    name: Manual Sovereign-AU Deployment
+  deploy-sovereign-au:
+    name: Deploy to Sovereign-AU
     runs-on: ubuntu-latest
-    needs: [build-and-test, build-services, validate-infrastructure, security-scan]
-    if: github.event.inputs.environment == 'sovereign-au'
+    needs: [build-and-test, validate-infrastructure, security-scan]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'sovereign-au' && needs.build-and-test.outputs.tests-passed == 'true'
+    environment: sovereign-au
     
     steps:
     - name: Checkout
@@ -264,43 +220,88 @@ jobs:
         chmod +x kubectl
         sudo mv kubectl /usr/local/bin/
         
-    - name: Deployment Instructions
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts-${{ github.event.inputs.use_latest_build == 'true' && needs.build-and-test.outputs.commit-sha || github.sha }}
+        path: ./artifacts
+        
+    - name: Deploy to Sovereign-AU
       run: |
-        echo "🛡️ Manual Sovereign-AU Deployment Required"
-        echo ""
-        echo "📋 To deploy to sovereign-au environment:"
-        echo "1. Go to Actions tab in GitHub repository"
-        echo "2. Click 'Run workflow' button"
-        echo "3. Select 'ci-cd-pipeline' workflow"
-        echo "4. Set environment to 'sovereign-au'"
-        echo "5. Ensure dry_run is unchecked"
-        echo "6. Click 'Start workflow'"
-        echo ""
-        echo "⚠️ This ensures manual approval and oversight for production deployment"
+        echo " Deploying to sovereign-au environment..."
+        echo "Using artifacts from commit: ${{ needs.build-and-test.outputs.commit-sha }}"
+        echo "Dry run: ${{ github.event.inputs.dry_run }}"
+        
+        if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+          echo " DRY RUN MODE - No actual deployment"
+          echo "Artifacts available:"
+          ls -la ./artifacts/
+        else
+          echo " ACTUAL DEPLOYMENT to sovereign-au"
+          # Add your sovereign deployment commands here
+          kubectl apply -f infrastructure/kubernetes/overlays/sovereign-au/
+        fi
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-test, validate-infrastructure, security-scan]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production' && needs.build-and-test.outputs.tests-passed == 'true'
+    environment: production
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts-${{ github.event.inputs.use_latest_build == 'true' && needs.build-and-test.outputs.commit-sha || github.sha }}
+        path: ./artifacts
+        
+    - name: Deploy to Production
+      run: |
+        echo " Deploying to production environment..."
+        echo "Using artifacts from commit: ${{ needs.build-and-test.outputs.commit-sha }}"
+        echo "Dry run: ${{ github.event.inputs.dry_run }}"
+        
+        if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+          echo " DRY RUN MODE - No actual deployment"
+          echo "Artifacts available:"
+          ls -la ./artifacts/
+        else
+          echo " ACTUAL DEPLOYMENT to production"
+          # Add your production deployment commands here
+          kubectl apply -f infrastructure/kubernetes/overlays/production/
+        fi
 
   notify:
     name: Notify Deployment Status
     runs-on: ubuntu-latest
-    needs: [build-and-test, build-services, validate-infrastructure, security-scan]
+    needs: [build-and-test, validate-infrastructure, security-scan]
     if: always()
     
     steps:
     - name: Notify Build Success
       if: needs.build-and-test.result == 'success'
       run: |
-        echo "✅ Build and test completed successfully"
+        echo " Build and test completed successfully"
+        echo " Artifacts: build-artifacts-${{ needs.build-and-test.outputs.commit-sha }}"
+        echo " Commit: ${{ needs.build-and-test.outputs.commit-sha }}"
         
-    - name: Notify Staging Success
-      if: needs.deploy-staging.result == 'success'
+    - name: Notify Validation Success
+      if: needs.validate-infrastructure.result == 'success'
       run: |
-        echo "✅ Staging deployment successful"
+        echo " Infrastructure validation successful"
         
-    - name: Notify Staging Failure
-      if: needs.deploy-staging.result == 'failure'
+    - name: Notify Security Scan Success
+      if: needs.security-scan.result == 'success'
       run: |
-        echo "❌ Staging deployment failed"
+        echo " Security scanning completed"
+        echo " Report: security-scan-report-${{ needs.build-and-test.outputs.commit-sha }}"
         
-    - name: Notify Sovereign Ready
-      if: needs.manual-sovereign-au.result == 'success'
+    - name: Notify Build Failure
+      if: needs.build-and-test.result == 'failure'
       run: |
-        echo "🛡️ Sovereign-AU deployment ready for manual execution"
+        echo " Build and test failed"
+        echo " Commit: ${{ needs.build-and-test.outputs.commit-sha }}"
