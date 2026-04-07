@@ -326,7 +326,7 @@ jobs:
           
           # Validate base manifests
           echo "### Checking base manifests..." >> $GITHUB_STEP_SUMMARY
-          if yq eval '.' infrastructure/kubernetes/base > /dev/null 2>&1; then
+          if yq eval '.' infrastructure/kubernetes/base/*.yaml > /dev/null 2>&1; then
             echo "  - Base manifests: VALID" >> $GITHUB_STEP_SUMMARY
           else
             echo "  - Base manifests: INVALID" >> $GITHUB_STEP_SUMMARY
@@ -338,7 +338,7 @@ jobs:
           for env in development staging sovereign-au production; do
             if [ -d "infrastructure/kubernetes/overlays/$env" ]; then
               echo "  - Validating $env overlay..." >> $GITHUB_STEP_SUMMARY
-              if yq eval '.' "infrastructure/kubernetes/overlays/$env" > /dev/null 2>&1; then
+              if yq eval '.' "infrastructure/kubernetes/overlays/$env"/*.yaml > /dev/null 2>&1; then
                 echo "    - $env: VALID" >> $GITHUB_STEP_SUMMARY
               else
                 echo "    - $env: INVALID" >> $GITHUB_STEP_SUMMARY
