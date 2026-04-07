@@ -152,7 +152,7 @@ jobs:
           category: 'trivy-worker'
 
       - name: Upload Trivy artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: trivy-reports
@@ -235,7 +235,7 @@ jobs:
           echo "Worker govulncheck completed"
           
       - name: Upload Go security artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: go-security-reports
@@ -274,7 +274,7 @@ jobs:
           ls -la npm-audit-results.json || echo "npm audit file not found"
           
       - name: Upload npm audit results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: npm-audit-report
