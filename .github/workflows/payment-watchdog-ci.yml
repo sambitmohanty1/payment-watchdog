@@ -303,3 +303,157 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,scope=${{ matrix.service }},mode=max
 
+  # Infrastructure Validation
+  validate-infrastructure:
+    name: Validate Infrastructure
+    runs-on: ubuntu-latest
+    needs: [unit-tests, quick-security]
+    if: always() && needs.unit-tests.result == 'success'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup yq for YAML processing
+        run: |
+          wget -qO /tmp/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          chmod +x /tmp/yq
+          sudo mv /tmp/yq /usr/local/bin/yq
+        
+      - name: Validate Kubernetes Manifests
+        run: |
+          echo "## Validating Kubernetes manifests..." >> $GITHUB_STEP_SUMMARY
+          
+          # Validate base manifests
+          echo "### Checking base manifests..." >> $GITHUB_STEP_SUMMARY
+          if yq eval '.' infrastructure/kubernetes/base > /dev/null 2>&1; then
+            echo "  - Base manifests: VALID" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "  - Base manifests: INVALID" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          # Validate all environment overlays
+          echo "### Checking environment overlays..." >> $GITHUB_STEP_SUMMARY
+          for env in development staging sovereign-au production; do
+            if [ -d "infrastructure/kubernetes/overlays/$env" ]; then
+              echo "  - Validating $env overlay..." >> $GITHUB_STEP_SUMMARY
+              if yq eval '.' "infrastructure/kubernetes/overlays/$env" > /dev/null 2>&1; then
+                echo "    - $env: VALID" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "    - $env: INVALID" >> $GITHUB_STEP_SUMMARY
+                exit 1
+              fi
+            else
+              echo "  - $env overlay: NOT FOUND" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          echo "### All manifests validated successfully" >> $GITHUB_STEP_SUMMARY
+
+  # Comprehensive Security Scanning
+  comprehensive-security:
+    name: Comprehensive Security Scan
+    runs-on: ubuntu-latest
+    needs: [unit-tests, quick-security]
+    if: always() && needs.unit-tests.result == 'success'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Run Trivy Security Scan
+        run: |
+          echo "## Running comprehensive security scan..." >> $GITHUB_STEP_SUMMARY
+          
+          # Create reports directory
+          mkdir -p security-reports
+          
+          # Scan API service
+          echo "### Scanning API service..." >> $GITHUB_STEP_SUMMARY
+          cd api
+          if trivy fs --exit-code 0 --format json --output ../security-reports/api-deps.json .; then
+            echo "  - API scan: COMPLETED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "  - API scan: COMPLETED WITH FINDINGS" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Scan Worker service
+          echo "### Scanning Worker service..." >> $GITHUB_STEP_SUMMARY
+          cd ../worker
+          if trivy fs --exit-code 0 --format json --output ../security-reports/worker-deps.json .; then
+            echo "  - Worker scan: COMPLETED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "  - Worker scan: COMPLETED WITH FINDINGS" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Scan Web service
+          echo "### Scanning Web service..." >> $GITHUB_STEP_SUMMARY
+          cd ../web
+          if trivy fs --exit-code 0 --format json --output ../security-reports/web-deps.json .; then
+            echo "  - Web scan: COMPLETED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "  - Web scan: COMPLETED WITH FINDINGS" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Scan IaC configurations
+          echo "### Scanning Infrastructure as Code..." >> $GITHUB_STEP_SUMMARY
+          cd ../..
+          if trivy config --exit-code 0 infrastructure/kubernetes/ --format json --output security-reports/infrastructure.json; then
+            echo "  - IaC scan: COMPLETED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "  - IaC scan: COMPLETED WITH FINDINGS" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### Security scanning completed" >> $GITHUB_STEP_SUMMARY
+        
+      - name: Upload Security Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports-${{ github.sha }}
+          path: security-reports/
+          retention-days: 30
+
+  # Enhanced Status Notifications
+  notify-status:
+    name: Notify CI/CD Status
+    runs-on: ubuntu-latest
+    needs: [unit-tests, quick-security, validate-infrastructure, comprehensive-security, build-and-push]
+    if: always()
+    
+    steps:
+      - name: Comprehensive Status Report
+        run: |
+          echo "# Payment Watchdog CI/CD Pipeline Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Quick Security | ${{ needs.quick-security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Infrastructure Validation | ${{ needs.validate-infrastructure.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Comprehensive Security | ${{ needs.comprehensive-security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build & Push | ${{ needs.build-and-push.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Overall status
+          if [[ "${{ needs.unit-tests.result }}" == "success" && "${{ needs.build-and-push.result }}" == "success" ]]; then
+            echo "## Overall Status: SUCCESS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Overall Status: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Information" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Workflow Run: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          
+          # Security reports link
+          if [[ "${{ needs.comprehensive-security.result }}" == "success" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Security Reports" >> $GITHUB_STEP_SUMMARY
+            echo "- Download artifacts: \`security-reports-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+

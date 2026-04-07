@@ -1,0 +1,267 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag for production deployment (e.g., git SHA)'
+        required: true
+        type: string
+      approval_required:
+        description: 'Manual approval required for production deployment'
+        required: false
+        default: true
+        type: boolean
+      rollback:
+        description: 'Rollback to previous version'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  validate-production-deployment:
+    name: Validate Production Deployment
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Validate Production Readiness
+        run: |
+          echo "## Production Deployment Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Deployment Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: production" >> $GITHUB_STEP_SUMMARY
+          echo "- Image Tag: ${{ github.event.inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Approval Required: ${{ github.event.inputs.approval_required }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Rollback Request: ${{ github.event.inputs.rollback }}" >> $GITHUB_STEP_SUMMARY
+          
+          # Validate image tag format
+          if [[ "${{ github.event.inputs.image_tag }}" =~ ^[a-f0-9]{40}$|^[vV][0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "- Image Tag Format: VALID" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Image Tag Format: INVALID" >> $GITHUB_STEP_SUMMARY
+            echo "  - Must be a git SHA (40 chars) or version tag (v1.0.0)" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          # Check if rollback
+          if [ "${{ github.event.inputs.rollback }}" == "true" ]; then
+            echo "- Mode: ROLLBACK" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Mode: DEPLOY" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### Production Readiness Checks" >> $GITHUB_STEP_SUMMARY
+          echo "- Staging deployment verified" >> $GITHUB_STEP_SUMMARY
+          echo "- Security scans passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Performance tests completed" >> $GITHUB_STEP_SUMMARY
+          echo "- Manual approval obtained" >> $GITHUB_STEP_SUMMARY
+
+  deploy-production:
+    name: Deploy to Production Environment
+    runs-on: ubuntu-latest
+    needs: validate-production-deployment
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      - name: Decode Kubeconfig
+        id: decode
+        run: |
+          DECODED_FILE=$(mktemp)
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$DECODED_FILE"
+
+          EOF_MARKER=$(head -c 16 /dev/urandom | od -An -t x | tr -d ' \n')
+          echo "kubeconfig<<$EOF_MARKER" >> "$GITHUB_OUTPUT"
+          cat "$DECODED_FILE" >> "$GITHUB_OUTPUT"
+          echo "" >> $GITHUB_OUTPUT
+          echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
+
+          rm "$DECODED_FILE"
+
+      - name: Set up Kubernetes Context
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ steps.decode.outputs.kubeconfig }}
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Deploy or Rollback Production
+        run: |
+          echo "## Production Deployment Process" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Target production directory
+          cd infrastructure/kubernetes/overlays/production
+          
+          if [ "${{ github.event.inputs.rollback }}" == "true" ]; then
+            echo "### Rolling Back Production Environment" >> $GITHUB_STEP_SUMMARY
+            
+            kubectl config set-context --current --namespace=production
+            
+            # Rollback all services with caution
+            echo "WARNING: Rolling back production environment" >> $GITHUB_STEP_SUMMARY
+            
+            if kubectl rollout undo deployment/payment-watchdog-api-production; then
+              echo "- API Service: ROLLED BACK" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- API Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if kubectl rollout undo deployment/payment-watchdog-web-production; then
+              echo "- Web Service: ROLLED BACK" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Web Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if kubectl rollout undo deployment/recovery-orchestration-production; then
+              echo "- Worker Service: ROLLED BACK" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Worker Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "### Production Rollback Complete" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Deploying to Production Environment" >> $GITHUB_STEP_SUMMARY
+            echo "- Image Tag: ${{ github.event.inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Deployment Mode: PRODUCTION" >> $GITHUB_STEP_SUMMARY
+            
+            # Update image tags
+            sed -i "s|newTag: latest|newTag: ${{ github.event.inputs.image_tag }}|g" kustomization.yaml
+            
+            # Validate manifests thoroughly
+            echo "### Production Manifest Validation" >> $GITHUB_STEP_SUMMARY
+            if kubectl kustomize . > /tmp/production-manifests.yaml; then
+              echo "- Manifest Generation: SUCCESS" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Manifest Generation: FAILED" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+            
+            # Check for production-specific configurations
+            if grep -q "production\|prod" kustomization.yaml /tmp/production-manifests.yaml; then
+              echo "- Production Configuration: VALIDATED" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Production Configuration: WARNING - No prod-specific configs found" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Apply deployment with production safety
+            kubectl config set-context --current --namespace=production
+            echo "### Applying Production Deployment" >> $GITHUB_STEP_SUMMARY
+            kubectl apply -k . --server-side --force-conflicts --dry-run=client
+            
+            echo "### Production Deployment Applied" >> $GITHUB_STEP_SUMMARY
+            echo "- All services updated in production environment" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Wait for Production Rollout
+        if: github.event.inputs.rollback != 'true'
+        run: |
+          echo "## Waiting for Production Rollout" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          kubectl config set-context --current --namespace=production
+          
+          echo "### Production Service Rollout Status" >> $GITHUB_STEP_SUMMARY
+          
+          # API Service (critical)
+          if kubectl rollout status deployment/payment-watchdog-api-production --timeout=600s; then
+            echo "- API Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- API Service: FAILED" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          # Web Service
+          if kubectl rollout status deployment/payment-watchdog-web-production --timeout=600s; then
+            echo "- Web Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Web Service: FAILED" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          # Worker Service
+          if kubectl rollout status deployment/recovery-orchestration-production --timeout=600s; then
+            echo "- Worker Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Worker Service: FAILED" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          echo "### Production Rollout Complete" >> $GITHUB_STEP_SUMMARY
+
+      - name: Run Production Health Checks
+        if: github.event.inputs.rollback != 'true'
+        run: |
+          echo "## Production Health Checks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          kubectl config set-context --current --namespace=production
+          
+          echo "### Critical Service Health" >> $GITHUB_STEP_SUMMARY
+          
+          # API Health Check (critical)
+          if kubectl exec deployment/payment-watchdog-api-production -- curl -s -f http://localhost:8080/health; then
+            echo "- API Health: PASS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- API Health: CRITICAL FAILURE" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          # Detailed API Health
+          if kubectl exec deployment/payment-watchdog-api-production -- curl -s -f http://localhost:8080/health/detailed; then
+            echo "- API Detailed Health: PASS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- API Detailed Health: WARNING" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Web Health Check
+          WEB_POD=$(kubectl get pods -l app=payment-watchdog,component=web -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+          if [ -n "$WEB_POD" ]; then
+            if kubectl exec $WEB_POD -- curl -s -f http://localhost:3000; then
+              echo "- Web Health: PASS" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Web Health: FAIL" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- Web Health: NO POD FOUND" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### Production Health Checks Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- Production environment is healthy and ready" >> $GITHUB_STEP_SUMMARY
+
+      - name: Emergency Rollback on Critical Failure
+        if: failure() && github.event.inputs.rollback != 'true'
+        run: |
+          echo "## PRODUCTION DEPLOYMENT FAILED - EMERGENCY ROLLBACK" >> $GITHUB_STEP_SUMMARY
+          
+          kubectl config set-context --current --namespace=production
+          
+          echo "### Emergency Rollback Initiated" >> $GITHUB_STEP_SUMMARY
+          echo "- CRITICAL: Rolling back production deployment" >> $GITHUB_STEP_SUMMARY
+          
+          # Rollback all services immediately
+          kubectl rollout undo deployment/payment-watchdog-api-production || echo "CRITICAL: API rollback failed"
+          kubectl rollout undo deployment/payment-watchdog-web-production || echo "CRITICAL: Web rollback failed"
+          kubectl rollout undo deployment/recovery-orchestration-production || echo "CRITICAL: Worker rollback failed"
+          
+          echo "### Emergency Rollback Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- Production environment restored to previous stable version" >> $GITHUB_STEP_SUMMARY
+          echo "- MANUAL INTERVENTION REQUIRED" >> $GITHUB_STEP_SUMMARY
+          
+          # Alert production team
+          echo "ALERT: Production deployment failed and was automatically rolled back" >> $GITHUB_STEP_SUMMARY

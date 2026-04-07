@@ -1,0 +1,216 @@
+name: Deploy to Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag for staging deployment (e.g., git SHA)'
+        required: false
+        type: string
+      rollback:
+        description: 'Rollback to previous version'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging Environment
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Staging Deployment Request
+        run: |
+          echo "## Staging Deployment Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Deployment Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: staging" >> $GITHUB_STEP_SUMMARY
+          echo "- Image Tag: ${{ github.event.inputs.image_tag || 'latest' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Rollback Request: ${{ github.event.inputs.rollback || 'false' }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event.inputs.rollback }}" == "true" ]; then
+            echo "- Mode: ROLLBACK" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Mode: DEPLOY" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Setup Kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      - name: Decode Kubeconfig
+        id: decode
+        run: |
+          DECODED_FILE=$(mktemp)
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$DECODED_FILE"
+
+          EOF_MARKER=$(head -c 16 /dev/urandom | od -An -t x | tr -d ' \n')
+          echo "kubeconfig<<$EOF_MARKER" >> "$GITHUB_OUTPUT"
+          cat "$DECODED_FILE" >> "$GITHUB_OUTPUT"
+          echo "" >> $GITHUB_OUTPUT
+          echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
+
+          rm "$DECODED_FILE"
+
+      - name: Set up Kubernetes Context
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ steps.decode.outputs.kubeconfig }}
+
+      - name: Determine Image Tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "Using provided image tag: ${{ github.event.inputs.image_tag }}"
+            echo "image_tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "No image tag provided. Getting latest build from main branch..."
+            LATEST_SHA=$(git rev-parse origin/main)
+            echo "Using latest build: $LATEST_SHA"
+            echo "image_tag=$LATEST_SHA" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Deploy or Rollback Staging
+        run: |
+          echo "## Staging Deployment Process" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Target staging directory
+          cd infrastructure/kubernetes/overlays/staging
+          
+          if [ "${{ github.event.inputs.rollback }}" == "true" ]; then
+            echo "### Rolling Back Staging Environment" >> $GITHUB_STEP_SUMMARY
+            
+            kubectl config set-context --current --namespace=staging
+            
+            # Rollback all services
+            if kubectl rollout undo deployment/payment-watchdog-api-staging; then
+              echo "- API Service: ROLLED BACK" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- API Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if kubectl rollout undo deployment/payment-watchdog-web-staging; then
+              echo "- Web Service: ROLLED BACK" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Web Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if kubectl rollout undo deployment/recovery-orchestration-staging; then
+              echo "- Worker Service: ROLLED BACK" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Worker Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "### Rollback Complete" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Deploying to Staging Environment" >> $GITHUB_STEP_SUMMARY
+            echo "- Image Tag: ${{ steps.tag.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+            
+            # Update image tags
+            sed -i "s|newTag: latest|newTag: ${{ steps.tag.outputs.image_tag }}|g" kustomization.yaml
+            
+            # Validate manifests
+            if kubectl kustomize . > /dev/null; then
+              echo "- Manifest Validation: PASS" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Manifest Validation: FAIL" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+            
+            # Apply deployment
+            kubectl config set-context --current --namespace=staging
+            kubectl apply -k . --server-side --force-conflicts
+            
+            echo "### Deployment Applied" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Wait for Staging Rollout
+        if: github.event.inputs.rollback != 'true'
+        run: |
+          echo "## Waiting for Staging Rollout" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          kubectl config set-context --current --namespace=staging
+          
+          echo "### Service Rollout Status" >> $GITHUB_STEP_SUMMARY
+          
+          # API Service
+          if kubectl rollout status deployment/payment-watchdog-api-staging --timeout=300s; then
+            echo "- API Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- API Service: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Web Service
+          if kubectl rollout status deployment/payment-watchdog-web-staging --timeout=300s; then
+            echo "- Web Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Web Service: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Worker Service
+          if kubectl rollout status deployment/recovery-orchestration-staging --timeout=300s; then
+            echo "- Worker Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Worker Service: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Run Staging Smoke Tests
+        if: github.event.inputs.rollback != 'true'
+        run: |
+          echo "## Running Staging Smoke Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          kubectl config set-context --current --namespace=staging
+          
+          echo "### Health Checks" >> $GITHUB_STEP_SUMMARY
+          
+          # API Health Check
+          if kubectl exec deployment/payment-watchdog-api-staging -- curl -s -f http://localhost:8091/health; then
+            echo "- API Health: PASS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- API Health: FAIL" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Web Health Check
+          WEB_POD=$(kubectl get pods -l app=payment-watchdog,component=web -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+          if [ -n "$WEB_POD" ]; then
+            if kubectl exec $WEB_POD -- curl -s -f http://localhost:3011; then
+              echo "- Web Health: PASS" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Web Health: FAIL" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- Web Health: NO POD FOUND" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### Smoke Tests Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- Staging environment is ready for testing" >> $GITHUB_STEP_SUMMARY
+
+      - name: Auto-Rollback on Failure
+        if: failure() && github.event.inputs.rollback != 'true'
+        run: |
+          echo "## Staging Deployment Failed - Auto-Rollback" >> $GITHUB_STEP_SUMMARY
+          
+          kubectl config set-context --current --namespace=staging
+          
+          echo "### Rolling Back Failed Deployment" >> $GITHUB_STEP_SUMMARY
+          
+          kubectl rollout undo deployment/payment-watchdog-api-staging || echo "API rollback failed"
+          kubectl rollout undo deployment/payment-watchdog-web-staging || echo "Web rollback failed"
+          kubectl rollout undo deployment/recovery-orchestration-staging || echo "Worker rollback failed"
+          
+          echo "### Auto-Rollback Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- Staging environment restored to previous version" >> $GITHUB_STEP_SUMMARY
