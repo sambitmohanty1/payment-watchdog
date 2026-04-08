@@ -183,9 +183,9 @@ jobs:
       - name: Determine Image Tag
         id: tag
         run: |
-          if [ -n "${{ inputs.image_tag }}" ]; then
-            echo "Using provided image tag: ${{ inputs.image_tag }}"
-            echo "image_tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "Using provided image tag: ${{ github.event.inputs.image_tag }}"
+            echo "image_tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
           else
             echo "No image tag provided. Getting latest build from main branch..."
             LATEST_SHA=$(git rev-parse origin/main)
