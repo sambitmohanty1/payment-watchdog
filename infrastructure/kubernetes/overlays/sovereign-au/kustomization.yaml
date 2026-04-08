@@ -197,6 +197,18 @@ patches:
           limits:
             memory: "512Mi"
             cpu: "500m"
+  
+  # Fix worker environment for sovereign deployment
+  - target:
+      kind: Deployment
+      name: recovery-orchestration
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "sovereign-au"
+      - op: replace
+        path: /spec/template/spec/containers/0/env/3/value
+        value: "true"
 
 # Replicas for sovereign environment
 replicas:

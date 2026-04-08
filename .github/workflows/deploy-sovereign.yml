@@ -278,6 +278,23 @@ jobs:
           
           kubectl config set-context --current --namespace=sovereign-au
           
+          # Clean up existing deployments and stuck pods
+          echo "### Cleaning Up Existing Sovereign AU Resources" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Delete stuck pods and deployments to ensure clean state
+          echo "- Deleting stuck pods..." >> $GITHUB_STEP_SUMMARY
+          kubectl delete pods -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No pods to delete" >> $GITHUB_STEP_SUMMARY
+          
+          echo "- Deleting stuck deployments..." >> $GITHUB_STEP_SUMMARY
+          kubectl delete deployment -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No deployments to delete" >> $GITHUB_STEP_SUMMARY
+          
+          echo "- Deleting stuck PVCs..." >> $GITHUB_STEP_SUMMARY
+          kubectl delete pvc -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No PVCs to delete" >> $GITHUB_STEP_SUMMARY
+          
+          echo "- Waiting for cleanup to complete..." >> $GITHUB_STEP_SUMMARY
+          sleep 10
+          
           # Create GitHub Container Registry secret
           echo "### Creating GitHub Container Registry Secret" >> $GITHUB_STEP_SUMMARY
           if ! kubectl get secret ghcr-secret -n sovereign-au >/dev/null 2>&1; then
