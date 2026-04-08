@@ -180,6 +180,53 @@ jobs:
       - name: Setup Kustomize
         uses: imranismail/setup-kustomize@v2
 
+      - name: Validate Sovereign AU Configuration
+        run: |
+          echo "## Validating Sovereign AU Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Build and validate kustomize output
+          kustomize build infrastructure/kubernetes/overlays/sovereign-au > /tmp/sovereign-output.yaml
+          
+          # Check deployment count
+          DEPLOYMENT_COUNT=$(grep -c "^kind: Deployment" /tmp/sovereign-output.yaml)
+          echo "### Deployment Count Validation" >> $GITHUB_STEP_SUMMARY
+          echo "- Expected: 5 deployments" >> $GITHUB_STEP_SUMMARY
+          echo "- Found: $DEPLOYMENT_COUNT deployments" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$DEPLOYMENT_COUNT" -ne 5 ]; then
+            echo "- Status: FAILED - Incorrect deployment count" >> $GITHUB_STEP_SUMMARY
+            echo "ERROR: Expected 5 deployments, found $DEPLOYMENT_COUNT" >&2
+            exit 1
+          else
+            echo "- Status: PASSED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Validate deployment names
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Expected Deployment Names" >> $GITHUB_STEP_SUMMARY
+          echo "- payment-watchdog-api-sovereign-au" >> $GITHUB_STEP_SUMMARY
+          echo "- payment-watchdog-web-sovereign-au" >> $GITHUB_STEP_SUMMARY
+          echo "- postgres-sovereign-au" >> $GITHUB_STEP_SUMMARY
+          echo "- recovery-orchestration-sovereign-au" >> $GITHUB_STEP_SUMMARY
+          echo "- redis-sovereign-au" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Actual Deployment Names Found" >> $GITHUB_STEP_SUMMARY
+          grep -A 5 "^kind: Deployment" /tmp/sovereign-output.yaml | grep "  name:" | sed 's/  name: /- /' >> $GITHUB_STEP_SUMMARY
+          
+          # Check for duplicates
+          DUPLICATE_COUNT=$(grep -c "  name: payment-watchdog-api-sovereign-au" /tmp/sovereign-output.yaml)
+          if [ "$DUPLICATE_COUNT" -gt 1 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### DUPLICATE DETECTION" >> $GITHUB_STEP_SUMMARY
+            echo "- WARNING: Found duplicate deployment references" >> $GITHUB_STEP_SUMMARY
+            echo "- This may indicate HPA references (expected)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration Validation: PASSED" >> $GITHUB_STEP_SUMMARY
+
       - name: Determine Image Tag
         id: tag
         run: |
@@ -244,31 +291,43 @@ jobs:
           echo "### Service Rollout Status" >> $GITHUB_STEP_SUMMARY
           
           # API Service
+          echo "### Checking API Service Rollout" >> $GITHUB_STEP_SUMMARY
           if kubectl rollout status deployment/payment-watchdog-api-sovereign-au --timeout=600s --request-timeout=30s; then
             echo "- API Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- API Service: FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "  - Debug: Checking deployment status..." >> $GITHUB_STEP_SUMMARY
+            kubectl get deployment payment-watchdog-api-sovereign-au -o yaml | grep -E "replicas|readyReplicas|availableReplicas" | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY || echo "    Could not fetch deployment details" >> $GITHUB_STEP_SUMMARY
           fi
           
           # Web Service
-          if kubectl rollout status deployment/payment-watchdog-ui-sovereign-au --timeout=600s --request-timeout=30s; then
+          echo "### Checking Web Service Rollout" >> $GITHUB_STEP_SUMMARY
+          if kubectl rollout status deployment/payment-watchdog-web-sovereign-au --timeout=600s --request-timeout=30s; then
             echo "- Web Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Web Service: FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "  - Debug: Checking deployment status..." >> $GITHUB_STEP_SUMMARY
+            kubectl get deployment payment-watchdog-web-sovereign-au -o yaml | grep -E "replicas|readyReplicas|availableReplicas" | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY || echo "    Could not fetch deployment details" >> $GITHUB_STEP_SUMMARY
           fi
           
           # Worker Service
+          echo "### Checking Worker Service Rollout" >> $GITHUB_STEP_SUMMARY
           if kubectl rollout status deployment/recovery-orchestration-sovereign-au --timeout=600s --request-timeout=30s; then
             echo "- Worker Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Worker Service: FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "  - Debug: Checking deployment status..." >> $GITHUB_STEP_SUMMARY
+            kubectl get deployment recovery-orchestration-sovereign-au -o yaml | grep -E "replicas|readyReplicas|availableReplicas" | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY || echo "    Could not fetch deployment details" >> $GITHUB_STEP_SUMMARY
           fi
           
           # Database Service
-          if kubectl rollout status deployment/lexure-postgres-sovereign-au --timeout=600s --request-timeout=30s; then
+          echo "### Checking Database Service Rollout" >> $GITHUB_STEP_SUMMARY
+          if kubectl rollout status deployment/postgres-sovereign-au --timeout=600s --request-timeout=30s; then
             echo "- Database Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Database Service: FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "  - Debug: Checking deployment status..." >> $GITHUB_STEP_SUMMARY
+            kubectl get deployment postgres-sovereign-au -o yaml | grep -E "replicas|readyReplicas|availableReplicas" | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY || echo "    Could not fetch deployment details" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "### AU Data Residency Verification" >> $GITHUB_STEP_SUMMARY
@@ -293,7 +352,7 @@ jobs:
           fi
           
           # Web Health Check
-          WEB_POD=$(kubectl get pods -l app=payment-watchdog,component=ui -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+          WEB_POD=$(kubectl get pods -l app.kubernetes.io/name=payment-watchdog-web -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
           if [ -n "$WEB_POD" ]; then
             if kubectl exec $WEB_POD -- curl -s -f http://localhost:3001; then
               echo "- Web Health: PASS" >> $GITHUB_STEP_SUMMARY
@@ -326,7 +385,7 @@ jobs:
             echo "- API Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
           fi
           
-          if kubectl rollout undo deployment/payment-watchdog-ui-sovereign-au; then
+          if kubectl rollout undo deployment/payment-watchdog-web-sovereign-au; then
             echo "- Web Service: ROLLED BACK" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Web Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
