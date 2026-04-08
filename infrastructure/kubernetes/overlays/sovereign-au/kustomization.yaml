@@ -39,6 +39,31 @@ images:
 
 # Patches for sovereign-specific configurations
 patches:
+  # Add image pull secrets to all deployments
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /spec/template/spec/imagePullSecrets
+        value:
+          - name: ghcr-secret
+  - target:
+      kind: ServiceAccount
+    patch: |-
+      - op: add
+        path: /imagePullSecrets
+        value:
+          - name: ghcr-secret
+  - target:
+      kind: ServiceAccount
+      name: recovery-orchestration
+    patch: |-
+      - op: remove
+        path: /metadata/annotations/iam.amazonaws.com~1role
+      - op: add
+        path: /metadata/annotations/oracle.com~1auth
+        value: "oci-identity"
+  
   # Storage class configuration for OCI (current deployment)
   - target:
       kind: PersistentVolumeClaim
@@ -132,6 +157,46 @@ patches:
         path: /data
         value:
           redis_password: cmVkaXM=  # redis
+
+# Add resource requests and limits for sovereign environment
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+  - target:
+      kind: Deployment
+      name: postgres
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+  - target:
+      kind: Deployment
+      name: redis
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
 
 # Replicas for sovereign environment
 replicas:

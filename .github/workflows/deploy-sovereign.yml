@@ -278,6 +278,19 @@ jobs:
           
           kubectl config set-context --current --namespace=sovereign-au
           
+          # Create GitHub Container Registry secret
+          echo "### Creating GitHub Container Registry Secret" >> $GITHUB_STEP_SUMMARY
+          if ! kubectl get secret ghcr-secret -n sovereign-au >/dev/null 2>&1; then
+            kubectl create secret docker-registry ghcr-secret \
+              --docker-server=ghcr.io \
+              --docker-username=sambitmohanty1 \
+              --docker-password=${{ secrets.GITHUB_TOKEN }} \
+              --namespace=sovereign-au
+            echo "- Created ghcr-secret for image pulling" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ghcr-secret already exists" >> $GITHUB_STEP_SUMMARY
+          fi
+          
           echo "### Applying AU Sovereign Deployment" >> $GITHUB_STEP_SUMMARY
           kubectl apply -k . --server-side --force-conflicts --request-timeout=60s
 
