@@ -1,8 +1,6 @@
 module github.com/sambitmohanty1/payment-watchdog/api
 
-go 1.24.0
-
-toolchain go1.24.4
+go 1.25.0
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
@@ -17,7 +15,7 @@ require (
 	go.opentelemetry.io/otel v1.40.0
 	go.opentelemetry.io/otel/trace v1.40.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/oauth2 v0.35.0
+	golang.org/x/oauth2 v0.36.0
 	gorm.io/datatypes v1.2.7
 	gorm.io/driver/postgres v1.5.7
 	gorm.io/gorm v1.30.0
