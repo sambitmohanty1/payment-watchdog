@@ -10,6 +10,7 @@ resources:
   - namespace.yaml
   - network-policy.yaml
   - global-config.yaml
+  - ../../base/services/api/serviceaccount.yaml
 
 # Environment-specific namespace
 namespace: sovereign-au
@@ -71,14 +72,14 @@ patches:
     patch: |-
       - op: replace
         path: /spec/storageClassName
-        value: oci-bv-sovereign-au  # Current: OCI, can be overridden for future migrations
+        value: oci-bv  # Use default OCI storage class
   - target:
       kind: PersistentVolumeClaim
       name: redis-pvc
     patch: |-
       - op: replace
         path: /spec/storageClassName
-        value: oci-bv-sovereign-au  # Current: OCI, can be overridden for future migrations
+        value: oci-bv  # Use default OCI storage class
 
   # Worker service configuration patch - CRITICAL for fixing pod crashes
   - target:

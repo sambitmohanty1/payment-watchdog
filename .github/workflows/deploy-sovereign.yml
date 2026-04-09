@@ -269,8 +269,8 @@ jobs:
             exit 1
           fi
           
-          # Update image tags with latest build
-          sed -i "s|newTag: latest|newTag: ${{ steps.tag.outputs.image_tag }}|g" kustomization.yaml
+          # Keep using latest tag for sovereign deployment
+          echo "- Using latest tags for sovereign deployment" >> $GITHUB_STEP_SUMMARY
           
           # Show what will be deployed
           echo "### Resources to Deploy" >> $GITHUB_STEP_SUMMARY
@@ -325,16 +325,17 @@ jobs:
           
           # Create GitHub Container Registry secret
           echo "### Creating GitHub Container Registry Secret" >> $GITHUB_STEP_SUMMARY
-          if ! kubectl get secret ghcr-secret -n sovereign-au >/dev/null 2>&1; then
-            kubectl create secret docker-registry ghcr-secret \
-              --docker-server=ghcr.io \
-              --docker-username=sambitmohanty1 \
-              --docker-password=${{ secrets.GITHUB_TOKEN }} \
-              --namespace=sovereign-au
-            echo "- Created ghcr-secret for image pulling" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "- ghcr-secret already exists" >> $GITHUB_STEP_SUMMARY
-          fi
+          # Delete existing secret to ensure fresh token
+          kubectl delete secret ghcr-secret -n sovereign-au --ignore-not-found=true
+          
+          # Create new secret with proper token
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username=sambitmohanty1 \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --namespace=sovereign-au
+            
+          echo "- Created fresh ghcr-secret with GITHUB_TOKEN" >> $GITHUB_STEP_SUMMARY
           
           # Verify secret was created correctly
           echo "- Verifying ghcr-secret..." >> $GITHUB_STEP_SUMMARY
