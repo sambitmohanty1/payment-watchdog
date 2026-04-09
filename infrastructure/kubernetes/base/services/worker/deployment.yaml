@@ -30,8 +30,8 @@ spec:
       serviceAccountName: recovery-orchestration
       containers:
       - name: recovery-orchestration
-        image: payment-watchdog/worker:latest
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/sambitmohanty1/payment-watchdog/worker:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8086
           name: http

@@ -29,8 +29,8 @@ spec:
       serviceAccountName: payment-watchdog-api
       containers:
       - name: app
-        image: payment-watchdog-api:latest
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/sambitmohanty1/payment-watchdog/api:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8085
           name: http

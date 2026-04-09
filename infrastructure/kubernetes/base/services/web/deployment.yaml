@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
       - name: payment-watchdog-web
-        image: payment-watchdog-web:latest
-        imagePullPolicy: Never
+        image: ghcr.io/sambitmohanty1/payment-watchdog/web:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 3001
           name: http

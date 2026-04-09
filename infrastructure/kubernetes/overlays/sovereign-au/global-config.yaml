@@ -9,3 +9,7 @@ data:
   namespace: sovereign-au
   environment: sovereign-au
   data_residency: australia
+  # Database connection variables
+  POSTGRES_SERVICE_NAME: postgres-sovereign-au
+  POSTGRES_SERVICE_PORT: "5432"
+  NAMESPACE: sovereign-au
