@@ -27,13 +27,13 @@ labels:
 
 # Images for sovereign environment
 images:
-  - name: payment-watchdog/api
+  - name: ghcr.io/sambitmohanty1/payment-watchdog/api
     newName: ghcr.io/sambitmohanty1/payment-watchdog/api
     newTag: latest
-  - name: payment-watchdog/worker
+  - name: ghcr.io/sambitmohanty1/payment-watchdog/worker
     newName: ghcr.io/sambitmohanty1/payment-watchdog/worker
     newTag: latest
-  - name: payment-watchdog/web
+  - name: ghcr.io/sambitmohanty1/payment-watchdog/web
     newName: ghcr.io/sambitmohanty1/payment-watchdog/web
     newTag: latest
 
@@ -71,14 +71,14 @@ patches:
     patch: |-
       - op: replace
         path: /spec/storageClassName
-        value: oci-bv  # Current: OCI, can be overridden for future migrations
+        value: oci-bv-sovereign-au  # Current: OCI, can be overridden for future migrations
   - target:
       kind: PersistentVolumeClaim
       name: redis-pvc
     patch: |-
       - op: replace
         path: /spec/storageClassName
-        value: oci-bv  # Current: OCI, can be overridden for future migrations
+        value: oci-bv-sovereign-au  # Current: OCI, can be overridden for future migrations
 
   # Worker service configuration patch - CRITICAL for fixing pod crashes
   - target:
@@ -137,7 +137,19 @@ patches:
               sample_rate: 1.0
               exporter: otlp
               endpoint: http://otel-collector.observability.svc.cluster.local:4317
-
+              
+          notifications:
+            email:
+              enabled: true
+              from: noreply@paymentwatchdog.com
+              smtp_host: localhost
+              smtp_port: 1025
+              retry_attempts: 3
+            sms:
+              enabled: true
+              from: PAYMENT_WATCHDOG
+              provider: twilio
+              retry_attempts: 3
   # Patch for postgres secrets
   - target:
       kind: Secret
@@ -203,12 +215,20 @@ patches:
       kind: Deployment
       name: recovery-orchestration
     patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/env/0/value
-        value: "sovereign-au"
-      - op: replace
-        path: /spec/template/spec/containers/0/env/3/value
-        value: "true"
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: recovery-orchestration
+      spec:
+        template:
+          spec:
+            containers:
+            - name: recovery-orchestration
+              env:
+              - name: ENVIRONMENT
+                value: "sovereign-au"
+              - name: SOVEREIGN_MODE
+                value: "true"
 
 # Replicas for sovereign environment
 replicas:
