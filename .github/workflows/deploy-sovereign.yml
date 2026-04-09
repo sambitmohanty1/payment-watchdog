@@ -278,22 +278,50 @@ jobs:
           
           kubectl config set-context --current --namespace=sovereign-au
           
+          # Diagnose current pod issues before cleanup
+          echo "### Diagnosing Current Pod Issues" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "- Current pod status:" >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n sovereign-au -o wide >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "  Could not get pod status" >> $GITHUB_STEP_SUMMARY
+          
+          echo "- Pod events:" >> $GITHUB_STEP_SUMMARY
+          kubectl get events -n sovereign-au --sort-by='.lastTimestamp' | tail -10 >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "  Could not get events" >> $GITHUB_STEP_SUMMARY
+          
+          echo "- Pod descriptions:" >> $GITHUB_STEP_SUMMARY
+          for pod in $(kubectl get pods -n sovereign-au -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+            echo "  Pod: $pod" >> $GITHUB_STEP_SUMMARY
+            kubectl describe pod $pod -n sovereign-au | grep -E "Status:|Reason:|Message:" | head -5 | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY 2>/dev/null
+          done
+          
           # Clean up existing deployments and stuck pods
           echo "### Cleaning Up Existing Sovereign AU Resources" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Delete stuck pods and deployments to ensure clean state
-          echo "- Deleting stuck pods..." >> $GITHUB_STEP_SUMMARY
-          kubectl delete pods -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No pods to delete" >> $GITHUB_STEP_SUMMARY
+          # Smart cleanup - only delete payment-watchdog specific resources
+          echo "- Cleaning up payment-watchdog pods..." >> $GITHUB_STEP_SUMMARY
+          kubectl delete pods -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No payment-watchdog pods to delete" >> $GITHUB_STEP_SUMMARY
           
-          echo "- Deleting stuck deployments..." >> $GITHUB_STEP_SUMMARY
-          kubectl delete deployment -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No deployments to delete" >> $GITHUB_STEP_SUMMARY
+          echo "- Cleaning up payment-watchdog deployments..." >> $GITHUB_STEP_SUMMARY
+          kubectl delete deployment -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No payment-watchdog deployments to delete" >> $GITHUB_STEP_SUMMARY
           
-          echo "- Deleting stuck PVCs..." >> $GITHUB_STEP_SUMMARY
-          kubectl delete pvc -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No PVCs to delete" >> $GITHUB_STEP_SUMMARY
+          echo "- Cleaning up payment-watchdog PVCs..." >> $GITHUB_STEP_SUMMARY
+          kubectl delete pvc -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No payment-watchdog PVCs to delete" >> $GITHUB_STEP_SUMMARY
+          
+          # Also try by name patterns for stubborn resources
+          echo "- Cleaning up by name patterns..." >> $GITHUB_STEP_SUMMARY
+          kubectl delete pods -n sovereign-au -l app.kubernetes.io/name=payment-watchdog-web --force --grace-period=0 2>/dev/null || echo "  No web pods to delete" >> $GITHUB_STEP_SUMMARY
+          kubectl delete pods -n sovereign-au -l app.kubernetes.io/name=recovery-orchestration --force --grace-period=0 2>/dev/null || echo "  No worker pods to delete" >> $GITHUB_STEP_SUMMARY
+          kubectl delete pods -n sovereign-au -l app.kubernetes.io/name=postgres --force --grace-period=0 2>/dev/null || echo "  No postgres pods to delete" >> $GITHUB_STEP_SUMMARY
+          kubectl delete pods -n sovereign-au -l app.kubernetes.io/name=redis --force --grace-period=0 2>/dev/null || echo "  No redis pods to delete" >> $GITHUB_STEP_SUMMARY
           
           echo "- Waiting for cleanup to complete..." >> $GITHUB_STEP_SUMMARY
           sleep 10
+          
+          # Verify cleanup worked
+          echo "- Verifying cleanup..." >> $GITHUB_STEP_SUMMARY
+          REMAINING_PODS=$(kubectl get pods -n sovereign-au -l app.kubernetes.io/part-of=payment-watchdog --no-headers 2>/dev/null | wc -l)
+          echo "  Remaining payment-watchdog pods: $REMAINING_PODS" >> $GITHUB_STEP_SUMMARY
           
           # Create GitHub Container Registry secret
           echo "### Creating GitHub Container Registry Secret" >> $GITHUB_STEP_SUMMARY
@@ -306,6 +334,18 @@ jobs:
             echo "- Created ghcr-secret for image pulling" >> $GITHUB_STEP_SUMMARY
           else
             echo "- ghcr-secret already exists" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Verify secret was created correctly
+          echo "- Verifying ghcr-secret..." >> $GITHUB_STEP_SUMMARY
+          kubectl get secret ghcr-secret -n sovereign-au -o yaml | grep -E "name:|dockerconfigjson:" | sed 's/^/  /' >> $GITHUB_STEP_SUMMARY || echo "  Secret verification failed" >> $GITHUB_STEP_SUMMARY
+          
+          # Test image pull manually
+          echo "- Testing image pull..." >> $GITHUB_STEP_SUMMARY
+          if kubectl run test-pull --rm -i --restart=Never --image=ghcr.io/sambitmohanty1/payment-watchdog/api:latest --image-pull-policy=Always --overrides='{"spec":{"imagePullSecrets":[{"name":"ghcr-secret"}]}' -n sovereign-au --command -- echo "Image pull successful" 2>/dev/null; then
+            echo "- Image pull test: SUCCESS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Image pull test: FAILED" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "### Applying AU Sovereign Deployment" >> $GITHUB_STEP_SUMMARY
