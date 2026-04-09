@@ -6,10 +6,15 @@ metadata:
 
 # Include all base components and services
 resources:
-  - ../../base
   - namespace.yaml
   - network-policy.yaml
   - global-config.yaml
+  - storage-class.yaml
+  - ../../base/components/postgres
+  - ../../base/components/redis
+  - ../../base/services/api
+  - ../../base/services/worker
+  - ../../base/services/web
 
 # Environment-specific namespace
 namespace: sovereign-au
@@ -64,21 +69,21 @@ patches:
         path: /metadata/annotations/oracle.com~1auth
         value: "oci-identity"
   
-  # Storage class configuration for OCI (current deployment)
+  # Add storage class to PVCs
   - target:
       kind: PersistentVolumeClaim
       name: postgres-pvc
     patch: |-
-      - op: replace
+      - op: add
         path: /spec/storageClassName
-        value: oci-bv  # Use default OCI storage class
+        value: oci-bv-sovereign-au
   - target:
       kind: PersistentVolumeClaim
       name: redis-pvc
     patch: |-
-      - op: replace
+      - op: add
         path: /spec/storageClassName
-        value: oci-bv  # Use default OCI storage class
+        value: oci-bv-sovereign-au
 
   # Worker service configuration patch - CRITICAL for fixing pod crashes
   - target:

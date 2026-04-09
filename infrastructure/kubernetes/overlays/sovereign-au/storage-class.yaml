@@ -1,0 +1,21 @@
+# OCI Storage Class for Sovereign AU Deployment
+# Real OCI values to replace placeholder parameters
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: oci-bv
+  labels:
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: payment-watchdog
+    cloud-provider: oci
+    data-residency: australia
+    environment: sovereign-au
+    storage-tier: standard
+provisioner: oci.com/oci
+parameters:
+  compartmentId: ocid1.compartment.oc1..aaaaaaaabmaocwbm56fw3zz3l66xk5rc3ebhxzlrgphdbkqdo7mfkhsp3nza
+  availabilityDomain: ap-melbourne-1
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
