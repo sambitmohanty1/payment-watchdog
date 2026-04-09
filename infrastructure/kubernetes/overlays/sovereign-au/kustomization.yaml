@@ -10,7 +10,6 @@ resources:
   - namespace.yaml
   - network-policy.yaml
   - global-config.yaml
-  - ../../base/services/api/serviceaccount.yaml
 
 # Environment-specific namespace
 namespace: sovereign-au
