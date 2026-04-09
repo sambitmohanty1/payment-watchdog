@@ -1,8 +1,6 @@
 module github.com/sambitmohanty1/payment-watchdog/worker
 
-go 1.24.0
-
-toolchain go1.24.4
+go 1.25.0
 
 // Local shared packages
 replace github.com/sambitmohanty1/payment-watchdog/shared => ../shared
@@ -77,7 +75,7 @@ require (
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
-	golang.org/x/time v0.12.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/datatypes v1.2.7 // indirect
 	gorm.io/driver/mysql v1.5.6 // indirect
