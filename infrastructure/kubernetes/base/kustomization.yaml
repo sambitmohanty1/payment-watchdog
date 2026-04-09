@@ -12,7 +12,6 @@ resources:
   - services/api
   - services/worker
   - services/web
-  - serviceaccount.yaml
 
 # Common labels applied to all resources
 labels:
