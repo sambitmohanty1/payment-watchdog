@@ -368,6 +368,9 @@ patches:
                 value: "5432"
               - name: REDIS_ADDR
                 value: "redis-sovereign-au.sovereign-au.svc.cluster.local:6379"
+              # Remove HTTP probes - this is a background stream consumer, not an HTTP server
+              livenessProbe: null
+              readinessProbe: null
 
 # Replicas for sovereign environment
 replicas:
