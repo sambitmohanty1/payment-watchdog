@@ -359,46 +359,117 @@ jobs:
           
           kubectl config set-context --current --namespace=sovereign-au
           
+          # Give pods 60s to start before diagnosing
+          echo "### Waiting 60s for pods to initialize..." >> $GITHUB_STEP_SUMMARY
+          sleep 60
+          
+          # === DIAGNOSTICS SECTION ===
+          echo "### Pod Diagnostics (after 60s)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "#### All Pods Status" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n sovereign-au -o wide 2>&1 >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          echo "#### PVC Status" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get pvc -n sovereign-au 2>&1 >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          echo "#### Secrets in Namespace" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get secrets -n sovereign-au 2>&1 >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          echo "#### ConfigMaps in Namespace" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get configmaps -n sovereign-au 2>&1 >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          echo "#### Recent Events (sorted)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get events -n sovereign-au --sort-by='.lastTimestamp' 2>&1 | tail -30 >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          # Describe each non-Running pod
+          echo "#### Pod Describe (non-Running pods)" >> $GITHUB_STEP_SUMMARY
+          for pod in $(kubectl get pods -n sovereign-au --no-headers 2>/dev/null | grep -v "Running" | awk '{print $1}'); do
+            echo "##### Pod: $pod" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            kubectl describe pod "$pod" -n sovereign-au 2>&1 | tail -40 >> $GITHUB_STEP_SUMMARY || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          done
+          
+          # Grab logs from any crashing pods
+          echo "#### Pod Logs (first 50 lines per container)" >> $GITHUB_STEP_SUMMARY
+          for pod in $(kubectl get pods -n sovereign-au --no-headers 2>/dev/null | awk '{print $1}'); do
+            STATUS=$(kubectl get pod "$pod" -n sovereign-au -o jsonpath='{.status.phase}' 2>/dev/null)
+            echo "##### $pod (status: $STATUS)" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            kubectl logs "$pod" -n sovereign-au --tail=50 2>&1 >> $GITHUB_STEP_SUMMARY || echo "  Could not get logs" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          done
+          
+          # === ROLLOUT SECTION (shorter timeout since we already waited 60s) ===
           echo "### Service Rollout Status" >> $GITHUB_STEP_SUMMARY
+          
+          ROLLOUT_FAILED=0
           
           # API Service
           echo "### Checking API Service Rollout" >> $GITHUB_STEP_SUMMARY
-          if kubectl rollout status deployment/payment-watchdog-api-sovereign-au --timeout=600s --request-timeout=30s; then
+          if kubectl rollout status deployment/payment-watchdog-api-sovereign-au --timeout=300s --request-timeout=30s; then
             echo "- API Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- API Service: FAILED" >> $GITHUB_STEP_SUMMARY
-            echo "  - Debug: Checking deployment status..." >> $GITHUB_STEP_SUMMARY
-            kubectl get deployment payment-watchdog-api-sovereign-au -o yaml | grep -E "replicas|readyReplicas|availableReplicas" | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY || echo "    Could not fetch deployment details" >> $GITHUB_STEP_SUMMARY
+            ROLLOUT_FAILED=1
           fi
           
           # Web Service
           echo "### Checking Web Service Rollout" >> $GITHUB_STEP_SUMMARY
-          if kubectl rollout status deployment/payment-watchdog-web-sovereign-au --timeout=600s --request-timeout=30s; then
+          if kubectl rollout status deployment/payment-watchdog-web-sovereign-au --timeout=300s --request-timeout=30s; then
             echo "- Web Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Web Service: FAILED" >> $GITHUB_STEP_SUMMARY
-            echo "  - Debug: Checking deployment status..." >> $GITHUB_STEP_SUMMARY
-            kubectl get deployment payment-watchdog-web-sovereign-au -o yaml | grep -E "replicas|readyReplicas|availableReplicas" | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY || echo "    Could not fetch deployment details" >> $GITHUB_STEP_SUMMARY
+            ROLLOUT_FAILED=1
           fi
           
           # Worker Service
           echo "### Checking Worker Service Rollout" >> $GITHUB_STEP_SUMMARY
-          if kubectl rollout status deployment/recovery-orchestration-sovereign-au --timeout=600s --request-timeout=30s; then
+          if kubectl rollout status deployment/recovery-orchestration-sovereign-au --timeout=300s --request-timeout=30s; then
             echo "- Worker Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Worker Service: FAILED" >> $GITHUB_STEP_SUMMARY
-            echo "  - Debug: Checking deployment status..." >> $GITHUB_STEP_SUMMARY
-            kubectl get deployment recovery-orchestration-sovereign-au -o yaml | grep -E "replicas|readyReplicas|availableReplicas" | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY || echo "    Could not fetch deployment details" >> $GITHUB_STEP_SUMMARY
+            ROLLOUT_FAILED=1
           fi
           
           # Database Service
           echo "### Checking Database Service Rollout" >> $GITHUB_STEP_SUMMARY
-          if kubectl rollout status deployment/postgres-sovereign-au --timeout=600s --request-timeout=30s; then
+          if kubectl rollout status deployment/postgres-sovereign-au --timeout=300s --request-timeout=30s; then
             echo "- Database Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Database Service: FAILED" >> $GITHUB_STEP_SUMMARY
-            echo "  - Debug: Checking deployment status..." >> $GITHUB_STEP_SUMMARY
-            kubectl get deployment postgres-sovereign-au -o yaml | grep -E "replicas|readyReplicas|availableReplicas" | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY || echo "    Could not fetch deployment details" >> $GITHUB_STEP_SUMMARY
+            ROLLOUT_FAILED=1
+          fi
+          
+          # Final diagnostics if anything failed
+          if [ "$ROLLOUT_FAILED" -eq 1 ]; then
+            echo "### Post-Failure Diagnostics" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            kubectl get pods -n sovereign-au -o wide 2>&1 >> $GITHUB_STEP_SUMMARY || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            
+            for pod in $(kubectl get pods -n sovereign-au --no-headers 2>/dev/null | grep -v "Running" | awk '{print $1}'); do
+              echo "#### Failed Pod: $pod" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              kubectl describe pod "$pod" -n sovereign-au 2>&1 | tail -30 >> $GITHUB_STEP_SUMMARY || true
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              kubectl logs "$pod" -n sovereign-au --tail=100 --all-containers 2>&1 >> $GITHUB_STEP_SUMMARY || true
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            done
+            
+            exit 1
           fi
           
           echo "### AU Data Residency Verification" >> $GITHUB_STEP_SUMMARY

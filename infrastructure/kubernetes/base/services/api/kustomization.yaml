@@ -8,6 +8,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - configmap.yaml
+  - secret.yaml
   - hpa.yaml
   - serviceaccount.yaml
 
