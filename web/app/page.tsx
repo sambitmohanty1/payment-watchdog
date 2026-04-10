@@ -32,7 +32,6 @@ export default function HomePage() {
   }
 
   return (
-  return (
     <div className="min-h-screen mesh-gradient pb-20">
       <header className="border-b border-white/5 bg-slate-950/20 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
