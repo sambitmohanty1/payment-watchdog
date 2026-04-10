@@ -9,7 +9,6 @@ resources:
   - namespace.yaml
   - network-policy.yaml
   - global-config.yaml
-  - storage-class.yaml
   - ../../base/components/postgres
   - ../../base/components/redis
   - ../../base/services/api
@@ -69,21 +68,21 @@ patches:
         path: /metadata/annotations/oracle.com~1auth
         value: "oci-identity"
   
-  # Add storage class to PVCs
+  # Use cluster default OCI Block Volume StorageClass (provisioner: blockvolume.csi.oraclecloud.com)
   - target:
       kind: PersistentVolumeClaim
       name: postgres-pvc
     patch: |-
       - op: add
         path: /spec/storageClassName
-        value: oci-bv-v2-sovereign-au
+        value: oci-bv
   - target:
       kind: PersistentVolumeClaim
       name: redis-pvc
     patch: |-
       - op: add
         path: /spec/storageClassName
-        value: oci-bv-v2-sovereign-au
+        value: oci-bv
 
   # API service configuration patch - CRITICAL for fixing pod crashes
   - target:
