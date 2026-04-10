@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 )
 
 // LocalEventBus implements EventBus for in-memory communication
@@ -18,7 +19,7 @@ type LocalEventBus struct {
 type localSubscription struct {
 	id      string
 	topic   string
-	handler EventHandler
+	handler architecture.EventHandler
 }
 
 func (s *localSubscription) ID() string         { return s.id }
@@ -60,7 +61,7 @@ func (l *LocalEventBus) PublishAsync(ctx context.Context, topic string, event in
 	return nil
 }
 
-func (l *LocalEventBus) Subscribe(ctx context.Context, topic string, handler EventHandler) (Subscription, error) {
+func (l *LocalEventBus) Subscribe(ctx context.Context, topic string, handler architecture.EventHandler) (architecture.Subscription, error) {
 	sub := &localSubscription{
 		id:      uuid.New().String(),
 		topic:   topic,
@@ -74,11 +75,11 @@ func (l *LocalEventBus) Subscribe(ctx context.Context, topic string, handler Eve
 	return sub, nil
 }
 
-func (l *LocalEventBus) SubscribeAsync(ctx context.Context, topic string, handler EventHandler) (Subscription, error) {
+func (l *LocalEventBus) SubscribeAsync(ctx context.Context, topic string, handler architecture.EventHandler) (architecture.Subscription, error) {
 	return l.Subscribe(ctx, topic, handler)
 }
 
-func (l *LocalEventBus) Unsubscribe(subscription Subscription) error {
+func (l *LocalEventBus) Unsubscribe(subscription architecture.Subscription) error {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
