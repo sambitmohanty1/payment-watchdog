@@ -333,6 +333,36 @@ patches:
                     name: redis-secrets
                     key: redis_password
 
+  # Fix api environment for sovereign deployment to bypass Viper config file loading bug
+  - target:
+      kind: Deployment
+      name: payment-watchdog-api
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: payment-watchdog-api
+      spec:
+        template:
+          spec:
+            containers:
+            - name: app
+              env:
+              - name: ENVIRONMENT
+                value: "sovereign-au"
+              - name: DATABASE_HOST
+                value: "postgres-sovereign-au.sovereign-au.svc.cluster.local"
+              - name: DATABASE_PORT
+                value: "5432"
+              - name: DATABASE_NAME
+                value: "payment_watchdog"
+              - name: DATABASE_USER
+                value: "postgres"
+              - name: REDIS_HOST
+                value: "redis-sovereign-au.sovereign-au.svc.cluster.local"
+              - name: REDIS_PORT
+                value: "6379"
+
   # Fix worker environment for sovereign deployment
   - target:
       kind: Deployment
