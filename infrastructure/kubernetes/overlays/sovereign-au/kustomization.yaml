@@ -311,7 +311,28 @@ patches:
           limits:
             memory: "512Mi"
             cpu: "500m"
-  
+
+  # Fix Redis missing REDIS_PASSWORD env var (base uses $(REDIS_PASSWORD) but never defines it)
+  - target:
+      kind: Deployment
+      name: redis
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: redis
+      spec:
+        template:
+          spec:
+            containers:
+            - name: redis
+              env:
+              - name: REDIS_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: redis-secrets
+                    key: redis_password
+
   # Fix worker environment for sovereign deployment
   - target:
       kind: Deployment
