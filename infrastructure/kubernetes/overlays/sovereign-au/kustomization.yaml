@@ -43,9 +43,26 @@ images:
 
 # Patches for sovereign-specific configurations
 patches:
-  # Add image pull secrets to all deployments
+  # Add image pull secrets only to GHCR-based deployments (not postgres/redis which use Docker Hub)
   - target:
       kind: Deployment
+      name: payment-watchdog-api
+    patch: |-
+      - op: add
+        path: /spec/template/spec/imagePullSecrets
+        value:
+          - name: ghcr-secret
+  - target:
+      kind: Deployment
+      name: payment-watchdog-web
+    patch: |-
+      - op: add
+        path: /spec/template/spec/imagePullSecrets
+        value:
+          - name: ghcr-secret
+  - target:
+      kind: Deployment
+      name: recovery-orchestration
     patch: |-
       - op: add
         path: /spec/template/spec/imagePullSecrets
