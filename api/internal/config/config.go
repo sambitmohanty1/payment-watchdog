@@ -161,7 +161,16 @@ func readConfigFile() error {
 
 func bindEnvironment() error {
 	// Enable automatic environment variable loading
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
+
+	// Explicitly bind the critical connection details
+	viper.BindEnv("database.password", "DATABASE_PASSWORD")
+	viper.BindEnv("database.host", "DATABASE_HOST")
+	viper.BindEnv("database.user", "DATABASE_USER")
+	viper.BindEnv("database.name", "DATABASE_NAME")
+	viper.BindEnv("database.port", "DATABASE_PORT")
+
 
 	// Check for potential environment variable conflicts
 	if err := checkEnvironmentConflicts(); err != nil {
