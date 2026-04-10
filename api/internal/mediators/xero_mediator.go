@@ -82,6 +82,36 @@ type XeroLineItem struct {
 	RawData     json.RawMessage `json:"-"`
 }
 
+// XeroBankTransaction represents a bank transaction in Xero (PW-102)
+type XeroBankTransaction struct {
+	BankTransactionID string          `json:"BankTransactionID"`
+	Type              string          `json:"Type"` // RECEIVE, EXPEND, RECEIVE-TRANSFER, EXPEND-TRANSFER
+	Contact           XeroContact     `json:"Contact"`
+	Date              time.Time       `json:"Date"`
+	Status            string          `json:"Status"`
+	LineAmountTypes   string          `json:"LineAmountTypes"`
+	Reference         string          `json:"Reference"`
+	SubTotal          float64         `json:"SubTotal"`
+	TotalTax          float64         `json:"TotalTax"`
+	Total             float64         `json:"Total"`
+	CurrencyCode      string          `json:"CurrencyCode"`
+	IsReconciled      bool            `json:"IsReconciled"`
+	RawData           json.RawMessage `json:"-"`
+}
+
+// XeroPayment represents a payment recorded in Xero (PW-102)
+type XeroPayment struct {
+	PaymentID string    `json:"PaymentID"`
+	Date      time.Time `json:"Date"`
+	Amount    float64   `json:"Amount"`
+	Reference string    `json:"Reference"`
+	Invoice   struct {
+		InvoiceID     string `json:"InvoiceID"`
+		InvoiceNumber string `json:"InvoiceNumber"`
+	} `json:"Invoice"`
+	Status string `json:"Status"`
+}
+
 // NewXeroMediator creates a new Xero mediator
 func NewXeroMediator(config *ProviderConfig, eventBus EventBus, logger *zap.Logger) *XeroMediator {
 	base := NewBaseMediator(config, eventBus, logger)
@@ -657,6 +687,67 @@ func (x *XeroMediator) validateConnection(ctx context.Context) error {
 	return nil
 }
 
+// ReconcileBankTransactions performs cross-method reconciliation for a company (PW-102)
+func (x *XeroMediator) ReconcileBankTransactions(ctx context.Context, companyID string) (int, error) {
+	if !x.isConnected {
+		return 0, fmt.Errorf("Xero mediator not connected")
+	}
+
+	x.logger.Info("Starting Xero bank transaction reconciliation", zap.String("company_id", companyID))
+
+	// 1. Fetch bank transactions from the last 7 days
+	since := time.Now().Add(-7 * 24 * time.Hour)
+	transactions, err := x.apiClient.GetBankTransactions(ctx, since)
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch bank transactions: %w", err)
+	}
+
+	if len(transactions) == 0 {
+		x.logger.Info("No new bank transactions found for reconciliation", zap.String("company_id", companyID))
+		return 0, nil
+	}
+
+	// 2. We match these against outstanding payment failures via Event Bus.
+	resolvedCount := 0
+	for _, tx := range transactions {
+		// Only process "RECEIVE" transactions (incoming money)
+		if tx.Type != "RECEIVE" && tx.Type != "RECEIVE-TRANSFER" {
+			continue
+		}
+
+		// Create reconciliation match event
+		matchEvent := map[string]interface{}{
+			"event_id":           uuid.New().String(),
+			"company_id":         companyID,
+			"provider":           "xero",
+			"transaction_id":     tx.BankTransactionID,
+			"reference":          tx.Reference,
+			"amount_cents":       int64(tx.Total * 100),
+			"currency":           tx.CurrencyCode,
+			"transaction_date":   tx.Date.Format(time.RFC3339),
+			"customer_name":      tx.Contact.Name,
+			"is_reconciled":      tx.IsReconciled,
+			"detected_at":        time.Now().UTC(),
+		}
+
+		// Publish event for the RecoveryOrchestrator to match and resolve
+		if err := x.eventBus.Publish(ctx, "payment.reconciliation.detected", matchEvent); err != nil {
+			x.logger.Error("Failed to publish reconciliation event", 
+				zap.String("transaction_id", tx.BankTransactionID), 
+				zap.Error(err))
+			continue
+		}
+		
+		resolvedCount++
+	}
+
+	x.logger.Info("Xero reconciliation event publishing completed", 
+		zap.String("company_id", companyID), 
+		zap.Int("events_published", resolvedCount))
+
+	return resolvedCount, nil
+}
+
 // isPaymentFailure checks if an invoice represents a payment failure
 func (x *XeroMediator) isPaymentFailure(invoice *XeroInvoice) bool {
 	// Xero-specific logic for identifying payment failures
@@ -802,6 +893,51 @@ func (x *XeroAPIClient) GetInvoices(ctx context.Context, since time.Time) ([]*Xe
 	}
 
 	return response.Invoices, nil
+}
+
+// GetBankTransactions retrieves bank transactions from Xero API (PW-102)
+func (x *XeroAPIClient) GetBankTransactions(ctx context.Context, since time.Time) ([]*XeroBankTransaction, error) {
+	// Build query parameters
+	params := url.Values{}
+	params.Set("where", fmt.Sprintf("Date >= DateTime(%d, %d, %d)",
+		since.Year(), since.Month(), since.Day()))
+	params.Set("order", "Date DESC")
+
+	url := fmt.Sprintf("%s/BankTransactions?%s", x.baseURL, params.Encode())
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := x.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Xero API returned status: %d", resp.StatusCode)
+	}
+
+	var response struct {
+		BankTransactions []*XeroBankTransaction `json:"BankTransactions"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	// Store raw data
+	for _, tx := range response.BankTransactions {
+		if rawData, err := json.Marshal(tx); err == nil {
+			tx.RawData = rawData
+		}
+	}
+
+	return response.BankTransactions, nil
 }
 
 // OAuth 2.0 Implementation Methods

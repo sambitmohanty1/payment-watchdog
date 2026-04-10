@@ -3,8 +3,7 @@ const nextConfig = {
   // Enable standalone output for Docker builds
   output: 'standalone',
   experimental: {
-    appDir: true,
-    serverExternalPackages: [],
+    // appDir is now default in Next.js 14
   },
   
   // HTTPS configuration removed - using custom server instead

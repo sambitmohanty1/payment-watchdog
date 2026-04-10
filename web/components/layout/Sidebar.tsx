@@ -29,7 +29,11 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  className?: string;
+}
+
+export function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
@@ -38,7 +42,7 @@ export function Sidebar() {
       initial={false}
       animate={{ width: collapsed ? 80 : 280 }}
       transition={{ duration: 0.2, ease: "easeInOut" }}
-      className="flex flex-col bg-card border-r border-border"
+      className={cn("flex flex-col bg-card border-r border-border", className)}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">

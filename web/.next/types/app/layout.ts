@@ -1,4 +1,4 @@
-// File: /Users/mohants5/Documents/personal/projects/payment-watchdog/web/app/layout.tsx
+// File: C:\Personal\project\payment-watchdog\web\app\layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

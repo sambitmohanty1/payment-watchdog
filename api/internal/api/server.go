@@ -10,6 +10,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/eventbus"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/mediators"
 )
 
 // Server represents the API server
@@ -62,9 +64,36 @@ func (s *Server) SetupRoutes() {
 	communicationService := services.NewCommunicationService(s.db, nil, nil)
 	recoveryService := services.NewRecoveryOrchestrationService(s.db, retryService, communicationService, analyticsService, s.logger)
 
-	// Create Xero handlers
-	// For testing, passing nil mediator
-	xeroHandlers := NewXeroHandlers(nil, s.logger)
+	// 1. Initialize Event Bus for internal communication
+	bus := eventbus.NewLocalEventBus(s.logger)
+
+	// 2. Instantiate Event Processor Service to handle recovery & reconciliation matches
+	eventProcessor := services.NewEventProcessorService(s.db, ruleEngine, bus, s.logger)
+	if err := eventProcessor.StartEventProcessing(context.Background()); err != nil {
+		s.logger.Error("Failed to start event processor", zap.Error(err))
+	}
+
+	// 3. Create Xero Mediator with appropriate config
+	xeroProviderConfig := &architecture.ProviderConfig{
+		ProviderID:   "xero-primary",
+		ProviderType: architecture.ProviderTypeOAuth,
+		CompanyID:    "global", // In production, this would be dynamic
+		OAuthConfig: &architecture.OAuthConfig{
+			ClientID:     "XERO_CLIENT_ID", // Placeholder, will be injected via ENV or DB
+			ClientSecret: "XERO_CLIENT_SECRET",
+			TokenURL:     "https://identity.xero.com/connect/token",
+			AuthURL:      "https://login.xero.com/identity/connect/authorize",
+			Scopes:       []string{"offline_access", "accounting.transactions", "accounting.contacts"},
+		},
+		SyncConfig: &architecture.SyncConfig{
+			Frequency: 30 * time.Minute,
+			Enabled:   true,
+		},
+	}
+	xeroMediator := mediators.NewXeroMediator(xeroProviderConfig, bus, s.logger)
+
+	// 4. Create Xero handlers with the real mediator
+	xeroHandlers := NewXeroHandlers(xeroMediator, s.logger)
 
 	// Create handlers with available services
 	handlers := NewHandlers(

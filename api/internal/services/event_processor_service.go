@@ -576,8 +576,90 @@ func (e *EventProcessorService) StartEventProcessing(ctx context.Context) error 
 	// Start keep-alive loop
 	go e.keepAliveLoop(ctx)
 
+	// Subscribe to reconciliation events (PW-102)
+	_, err = e.eventBus.Subscribe(ctx, "payment.reconciliation.detected", e.handleReconciliationEvent)
+	if err != nil {
+		e.logger.Error("Failed to subscribe to reconciliation events", zap.Error(err))
+	}
+
 	e.logger.Info("Event processing service started successfully")
 	return nil
+}
+
+// handleReconciliationEvent processes incoming reconciliation matches (PW-102)
+func (e *EventProcessorService) handleReconciliationEvent(ctx context.Context, event interface{}) error {
+	eventMap, ok := event.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid reconciliation event type")
+	}
+
+	companyID, _ := eventMap["company_id"].(string)
+	reference, _ := eventMap["reference"].(string)
+	amountCents, _ := eventMap["amount_cents"].(int64)
+	transactionID, _ := eventMap["transaction_id"].(string)
+
+	e.logger.Info("Processing reconciliation event",
+		zap.String("company_id", companyID),
+		zap.String("reference", reference),
+		zap.Int64("amount_cents", amountCents))
+
+	// Find matching payment failure in database
+	var failure models.PaymentFailureEvent
+	// Strict match: Reference contains InvoiceNumber AND Amount matches
+	// Fallback: Amount matches AND status is not resolved
+	query := e.db.Where("company_id = ? AND status != 'resolved' AND amount_cents = ?", companyID, amountCents)
+	
+	if reference != "" {
+		// Try matching by reference/invoice number
+		query = query.Where("invoice_number = ? OR ? ILIKE '%' || invoice_number || '%'", reference, reference)
+	}
+
+	if err := query.First(&failure).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			e.logger.Debug("No matching payment failure found for reconciliation",
+				zap.String("reference", reference),
+				zap.Int64("amount_cents", amountCents))
+			return nil // Not an error, just no match
+		}
+		return fmt.Errorf("failed to query payment failures for reconciliation: %w", err)
+	}
+
+	// Match found! Resolve the failure.
+	e.logger.Info("MATCH FOUND: Resolving payment failure via Xero reconciliation",
+		zap.String("failure_id", failure.ID.String()),
+		zap.String("transaction_id", transactionID))
+
+	failure.Status = "resolved"
+	now := time.Now()
+	failure.ProcessedAt = &now
+	failure.UpdatedAt = now
+	
+	// Add reconciliation metadata
+	if failure.NormalizedData == "" {
+		failure.NormalizedData = "{}"
+	}
+	var normalized map[string]interface{}
+	json.Unmarshal([]byte(failure.NormalizedData), &normalized)
+	normalized["reconciliation_match"] = eventMap
+	normalizedBytes, _ := json.Marshal(normalized)
+	failure.NormalizedData = string(normalizedBytes)
+
+	if err := e.db.Save(&failure).Error; err != nil {
+		return fmt.Errorf("failed to resolve payment failure: %w", err)
+	}
+
+	// Publish resolution event
+	resolutionEvent := map[string]interface{}{
+		"event_id":           uuid.New().String(),
+		"event_type":         "payment.failure.resolved",
+		"payment_failure_id": failure.ID,
+		"company_id":         companyID,
+		"resolution_source":  "xero_reconciliation",
+		"transaction_id":     transactionID,
+		"timestamp":          time.Now(),
+	}
+	
+	return e.eventBus.Publish(ctx, "payment.failure.resolved", resolutionEvent)
 }
 
 // handlePaymentFailureEvent is the event handler that matches the EventHandler signature

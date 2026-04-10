@@ -10,11 +10,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui'
 
-export function Header() {
+import { cn } from "@/lib/utils"
+
+interface HeaderProps {
+  className?: string;
+}
+
+export function Header({ className }: HeaderProps) {
   const { theme, setTheme } = useTheme()
 
   return (
-    <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className={cn("flex items-center justify-between px-6 py-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60", className)}>
       {/* Search */}
       <div className="flex items-center space-x-4 flex-1 max-w-md">
         <div className="relative">

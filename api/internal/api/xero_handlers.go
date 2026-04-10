@@ -348,6 +348,34 @@ func (h *XeroHandlers) GetPaymentFailures(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// ManualReconcile triggers the reconciliation process manually (PW-102)
+func (h *XeroHandlers) ManualReconcile(c *gin.Context) {
+	companyID := c.Query("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "company_id query parameter required"})
+		return
+	}
+
+	h.logger.Info("Manual reconciliation triggered", zap.String("company_id", companyID))
+
+	count, err := h.xeroMediator.ReconcileBankTransactions(c.Request.Context(), companyID)
+	if err != nil {
+		h.logger.Error("Reconciliation failed", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Reconciliation failed",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":          true,
+		"company_id":       companyID,
+		"events_published": count,
+		"message":          fmt.Sprintf("Published %d sync events for reconciliation", count),
+	})
+}
+
 // RegisterXeroRoutes registers Xero-specific routes
 func RegisterXeroRoutes(router *gin.RouterGroup, xeroHandlers *XeroHandlers) {
 	xero := router.Group("/xero")
@@ -365,6 +393,7 @@ func RegisterXeroRoutes(router *gin.RouterGroup, xeroHandlers *XeroHandlers) {
 		xero.GET("/tenants", xeroHandlers.GetTenants)
 		xero.GET("/organizations", xeroHandlers.GetOrganizations)
 		xero.GET("/payment-failures", xeroHandlers.GetPaymentFailures)
+		xero.POST("/reconcile", xeroHandlers.ManualReconcile)
 	}
 }
 
