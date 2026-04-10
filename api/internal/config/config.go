@@ -19,7 +19,20 @@ type Config struct {
 	Xero          XeroConfig     `mapstructure:"xero"`
 	Email         EmailConfig    `mapstructure:"email"`
 	Log           LogConfig      `mapstructure:"log"`
+	Firebase      FirebaseConfig `mapstructure:"firebase"`
+	CORS          CORSConfig     `mapstructure:"cors"`
 	SovereignMode bool           `mapstructure:"sovereign_mode"`
+}
+
+// FirebaseConfig holds Firebase Admin SDK configuration
+type FirebaseConfig struct {
+	ProjectID          string `mapstructure:"project_id"`
+	ServiceAccountPath string `mapstructure:"service_account_path"`
+}
+
+// CORSConfig holds allowed origins for cross-origin requests
+type CORSConfig struct {
+	AllowedOrigins []string `mapstructure:"allowed_origins"`
 }
 
 // isLocal checks if the host is a local loopback or standard internal network
@@ -170,6 +183,20 @@ func bindEnvironment() error {
 	viper.BindEnv("database.user", "DATABASE_USER")
 	viper.BindEnv("database.name", "DATABASE_NAME")
 	viper.BindEnv("database.port", "DATABASE_PORT")
+
+	// Bind Stripe secrets from environment — never hardcode these
+	viper.BindEnv("stripe.secret_key", "STRIPE_SECRET_KEY")
+	viper.BindEnv("stripe.webhook_secret", "STRIPE_WEBHOOK_SECRET")
+	viper.BindEnv("stripe.publishable_key", "STRIPE_PUBLISHABLE_KEY")
+
+	// Bind Xero OAuth credentials from environment
+	viper.BindEnv("xero.client_id", "XERO_CLIENT_ID")
+	viper.BindEnv("xero.client_secret", "XERO_CLIENT_SECRET")
+	viper.BindEnv("xero.redirect_uri", "XERO_REDIRECT_URI")
+
+	// Bind Firebase credentials from environment
+	viper.BindEnv("firebase.project_id", "FIREBASE_PROJECT_ID")
+	viper.BindEnv("firebase.service_account_path", "FIREBASE_SERVICE_ACCOUNT_PATH")
 
 
 	// Check for potential environment variable conflicts

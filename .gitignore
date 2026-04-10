@@ -103,3 +103,21 @@ api/main
 worker/main
 api/payment-watchdog-api
 worker/payment-watchdog-worker
+
+# ============================================================
+# SECURITY: Never commit these files
+# ============================================================
+
+# Local config overrides with real secrets (use this for local dev)
+api/config/config.local.yaml
+api/config/*.local.yaml
+
+# Firebase service account keys
+*firebase-service-account*.json
+*service-account*.json
+
+# Env files that may contain API keys or passwords
+.env.production
+.env.staging
+web/.env.local
+web/.env.production

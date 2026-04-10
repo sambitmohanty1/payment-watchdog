@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"context"
 	"fmt"
 	"net/http"
@@ -60,8 +61,24 @@ func main() {
 	}
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("listen: %s\n", zap.Error(err))
+		if c.Server.HTTPS {
+			logger.Info("Starting server with TLS",
+				zap.String("port", c.Server.Port),
+				zap.String("cert", c.Server.CertFile),
+				zap.String("key", c.Server.KeyFile))
+			
+			srv.TLSConfig = &tls.Config{
+				MinVersion: tls.VersionTLS12,
+			}
+			
+			if err := srv.ListenAndServeTLS(c.Server.CertFile, c.Server.KeyFile); err != nil && err != http.ErrServerClosed {
+				logger.Fatal("listen (https): %s\n", zap.Error(err))
+			}
+		} else {
+			logger.Info("Starting server without TLS", zap.String("port", c.Server.Port))
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				logger.Fatal("listen (http): %s\n", zap.Error(err))
+			}
 		}
 	}()
 

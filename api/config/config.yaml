@@ -6,36 +6,45 @@ server:
   key_file: "./certs/server.key"
 
 database:
-  host: "lexure-mvp-postgres"
-  port: 5403
-  name: "lexure_intelligence_mvp"
+  host: "postgres-sovereign-au.sovereign-au.svc.cluster.local"
+  port: 5432
+  name: "payment_watchdog"
   user: "postgres"
-  password: "password"
-  ssl_mode: "disable"
+  password: ""  # Set via DATABASE_PASSWORD env var
+  ssl_mode: "require"
 
 stripe:
-  secret_key: "sk_test_your_stripe_secret_key_here"
-  webhook_secret: "whsec_test_webhook_secret_for_development"
-  publishable_key: "pk_test_your_stripe_publishable_key_here"
+  secret_key: ""       # Set via STRIPE_SECRET_KEY env var
+  webhook_secret: ""   # Set via STRIPE_WEBHOOK_SECRET env var
+  publishable_key: ""  # Set via STRIPE_PUBLISHABLE_KEY env var
 
 xero:
-  client_id: 0F8E50EAE9A1459F90822CF0C25EDCA8
-  client_secret: RJuOZzXkw9QNwwLLl9LsKE39dvZM78Hmfyqrui31H5Bm-DaQ
-  redirect_uri: "https://localhost:8085/api/v1/xero/auth/callback"
+  client_id: ""        # Set via XERO_CLIENT_ID env var
+  client_secret: ""    # Set via XERO_CLIENT_SECRET env var
+  redirect_uri: ""     # Set via XERO_REDIRECT_URI env var (e.g. https://api.yourdomain.com/xero/oauth/callback)
 
 email:
   provider: "smtp"
   host: "localhost"
   port: 587
-  username: ""
-  password: ""
+  username: ""  # Set via EMAIL_USERNAME env var
+  password: ""  # Set via EMAIL_PASSWORD env var
   from_email: "noreply@payment-watchdog.com"
-  from_name: "Lexure Intelligence"
+  from_name: "Payment Watchdog"
 
 log:
   level: "info"
 
+firebase:
+  project_id: ""           # Set via FIREBASE_PROJECT_ID env var
+  service_account_path: "" # Set via FIREBASE_SERVICE_ACCOUNT_PATH env var
+
+cors:
+  allowed_origins:
+    - "http://152.69.179.49"   # OCI Web frontend
+    - "http://localhost:3011"   # Local development
+
 # Vault configuration for secure secret management
 vault:
-  url: ""  # Set to Vault server URL (e.g., "http://localhost:8200")
+  url: ""    # Set to Vault server URL (e.g. "http://localhost:8200")
   token: "" # Set to Vault token for authentication
