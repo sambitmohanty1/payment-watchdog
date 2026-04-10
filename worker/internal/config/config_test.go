@@ -38,13 +38,13 @@ func TestIsSovereignCompliant(t *testing.T) {
 		{
 			name:          "Sovereign mode with internal cluster DNS",
 			sovereignMode: true,
-			dbHost:        "lexure-mvp-postgres",
+			dbHost:        "postgres-sovereign-au",
 			expected:      true,
 		},
 		{
 			name:          "Sovereign mode with svc.cluster.local",
 			sovereignMode: true,
-			dbHost:        "lexure-mvp-postgres.lexure.svc.cluster.local",
+			dbHost:        "postgres-sovereign-au.sovereign-au.svc.cluster.local",
 			expected:      true,
 		},
 		{
