@@ -366,9 +366,8 @@ jobs:
           
           if [[ "${{ github.event.inputs.deploy_pvcs }}" != "true" ]]; then
             echo "- 🛡️ Filtering PVCs out of the deployment stream..." >> $GITHUB_STEP_SUMMARY
-            # Use grep to remove PVC blocks. Works by filtering out everything between 'kind: PersistentVolumeClaim' and the next '---'
-            # Note: This is an approximation for CI environments; real prod should use yq
-            grep -v -zE "(?s)kind: PersistentVolumeClaim.*?---" ./deploy-manifests/raw-manifests.yaml > ./deploy-manifests/final-manifests.yaml || cp ./deploy-manifests/raw-manifests.yaml ./deploy-manifests/final-manifests.yaml
+            # Use yq to safely filter out PVC blocks without introducing control characters
+            yq 'select(.kind != "PersistentVolumeClaim")' ./deploy-manifests/raw-manifests.yaml > ./deploy-manifests/final-manifests.yaml || cp ./deploy-manifests/raw-manifests.yaml ./deploy-manifests/final-manifests.yaml
           else
             cp ./deploy-manifests/raw-manifests.yaml ./deploy-manifests/final-manifests.yaml
           fi
