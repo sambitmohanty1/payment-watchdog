@@ -163,7 +163,7 @@ func (s *Server) SetupRoutes() {
 	xero := s.engine.Group("/xero")
 	{
 		xero.GET("/oauth/url", handlers.xeroHandlers.GetOAuthURL)
-		xero.POST("/oauth/callback", handlers.xeroHandlers.OAuthCallback)
+		xero.GET("/oauth/callback", handlers.xeroHandlers.OAuthCallback)
 		xero.GET("/contacts", handlers.xeroHandlers.GetContacts)
 		xero.POST("/contacts", handlers.xeroHandlers.CreateContact)
 		xero.GET("/invoices", handlers.xeroHandlers.GetInvoices)
