@@ -12,6 +12,7 @@ import (
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // Handlers contains all the API handlers with their dependencies
