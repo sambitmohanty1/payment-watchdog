@@ -350,7 +350,7 @@ jobs:
           fi
           
           echo "### Applying AU Sovereign Deployment" >> $GITHUB_STEP_SUMMARY
-          kubectl apply -k . --server-side --force-conflicts --request-timeout=60s
+          kubectl apply -k . --request-timeout=60s
 
       - name: Wait for AU Deployment Rollout
         run: |
@@ -464,3 +464,6 @@ jobs:
           
           if kubectl rollout undo deployment/recovery-orchestration-sovereign-au; then
             echo "- Worker Service: ROLLED BACK" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Worker Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
+          fi

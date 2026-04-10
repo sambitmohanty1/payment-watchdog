@@ -9,7 +9,6 @@ resources:
   - namespace.yaml
   - network-policy.yaml
   - global-config.yaml
-  - storage-class.yaml
   - ../../base/components/postgres
   - ../../base/components/redis
   - ../../base/services/api
@@ -76,14 +75,14 @@ patches:
     patch: |-
       - op: add
         path: /spec/storageClassName
-        value: oci-bv-sovereign-au
+        value: oci-bv
   - target:
       kind: PersistentVolumeClaim
       name: redis-pvc
     patch: |-
       - op: add
         path: /spec/storageClassName
-        value: oci-bv-sovereign-au
+        value: oci-bv
 
   # Worker service configuration patch - CRITICAL for fixing pod crashes
   - target:
