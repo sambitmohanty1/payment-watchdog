@@ -331,6 +331,22 @@ patches:
                 value: "sovereign-au"
               - name: SOVEREIGN_MODE
                 value: "true"
+              - name: NAMESPACE
+                value: "sovereign-au"
+              - name: POSTGRES_SERVICE_NAME
+                value: "postgres-sovereign-au"
+              - name: POSTGRES_SERVICE_PORT
+                value: "5432"
+              - name: REDIS_SERVICE_NAME
+                value: "redis-sovereign-au"
+              - name: REDIS_SERVICE_PORT
+                value: "6379"
+              - name: DATABASE_HOST
+                value: "postgres-sovereign-au.sovereign-au.svc.cluster.local"
+              - name: DATABASE_PORT
+                value: "5432"
+              - name: REDIS_ADDR
+                value: "redis-sovereign-au.sovereign-au.svc.cluster.local:6379"
 
 # Replicas for sovereign environment
 replicas:
