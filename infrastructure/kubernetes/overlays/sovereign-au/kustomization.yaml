@@ -85,6 +85,80 @@ patches:
         path: /spec/storageClassName
         value: oci-bv-v2-sovereign-au
 
+  # API service configuration patch - CRITICAL for fixing pod crashes
+  - target:
+      kind: ConfigMap
+      name: payment-watchdog-config
+    patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: payment-watchdog-config
+      data:
+        config.yaml: |
+          server:
+            port: 8085
+            environment: sovereign-au
+            logLevel: info
+            shutdownTimeout: 30s
+            
+          database:
+            host: postgres-sovereign-au.sovereign-au.svc.cluster.local
+            port: 5432
+            name: payment_watchdog
+            sslMode: require
+            maxIdleConns: 10
+            maxOpenConns: 100
+            connMaxLifetime: 1h
+            
+          redis:
+            addr: redis-sovereign-au.sovereign-au.svc.cluster.local:6379
+            db: 0
+            poolSize: 100
+            
+          providers:
+            stripe:
+              apiVersion: 2020-08-27
+              timeout: 30s
+            xero:
+              apiVersion: 2.0
+              timeout: 30s
+            quickbooks:
+              apiVersion: 6.0
+              timeout: 30s
+            
+          notifications:
+            email:
+              enabled: true
+              from: no-reply@payment-watchdog.com
+              retryAttempts: 3
+            sms:
+              enabled: true
+              from: PAYMENT_WATCHDOG
+              retryAttempts: 3
+
+  # Web deployment environment patch - CRITICAL for fixing pod proxy loops
+  - target:
+      kind: Deployment
+      name: payment-watchdog-web
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: payment-watchdog-web
+      spec:
+        template:
+          spec:
+            containers:
+            - name: payment-watchdog-web
+              env:
+              - name: NEXT_PUBLIC_API_URL
+                value: "http://payment-watchdog-api-sovereign-au.sovereign-au.svc.cluster.local:80"
+              - name: NO_PROXY
+                value: "localhost,127.0.0.1,::1,payment-watchdog-api-sovereign-au.sovereign-au.svc.cluster.local"
+              - name: no_proxy
+                value: "localhost,127.0.0.1,::1,payment-watchdog-api-sovereign-au.sovereign-au.svc.cluster.local"
+
   # Worker service configuration patch - CRITICAL for fixing pod crashes
   - target:
       kind: ConfigMap
