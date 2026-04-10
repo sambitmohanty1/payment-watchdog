@@ -46,7 +46,7 @@ const DEFAULT_OPTIONS: UseSystemStatusOptions = {
 
 // API client configuration
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8091',
+  baseURL: '/api/system',
   timeout: 10000, // 10 seconds timeout
   headers: {
     'Content-Type': 'application/json',

@@ -175,6 +175,8 @@ patches:
             containers:
             - name: payment-watchdog-web
               env:
+              - name: INTERNAL_API_URL
+                value: "http://payment-watchdog-api-sovereign-au.sovereign-au.svc.cluster.local"
               - name: NEXT_PUBLIC_API_URL
                 value: "http://payment-watchdog-api-sovereign-au.sovereign-au.svc.cluster.local:80"
               - name: NO_PROXY

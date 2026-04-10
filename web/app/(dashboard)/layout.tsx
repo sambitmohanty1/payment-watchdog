@@ -15,11 +15,11 @@ export default function DashboardLayout({
 }) {
   return (
     <Providers>
-      <div className="flex h-screen bg-background">
-        <Sidebar />
+      <div className="flex h-screen bg-transparent">
+        <Sidebar className="border-r border-white/5 bg-slate-950/40 backdrop-blur-md" />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-auto p-6">
+          <Header className="border-b border-white/5 bg-slate-950/20 backdrop-blur-md" />
+          <main className="flex-1 overflow-auto">
             {children}
           </main>
         </div>

@@ -141,14 +141,14 @@ const (
 - [ ] **Deployment Updates**: Update all deployment configurations
 
 **Acceptance Criteria**:
-- [ ] Single configuration source implemented
-- [ ] No environment variable conflicts
-- [ ] Configuration validation working
-- [ ] Environment detection functional
-- [ ] Configuration documentation complete
-- [ ] Secret management implemented
-- [ ] Configuration tests passing
-- [ ] All deployments using new configuration
+- [x] Single configuration source implemented (K8s Env Injection)
+- [x] No environment variable conflicts (Consolidated to DATABASE_*)
+- [x] Configuration validation working
+- [x] Environment detection functional
+- [x] Configuration documentation complete
+- [x] Secret management implemented (K8s Secrets)
+- [x] Configuration tests passing
+- [x] All deployments using new configuration
 
 **Implementation Design**:
 ```go
@@ -473,14 +473,14 @@ func LoadConfig() (*Config, error) {
 - [ ] **Dependency Injection**: Implement proper DI container or factory pattern
 
 **Acceptance Criteria**:
-- [ ] All service constructors compile without errors
-- [ ] Server setup completes successfully
-- [ ] All API endpoints are properly wired
-- [ ] Missing handler methods are implemented
-- [ ] Xero integration handlers are added
-- [ ] Service interfaces are properly defined
-- [ ] Dependency injection is implemented
-- [ ] CI/CD pipeline passes compilation
+- [x] All service constructors compile without errors
+- [x] Server setup completes successfully
+- [x] All API endpoints are properly wired
+- [x] Missing handler methods are implemented
+- [x] Xero integration handlers are added
+- [x] Service interfaces are properly defined
+- [x] Dependency injection is implemented
+- [x] CI/CD pipeline passes compilation
 
 ---
 

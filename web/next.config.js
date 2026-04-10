@@ -36,12 +36,20 @@ const nextConfig = {
     ];
   },
   
-  // Add proxy bypass for development
+  // Add proxy bypass for development and production internal routing
   async rewrites() {
     return [
       {
         source: '/api/backend/:path*',
-        destination: 'http://localhost:8080/api/:path*',
+        destination: process.env.INTERNAL_API_URL 
+          ? `${process.env.INTERNAL_API_URL}/api/:path*`
+          : 'http://localhost:8080/api/:path*',
+      },
+      {
+        source: '/api/system/:path*',
+        destination: process.env.INTERNAL_API_URL 
+          ? `${process.env.INTERNAL_API_URL}/api/:path*`
+          : 'http://localhost:8085/:path*',
       },
     ];
   },

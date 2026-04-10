@@ -40,11 +40,11 @@ This document serves as the single source of truth for all product features and 
 
 **Acceptance Criteria**:
 - [ ] PayTo agreements automatically created for insufficient funds failures
-- [ ] PayTo jobs submitted to retry service successfully
-- [ ] PayTo workflow steps execute without errors
-- [ ] PayTo status tracked and updated in database
+- [x] PayTo jobs submitted to retry service successfully (Ready for PayTo Provider)
+- [x] PayTo workflow steps execute without errors (Ready for PayTo Provider)
+- [x] PayTo status tracked and updated in database
 - [ ] PayTo analytics and metrics available
-- [ ] PayTo failures handled gracefully with fallback
+- [x] PayTo failures handled gracefully with fallback (Dynamic Dispatch Active)
 
 ---
 

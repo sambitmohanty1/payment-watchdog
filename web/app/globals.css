@@ -1999,3 +1999,44 @@ body {
 .\[\&_tr\]\:border-b tr {
   border-bottom-width: 1px;
 }
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --primary: #6366f1;
+  --primary-glow: rgba(99, 102, 241, 0.4);
+}
+
+body {
+  @apply antialiased text-slate-200 bg-[#020617] min-h-screen;
+  font-family: 'Inter', sans-serif;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(244, 63, 94, 0.05) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(56, 189, 248, 0.1) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-2xl transition-all duration-300;
+  }
+  
+  .glass-card:hover {
+    @apply border-white/20 bg-slate-900/60 scale-[1.02];
+  }
+
+  .status-pulse {
+    @apply relative flex h-3 w-3;
+  }
+  
+  .status-pulse-ping {
+    @apply animate-ping absolute inline-flex h-full w-full rounded-full opacity-75;
+  }
+}
+
+h1, h2, h3, .font-heading {
+  font-family: 'Outfit', sans-serif;
+  @apply tracking-tight;
+}

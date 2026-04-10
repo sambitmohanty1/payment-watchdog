@@ -2,12 +2,11 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Payment Watchdog - Payment Recovery Management',
-  description: 'Monitor and manage payment recovery workflows',
-  keywords: 'payment recovery, payment failures, cashflow, fintech, SaaS',
-  authors: [{ name: 'Payment Watchdog Team' }],
-  viewport: 'width=device-width, initial-scale=1',
-  robots: 'index, follow',
+  title: 'Payment Watchdog | Sovereign AU Command Center',
+  description: 'Mission-critical payment recovery orchestration and health monitoring for the Australian Sovereign region.',
+  keywords: 'payment recovery, sovereign cloud, fintech, payment watchdog, data residency',
+  authors: [{ name: 'Payment Watchdog Principal Engineering' }],
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
 };
 
 export default function RootLayout({
@@ -16,11 +15,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="font-sans">
-        <div className="min-h-screen bg-gray-50">
-          {children}
-        </div>
+    <html lang="en" className="dark">
+      <body className="font-sans antialiased overflow-x-hidden">
+        {children}
       </body>
     </html>
   );

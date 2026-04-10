@@ -9,6 +9,21 @@
 
 ---
 
+### 🛡️ Sovereign AU Status: **ACTIVE & INTELLIGENT**
+
+**Phase 1 (Stabilization): COMPLETE** ✅
+- Resolved `CrashLoopBackOff` across API/Worker services.
+- Finalized explicit K8s environment variable injection.
+- Optimized persistent storage for OCI Sydney.
+
+**Phase 2 (Core Logic Activation): COMPLETE** ✅
+- **Intelligence Driven**: Rule-based failure classification active in Webhook pipeline.
+- **Dynamic Dispatch**: Implemented `ProviderRegistry` for zero-downtime failover to intent-recording.
+- **Service Mastery**: Resolved all `nil` dependencies; full business logic is now wired and persistent.
+- **Visibility**: Communication tracking and manual retry orchestration fully operational.
+
+---
+
 ## � Quick Start
 
 ### **Prerequisites**

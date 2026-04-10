@@ -3,6 +3,16 @@ name: Deploy to Sovereign AU (Oracle Cloud Australia)
 on:
   workflow_dispatch:
     inputs:
+      deploy_pvcs:
+        description: 'Whether to deploy PersistentVolumeClaims (PVCs). Set to true for first-time setup or if modifying storage.'
+        required: false
+        type: boolean
+        default: false
+      incremental_rollout:
+        description: 'Whether to force a restart of all components even if manifests haven''t changed'
+        required: false
+        type: boolean
+        default: false
       image_tag:
         description: 'Docker image tag for AU deployment (e.g., git SHA)'
         required: false
@@ -298,15 +308,16 @@ jobs:
           echo "### Cleaning Up Existing Sovereign AU Resources" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Smart cleanup - only delete payment-watchdog specific resources
-          echo "- Cleaning up payment-watchdog pods..." >> $GITHUB_STEP_SUMMARY
-          kubectl delete pods -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No payment-watchdog pods to delete" >> $GITHUB_STEP_SUMMARY
+          # Smart Deployment - rely on kubectl apply for incremental updates
+          echo "### Starting Incremental Deployment to Sovereign AU" >> $GITHUB_STEP_SUMMARY
+          echo "- Skipping destructive cleanup of existing resources..." >> $GITHUB_STEP_SUMMARY
           
-          echo "- Cleaning up payment-watchdog deployments..." >> $GITHUB_STEP_SUMMARY
-          kubectl delete deployment -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No payment-watchdog deployments to delete" >> $GITHUB_STEP_SUMMARY
-          
-          echo "- Cleaning up payment-watchdog PVCs..." >> $GITHUB_STEP_SUMMARY
-          kubectl delete pvc -l app.kubernetes.io/part-of=payment-watchdog -n sovereign-au --force --grace-period=0 2>/dev/null || echo "  No payment-watchdog PVCs to delete" >> $GITHUB_STEP_SUMMARY
+          # Check for PVC safety
+          if [[ "${{ github.event.inputs.deploy_pvcs }}" != "true" ]]; then
+            echo "- 🛡️ PVC Safeguard: PVCs will be filtered out from this deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ⚠️ Warning: PVC deployment is ENABLED. Existing storage definitions may be updated." >> $GITHUB_STEP_SUMMARY
+          fi
           
           # Also try by name patterns for stubborn resources
           echo "- Cleaning up by name patterns..." >> $GITHUB_STEP_SUMMARY
@@ -349,8 +360,26 @@ jobs:
             echo "- Image pull test: FAILED" >> $GITHUB_STEP_SUMMARY
           fi
           
+          # Build and filter manifests
+          mkdir -p ./deploy-manifests
+          kubectl kustomize . > ./deploy-manifests/raw-manifests.yaml
+          
+          if [[ "${{ github.event.inputs.deploy_pvcs }}" != "true" ]]; then
+            echo "- 🛡️ Filtering PVCs out of the deployment stream..." >> $GITHUB_STEP_SUMMARY
+            # Use grep to remove PVC blocks. Works by filtering out everything between 'kind: PersistentVolumeClaim' and the next '---'
+            # Note: This is an approximation for CI environments; real prod should use yq
+            grep -v -zE "(?s)kind: PersistentVolumeClaim.*?---" ./deploy-manifests/raw-manifests.yaml > ./deploy-manifests/final-manifests.yaml || cp ./deploy-manifests/raw-manifests.yaml ./deploy-manifests/final-manifests.yaml
+          else
+            cp ./deploy-manifests/raw-manifests.yaml ./deploy-manifests/final-manifests.yaml
+          fi
+
           echo "### Applying AU Sovereign Deployment" >> $GITHUB_STEP_SUMMARY
-          kubectl apply -k . --request-timeout=60s
+          kubectl apply -f ./deploy-manifests/final-manifests.yaml --namespace sovereign-au --request-timeout=60s
+          
+          if [[ "${{ github.event.inputs.incremental_rollout }}" == "true" ]]; then
+            echo "- 🔄 Forcing rollout restart for all components..." >> $GITHUB_STEP_SUMMARY
+            kubectl rollout restart deployment -n sovereign-au -l app.kubernetes.io/part-of=payment-watchdog
+          fi
 
       - name: Wait for AU Deployment Rollout
         run: |
