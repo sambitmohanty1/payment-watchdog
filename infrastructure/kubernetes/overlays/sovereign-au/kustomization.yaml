@@ -40,6 +40,13 @@ images:
   - name: ghcr.io/sambitmohanty1/payment-watchdog/web
     newName: ghcr.io/sambitmohanty1/payment-watchdog/web
     newTag: latest
+  # OKE CRI-O enforces fully qualified image names - short names like 'postgres:15-alpine' are rejected
+  - name: postgres
+    newName: docker.io/library/postgres
+    newTag: 15-alpine
+  - name: redis
+    newName: docker.io/library/redis
+    newTag: 7-alpine
 
 # Patches for sovereign-specific configurations
 patches:
