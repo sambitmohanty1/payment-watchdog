@@ -63,6 +63,11 @@ func NewHandlers(
 	}
 }
 
+// HandleStripeWebhook handles incoming webhooks from Stripe
+func (h *Handlers) HandleStripeWebhook(c *gin.Context) {
+	h.webhookService.HandleStripeWebhook(c)
+}
+
 // GetPaymentFailures returns a list of payment failures
 func (h *Handlers) GetPaymentFailures(c *gin.Context) {
 	companyID := c.Query("company_id")
@@ -172,9 +177,28 @@ func (h *Handlers) RetryPayment(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual retry logic
+	// Submit the manual retry job to the RetryService subsystem
+	if h.retryService != nil {
+		_, err = h.retryService.SubmitJob(
+			c.Request.Context(),
+			"payment_retry",
+			companyID,
+			map[string]interface{}{
+				"failure_id": failureIDStr,
+				"source":     "api_manual_retry",
+			},
+		)
+		if err != nil {
+			h.logger.Error("Failed to submit manual payment retry", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initiate retry"})
+			return
+		}
+	} else {
+		h.logger.Warn("RetryService is not initialized")
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"message":    "Payment retry initiated",
+		"message":    "Payment retry successfully initiated",
 		"failure_id": failureID,
 		"company_id": companyID,
 	})

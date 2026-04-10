@@ -14,25 +14,27 @@ import (
 
 // PaymentProcessorService handles payment failure events
 type PaymentProcessorService struct {
-	db       interfaces.DatabaseInterface
-	eventBus interfaces.EventBusInterface
-	config   *config.WorkerConfig
-	logger   interfaces.LoggerInterface
-	status   *interfaces.ProcessorStatus
+	db           interfaces.DatabaseInterface
+	eventBus     interfaces.EventBusInterface
+	rulesService *RulesService
+	config       *config.WorkerConfig
+	logger       interfaces.LoggerInterface
+	status       *interfaces.ProcessorStatus
 }
 
 // NewPaymentProcessorService creates a new payment processor service
-func NewPaymentProcessorService(db interfaces.DatabaseInterface, eventBus interfaces.EventBusInterface, config *config.WorkerConfig, logger interfaces.LoggerInterface) *PaymentProcessorService {
+func NewPaymentProcessorService(db interfaces.DatabaseInterface, eventBus interfaces.EventBusInterface, rulesService *RulesService, config *config.WorkerConfig, logger interfaces.LoggerInterface) *PaymentProcessorService {
 	return &PaymentProcessorService{
-		db:       db,
-		eventBus: eventBus,
-		config:   config,
-		logger:   logger,
+		db:           db,
+		eventBus:     eventBus,
+		rulesService: rulesService,
+		config:       config,
+		logger:       logger,
 		status: &interfaces.ProcessorStatus{
 			IsHealthy:   true,
 			LastProcess: "",
 			ErrorCount:  0,
-			Throughput:  0,
+			Throughput:  1, // Initial value
 		},
 	}
 }
@@ -86,7 +88,6 @@ func (s *PaymentProcessorService) handlePaymentFailure(ctx context.Context, even
 
 	return nil
 }
-
 // processFailure processes the actual payment failure logic
 func (s *PaymentProcessorService) processFailure(ctx context.Context, event *events.PaymentEvent) error {
 	s.logger.Info("Processing payment failure",
@@ -96,66 +97,74 @@ func (s *PaymentProcessorService) processFailure(ctx context.Context, event *eve
 		zap.String("currency", event.Currency),
 	)
 
-	// Attempt to extract the *gorm.DB instance
+	// 1. Persistence Layer: Record to DB (Phase 1 Logic)
 	type gormDBProvider interface {
 		GetDB() *gorm.DB
 	}
 
 	if dbProvider, ok := s.db.(gormDBProvider); ok {
 		db := dbProvider.GetDB()
+		if db != nil {
+			var providerID, providerEventType, customerID, customerEmail, customerName, failureReason, failureCode, failureMessage string
 
-		if db == nil {
-			s.logger.Warn("gorm DB is nil, cannot save payment failure event")
-			return nil
+			if val, ok := event.Metadata["provider"]; ok { providerID = fmt.Sprint(val) }
+			if val, ok := event.Metadata["provider_event_type"]; ok { providerEventType = fmt.Sprint(val) }
+			if val, ok := event.Metadata["customer_id"]; ok { customerID = fmt.Sprint(val) }
+			if val, ok := event.Metadata["customer_email"]; ok { customerEmail = fmt.Sprint(val) }
+			if val, ok := event.Metadata["customer_name"]; ok { customerName = fmt.Sprint(val) }
+			if val, ok := event.Metadata["reason"]; ok { failureReason = fmt.Sprint(val) }
+			if val, ok := event.Metadata["failure_code"]; ok { failureCode = fmt.Sprint(val) }
+			if val, ok := event.Metadata["failure_message"]; ok { failureMessage = fmt.Sprint(val) }
+
+			err := db.Exec(`
+				INSERT INTO payment_failure_events (
+					id, company_id, provider_id, event_id, event_type, 
+					amount_cents, currency, customer_id, customer_email, 
+					customer_name, failure_reason, failure_code, failure_message, 
+					status, created_at, updated_at
+				) VALUES (
+					gen_random_uuid(), ?, ?, ?, ?,
+					?, ?, ?, ?,
+					?, ?, ?, ?,
+					'received', NOW(), NOW()
+				) ON CONFLICT (event_id) DO NOTHING
+			`, 
+				event.CompanyID, providerID, event.ID, providerEventType, 
+				int64(event.Amount * 100), event.Currency, customerID, customerEmail, 
+				customerName, failureReason, failureCode, failureMessage,
+			).Error
+
+			if err != nil {
+				s.logger.Error("Failed to insert payment failure event to DB", zap.Error(err))
+			} else {
+				s.logger.Info("Successfully recorded payment failure event to DB")
+			}
 		}
+	}
 
-		// Insert into the payment_failure_events table directly to avoid importing api models
-		// and respect bounded contexts in a microservice setup
-		var providerID, providerEventType, customerID, customerEmail, customerName, failureReason, failureCode, failureMessage string
-
-		if val, ok := event.Metadata["provider"]; ok { providerID = fmt.Sprint(val) }
-		if val, ok := event.Metadata["provider_event_type"]; ok { providerEventType = fmt.Sprint(val) }
-		if val, ok := event.Metadata["customer_id"]; ok { customerID = fmt.Sprint(val) }
-		if val, ok := event.Metadata["customer_email"]; ok { customerEmail = fmt.Sprint(val) }
-		if val, ok := event.Metadata["customer_name"]; ok { customerName = fmt.Sprint(val) }
-		if val, ok := event.Metadata["reason"]; ok { failureReason = fmt.Sprint(val) }
-		if val, ok := event.Metadata["failure_code"]; ok { failureCode = fmt.Sprint(val) }
-		if val, ok := event.Metadata["failure_message"]; ok { failureMessage = fmt.Sprint(val) }
-
-		err := db.Exec(`
-			INSERT INTO payment_failure_events (
-				id, company_id, provider_id, event_id, event_type, 
-				amount_cents, currency, customer_id, customer_email, 
-				customer_name, failure_reason, failure_code, failure_message, 
-				status, created_at, updated_at
-			) VALUES (
-				gen_random_uuid(), ?, ?, ?, ?,
-				?, ?, ?, ?,
-				?, ?, ?, ?,
-				'received', NOW(), NOW()
-			) ON CONFLICT (event_id) DO NOTHING
-		`, 
-			event.CompanyID, 
-			providerID, 
-			event.ID, 
-			providerEventType, 
-			int64(event.Amount * 100), // convert back to cents
-			event.Currency,
-			customerID,
-			customerEmail,
-			customerName,
-			failureReason,
-			failureCode,
-			failureMessage,
-		).Error
-
+	// 2. Intelligence Layer: Classify the failure (Phase 2 Logic)
+	if s.rulesService != nil {
+		evaluation, err := s.rulesService.EvaluatePaymentFailure(ctx, event)
 		if err != nil {
-			s.logger.Error("Failed to insert payment failure event to DB", zap.Error(err))
+			s.logger.Error("Failed to evaluate payment failure rules", zap.Error(err))
 		} else {
-			s.logger.Info("Successfully recorded payment failure event to DB")
+			s.logger.Info("Failure classified", 
+				zap.String("rule", evaluation.RuleName),
+				zap.String("action", evaluation.Action),
+				zap.Float64("confidence", evaluation.Confidence),
+			)
+
+			// Determine recovery strategy
+			strategy, err := s.rulesService.ApplyRecoveryStrategy(ctx, event)
+			if err != nil {
+				s.logger.Error("Failed to apply recovery strategy", zap.Error(err))
+			} else {
+				s.logger.Info("Recovery strategy determined",
+					zap.String("strategy", strategy.StrategyType),
+					zap.Time("next_attempt", strategy.NextAttempt),
+				)
+			}
 		}
-	} else {
-		s.logger.Warn("s.db does not implement GetDB(), skipping database insertion")
 	}
 
 	return nil

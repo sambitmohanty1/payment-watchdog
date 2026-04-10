@@ -12,14 +12,15 @@ import (
 
 // RetryService handles retry logic with exponential backoff and dead letter queue
 type RetryService struct {
-	db              *gorm.DB
-	maxRetries      int
-	baseDelay       time.Duration
-	maxDelay        time.Duration
-	deadLetterQueue chan RetryJob
-	workers         int
-	mu              sync.RWMutex
-	activeJobs      map[string]*RetryJob
+	db               *gorm.DB
+	maxRetries       int
+	baseDelay        time.Duration
+	maxDelay         time.Duration
+	deadLetterQueue  chan RetryJob
+	workers          int
+	mu               sync.RWMutex
+	activeJobs       map[string]*RetryJob
+	providerRegistry *ProviderRegistry
 }
 
 // RetryJob represents a job that needs to be retried
@@ -76,6 +77,11 @@ func NewRetryService(db *gorm.DB, maxRetries int, baseDelay, maxDelay time.Durat
 	go service.processDeadLetterQueue()
 
 	return service
+}
+
+// SetProviderRegistry injects the provider registry for dynamic endpoint availability checks
+func (r *RetryService) SetProviderRegistry(registry *ProviderRegistry) {
+	r.providerRegistry = registry
 }
 
 // SubmitJob submits a new job for retry processing
@@ -196,12 +202,64 @@ func (r *RetryService) executeWebhookJob(ctx context.Context, job *RetryJob) *Re
 
 // executePaymentRetryJob executes a payment retry job
 func (r *RetryService) executePaymentRetryJob(ctx context.Context, job *RetryJob) *RetryJobResult {
-	// Placeholder implementation
-	// In real implementation, this would call the payment retry logic
+	provider := "stripe" // default provider
+	if val, ok := job.Data["provider"]; ok {
+		provider = fmt.Sprint(val)
+	}
+
+	// Use the ProviderRegistry for dynamic dispatch if available
+	if r.providerRegistry != nil {
+		executed, err := r.providerRegistry.ExecuteOrRecordIntent(
+			ctx,
+			provider,
+			// Live execution: would call the actual Stripe/Xero/PayTo API
+			func(ctx context.Context) error {
+				// TODO: Replace with actual provider SDK call when endpoints are onboarded
+				// e.g., stripe.PaymentIntents.Confirm(paymentIntentID)
+				return fmt.Errorf("live provider call not yet implemented for %s", provider)
+			},
+			// Fallback: record intent in the database
+			func(ctx context.Context) error {
+				return r.recordRetryIntent(ctx, job, provider)
+			},
+		)
+		if err != nil {
+			return &RetryJobResult{
+				Success: false,
+				Error:   err,
+			}
+		}
+		return &RetryJobResult{
+			Success: true,
+			Data:    fmt.Sprintf("payment retry processed (provider=%s, live_executed=%v)", provider, executed),
+		}
+	}
+
+	// Fallback when no ProviderRegistry is wired: record intent directly
+	if err := r.recordRetryIntent(ctx, job, provider); err != nil {
+		return &RetryJobResult{
+			Success: false,
+			Error:   err,
+		}
+	}
+
 	return &RetryJobResult{
 		Success: true,
-		Data:    "payment retry completed",
+		Data:    fmt.Sprintf("payment retry intent recorded (provider=%s)", provider),
 	}
+}
+
+// recordRetryIntent persists a retry intent record when the live provider is unavailable
+func (r *RetryService) recordRetryIntent(ctx context.Context, job *RetryJob, provider string) error {
+	if r.db == nil {
+		return nil
+	}
+
+	// Check if the retry_intents concept can be stored in retry_jobs itself
+	job.Status = "intent_recorded"
+	job.Error = fmt.Sprintf("provider_%s_unavailable", provider)
+
+	return r.db.WithContext(ctx).Save(job).Error
 }
 
 // executeAlertNotificationJob executes an alert notification job

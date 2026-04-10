@@ -108,7 +108,26 @@ func (s *WebhookService) processEvent(ctx context.Context, event *stripe.Event, 
                 RawEventData:      string(rawBody),
                 WebhookReceivedAt: time.Now(),
             }
-            return tx.Create(&failure).Error
+            
+            if err := tx.Create(&failure).Error; err != nil {
+                return err
+            }
+
+            // 6. INTELLIGENCE: Execute Rule Engine for Classification
+            if s.ruleEngine != nil {
+                results := s.ruleEngine.ExecuteRules(&failure)
+                fmt.Printf("Executed %d rules for event %s\n", len(results), failure.EventID)
+                for _, res := range results {
+                    if res.Success {
+                        fmt.Printf("Rule Success: %s - %s\n", res.RuleName, res.Message)
+                    }
+                }
+                
+                // Transition to 'processed' status if rules were evaluated
+                return tx.Model(&failure).Update("status", "processed").Error
+            }
+
+            return nil
         })
     }
     return nil

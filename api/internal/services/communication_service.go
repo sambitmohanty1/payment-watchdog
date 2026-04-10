@@ -18,10 +18,11 @@ import (
 
 // CommunicationService handles customer communications
 type CommunicationService struct {
-	db           *gorm.DB
-	emailService EmailProvider
-	smsService   SMSProvider
-	tracer       trace.Tracer
+	db               *gorm.DB
+	emailService     EmailProvider
+	smsService       SMSProvider
+	providerRegistry *ProviderRegistry
+	tracer           trace.Tracer
 }
 
 // CommunicationRequest represents a communication request
@@ -113,6 +114,11 @@ func NewCommunicationService(db *gorm.DB, emailProvider EmailProvider, smsProvid
 		smsService:   smsProvider,
 		tracer:       otel.Tracer("communication-service"),
 	}
+}
+
+// SetProviderRegistry injects the provider registry for dynamic availability checks
+func (c *CommunicationService) SetProviderRegistry(registry *ProviderRegistry) {
+	c.providerRegistry = registry
 }
 
 // SendEmail sends an email using templates

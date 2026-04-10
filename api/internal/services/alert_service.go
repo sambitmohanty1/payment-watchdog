@@ -124,13 +124,24 @@ This is an automated alert from your payment intelligence system.
 
 // sendAlert sends the actual alert
 func (s *AlertService) sendAlert(alert *models.CustomerCommunication) error {
-	// TODO: Implement actual email/SMS sending
-	// For MVP, just log the alert
 	s.logger.Info("Alert generated",
 		zap.String("alert_id", alert.ID.String()),
 		zap.String("channel", alert.Channel),
 		zap.String("subject", alert.Subject))
 
+	// Ensure DB is not nil to prevent panics during generic mock tests
+	if s.db == nil {
+		s.logger.Warn("Database not wired to AlertService, bypassing alert persistence layer")
+		return nil
+	}
+
+	// Persist the alert to the database for dashboard retrieval
+	if err := s.db.Create(alert).Error; err != nil {
+		s.logger.Error("Failed to persist alert safely to database", zap.Error(err))
+		return fmt.Errorf("failed to save alert to database: %w", err)
+	}
+
+	s.logger.Info("Alert successfully persisted to database.")
 	return nil
 }
 

@@ -194,6 +194,7 @@ func main() {
 			},
 		),
 		fx.Provide(
+			services.NewRulesService,
 			services.NewPaymentProcessorService,
 		),
 		fx.Invoke(func(processor *services.PaymentProcessorService) {

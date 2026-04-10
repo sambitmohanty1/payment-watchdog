@@ -1,11 +1,15 @@
 package api
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 )
 
 // Server represents the API server
@@ -38,14 +42,25 @@ func (s *Server) SetupRoutes() {
 	// Create services with proper constructor arguments
 	paymentFailureService := services.NewPaymentFailureService(s.db, s.logger)
 
-	// TODO: Implement proper service constructors - using nil for now to get compilation working
-	var webhookService *services.WebhookService = nil
+	// Create dependencies
+	ruleEngineFactory := rules.NewRuleEngineFactory(s.logger)
+	ruleEngine := ruleEngineFactory.CreateComprehensiveRuleEngine()
+
+	// Instantiate previously nil services with real implementations
+	// Note: We safely bypass Redis and External SMS providers to prioritize DB persistence
+	webhookService := services.NewWebhookService(s.db, nil, ruleEngine, s.config.Stripe.WebhookSecret)
 	alertService := services.NewAlertService(s.db, s.logger)
-	var retryService *services.RetryService = nil
+	retryService := services.NewRetryService(s.db, 3, 5*time.Second, 1*time.Minute, 5)
 	dataQualityService := services.NewDataQualityService(s.db, s.logger)
 	analyticsService := services.NewAnalyticsService(s.db, s.logger)
-	var recoveryService *services.RecoveryOrchestrationService = nil
-	var communicationService *services.CommunicationService = nil
+
+	// Create provider registry for dynamic endpoint availability checks
+	// This auto-detects Stripe/Xero/PayTo from environment variables
+	providerRegistry := services.NewProviderRegistry(s.logger)
+	retryService.SetProviderRegistry(providerRegistry)
+	
+	communicationService := services.NewCommunicationService(s.db, nil, nil)
+	recoveryService := services.NewRecoveryOrchestrationService(s.db, retryService, communicationService, analyticsService, s.logger)
 
 	// Create Xero handlers
 	// For testing, passing nil mediator
@@ -96,6 +111,9 @@ func (s *Server) SetupRoutes() {
 
 		// Export endpoints
 		api.GET("/export", handlers.ExportData)
+
+		// Webhooks
+		api.POST("/webhooks/stripe", handlers.HandleStripeWebhook)
 	}
 
 	// Recovery endpoints
