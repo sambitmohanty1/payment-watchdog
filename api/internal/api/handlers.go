@@ -16,6 +16,7 @@ import (
 
 // Handlers contains all the API handlers with their dependencies
 type Handlers struct {
+	db                    *gorm.DB
 	paymentFailureService *services.PaymentFailureService
 	webhookService        *services.WebhookService
 	alertService          *services.AlertService
@@ -31,6 +32,7 @@ type Handlers struct {
 
 // NewHandlers creates a new Handlers instance
 func NewHandlers(
+	db *gorm.DB,
 	paymentFailureService *services.PaymentFailureService,
 	webhookService *services.WebhookService,
 	alertService *services.AlertService,
@@ -45,6 +47,7 @@ func NewHandlers(
 	recoveryHandlers := NewRecoveryHandlers(recoveryService, communicationService)
 
 	return &Handlers{
+		db:                    db,
 		paymentFailureService: paymentFailureService,
 		webhookService:        webhookService,
 		alertService:          alertService,
@@ -102,75 +105,26 @@ func (h *Handlers) GetPaymentFailures(c *gin.Context) {
 		}
 	}
 
-	// For MVP demonstration, return sample data when no real data exists
-	// This allows the frontend to show how data visualization works
-	sampleFailures := []gin.H{
-		{
-			"id":                  "pf-001",
-			"company_id":          companyID,
-			"provider_id":         "stripe",
-			"event_id":            "evt_123456789",
-			"event_type":          "payment_intent.payment_failed",
-			"payment_intent_id":   "pi_123456789",
-			"amount":              1250.00,
-			"currency":            "AUD",
-			"customer_id":         "cus_123456789",
-			"customer_email":      "john.doe@example.com",
-			"customer_name":       "John Doe",
-			"failure_reason":      "insufficient_funds",
-			"failure_code":        "card_declined",
-			"failure_message":     "Your card was declined.",
-			"status":              "received",
-			"webhook_received_at": time.Now().UTC().Format(time.RFC3339),
-			"created_at":          time.Now().UTC().Format(time.RFC3339),
-		},
-		{
-			"id":                  "pf-002",
-			"company_id":          companyID,
-			"provider_id":         "stripe",
-			"event_id":            "evt_123456790",
-			"event_type":          "payment_intent.payment_failed",
-			"payment_intent_id":   "pi_123456790",
-			"amount":              750.50,
-			"currency":            "AUD",
-			"customer_id":         "cus_123456790",
-			"customer_email":      "jane.smith@example.com",
-			"customer_name":       "Jane Smith",
-			"failure_reason":      "card_declined",
-			"failure_code":        "card_declined",
-			"failure_message":     "Your card was declined.",
-			"status":              "processing",
-			"webhook_received_at": time.Now().UTC().Format(time.RFC3339),
-			"created_at":          time.Now().UTC().Format(time.RFC3339),
-		},
-		{
-			"id":                  "pf-003",
-			"company_id":          companyID,
-			"provider_id":         "paypal",
-			"event_id":            "evt_123456791",
-			"event_type":          "payment_intent.payment_failed",
-			"payment_intent_id":   "pi_123456791",
-			"amount":              2000.00,
-			"currency":            "AUD",
-			"customer_id":         "cus_123456791",
-			"customer_email":      "bob.wilson@example.com",
-			"customer_name":       "Bob Wilson",
-			"failure_reason":      "expired_card",
-			"failure_code":        "expired_card",
-			"failure_message":     "Your card has expired.",
-			"status":              "received",
-			"webhook_received_at": time.Now().UTC().Format(time.RFC3339),
-			"created_at":          time.Now().UTC().Format(time.RFC3339),
-		},
+	if h.paymentFailureService == nil {
+		h.logger.Error("paymentFailureService is nil")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	failures, total, err := h.paymentFailureService.GetPaymentFailures(c.Request.Context(), companyID, filters, page, limit)
+	if err != nil {
+		h.logger.Error("Failed to fetch payment failures", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch payment failures"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data":    sampleFailures,
+		"data":    failures,
 		"filters": filters,
 		"pagination": gin.H{
 			"page":  page,
 			"limit": limit,
-			"total": 12,
+			"total": total,
 		},
 	})
 }
@@ -243,49 +197,35 @@ func (h *Handlers) GetAlerts(c *gin.Context) {
 		limit = 20
 	}
 
-	// For MVP demonstration, return sample data when no real data exists
-	sampleAlerts := []gin.H{
-		{
-			"id":              "alert-001",
-			"company_id":      companyID,
-			"type":            "payment_failure",
-			"title":           "High Value Payment Failure",
-			"message":         "Payment failure of $2,000 detected for customer Bob Wilson",
-			"severity":        "high",
-			"status":          "unread",
-			"action_required": true,
-			"created_at":      time.Now().UTC().Format(time.RFC3339),
-		},
-		{
-			"id":              "alert-002",
-			"company_id":      companyID,
-			"type":            "retry_success",
-			"title":           "Payment Retry Successful",
-			"message":         "Retry attempt for payment $750.50 was successful",
-			"severity":        "low",
-			"status":          "read",
-			"action_required": false,
-			"created_at":      time.Now().UTC().Format(time.RFC3339),
-		},
-		{
-			"id":              "alert-003",
-			"company_id":      companyID,
-			"type":            "system",
-			"title":           "Recovery Rate Improved",
-			"message":         "Payment recovery rate has improved to 73.3% this week",
-			"severity":        "medium",
-			"status":          "unread",
-			"action_required": false,
-			"created_at":      time.Now().UTC().Format(time.RFC3339),
-		},
+	if h.db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not configured"})
+		return
+	}
+
+	var alerts []models.CustomerCommunication
+	var total int64
+
+	query := h.db.Model(&models.CustomerCommunication{}).Where("company_id = ?", companyID)
+	
+	if err := query.Count(&total).Error; err != nil {
+		h.logger.Error("Failed to count alerts", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count alerts"})
+		return
+	}
+
+	offset := (page - 1) * limit
+	if err := query.Order("created_at DESC").Offset(offset).Limit(limit).Find(&alerts).Error; err != nil {
+		h.logger.Error("Failed to fetch alerts", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch alerts"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data": sampleAlerts,
+		"data": alerts,
 		"pagination": gin.H{
 			"page":  page,
 			"limit": limit,
-			"total": 8,
+			"total": total,
 		},
 	})
 }
@@ -305,11 +245,24 @@ func (h *Handlers) GetAlert(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual alert retrieval
+	if h.db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not configured"})
+		return
+	}
+
+	var alert models.CustomerCommunication
+	if err := h.db.Where("id = ? AND company_id = ?", alertID, companyID).First(&alert).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Alert not found"})
+			return
+		}
+		h.logger.Error("Failed to fetch alert", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch alert"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"data": models.CustomerCommunication{
-			ID: alertID,
-		},
+		"data": alert,
 	})
 }
 
@@ -321,49 +274,65 @@ func (h *Handlers) GetDashboardStats(c *gin.Context) {
 		return
 	}
 
-	// For MVP demonstration, return sample data when no real data exists
-	// This allows the frontend to show how data visualization works
+	if h.db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not configured"})
+		return
+	}
+
+	var total int64
+	var totalAmountCents int64
+	h.db.Model(&models.PaymentFailureEvent{}).Where("company_id = ?", companyID).Count(&total)
+	h.db.Model(&models.PaymentFailureEvent{}).Where("company_id = ?", companyID).Select("COALESCE(SUM(amount_cents), 0)").Scan(&totalAmountCents)
+
+	type StatusCount struct {
+		Status string `json:"status"`
+		Count  int64  `json:"count"`
+	}
+	var byStatus []StatusCount
+	h.db.Model(&models.PaymentFailureEvent{}).Select("status, COUNT(*) as count").Where("company_id = ?", companyID).Group("status").Scan(&byStatus)
+
+	type ReasonCount struct {
+		Reason string `json:"reason"`
+		Count  int64  `json:"count"`
+	}
+	var byReason []ReasonCount
+	h.db.Model(&models.PaymentFailureEvent{}).Select("failure_reason as reason, COUNT(*) as count").Where("company_id = ?", companyID).Group("failure_reason").Order("count DESC").Limit(5).Scan(&byReason)
+
+	type ProviderCount struct {
+		Provider string `json:"provider"`
+		Count    int64  `json:"count"`
+	}
+	var byProvider []ProviderCount
+	h.db.Model(&models.PaymentFailureEvent{}).Select("provider_id as provider, COUNT(*) as count").Where("company_id = ?", companyID).Group("provider_id").Scan(&byProvider)
+
+	// Fetch Alerts via AlertService for the dashboard
+	var alertsTotal int64 = 0
+	if h.alertService != nil {
+		if stats, err := h.alertService.GetAlertStats(c.Request.Context(), companyID); err == nil {
+			if count, ok := stats["total_alerts"].(int64); ok {
+				alertsTotal = count
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"payment_failures": gin.H{
-			"total":        12,
-			"total_amount": 8750.50,
-			"by_status": []gin.H{
-				gin.H{"status": "received", "count": 8},
-				gin.H{"status": "processing", "count": 3},
-				gin.H{"status": "resolved", "count": 1},
-			},
-			"by_reason": []gin.H{
-				gin.H{"reason": "insufficient_funds", "count": 6},
-				gin.H{"reason": "card_declined", "count": 4},
-				gin.H{"reason": "expired_card", "count": 2},
-			},
-			"by_provider": []gin.H{
-				gin.H{"provider": "stripe", "count": 8},
-				gin.H{"provider": "paypal", "count": 4},
-			},
-			"daily_breakdown": []gin.H{
-				gin.H{"date": "2025-08-28", "count": 5, "amount": 3200.00},
-				gin.H{"date": "2025-08-29", "count": 7, "amount": 5550.50},
-			},
+			"total":        total,
+			"total_amount": float64(totalAmountCents) / 100.0,
+			"by_status":    byStatus,
+			"by_reason":    byReason,
+			"by_provider":  byProvider,
+			"daily_breakdown": []gin.H{},
 		},
 		"alerts": gin.H{
-			"total": 8,
-			"by_status": []gin.H{
-				gin.H{"status": "unread", "count": 5},
-				gin.H{"status": "read", "count": 3},
-			},
-			"by_channel": []gin.H{
-				gin.H{"channel": "email", "count": 6},
-				gin.H{"channel": "sms", "count": 2},
-			},
+			"total": alertsTotal,
+			"by_status": []gin.H{},
+			"by_channel": []gin.H{},
 		},
 		"retries": gin.H{
-			"total":        15,
-			"success_rate": 73.3,
-			"by_status": []gin.H{
-				gin.H{"status": "completed", "count": 11},
-				gin.H{"status": "failed", "count": 4},
-			},
+			"total":        0,
+			"success_rate": 0.0,
+			"by_status": []gin.H{},
 		},
 		"last_updated": time.Now().UTC().Format(time.RFC3339),
 	})
@@ -863,8 +832,14 @@ func (h *Handlers) getOverallHealth(health HealthStatus) string {
 
 // Helper functions for health checks
 func (h *Handlers) simulateDatabasePing() error {
-	// Simulate database ping - in real implementation, this would be actual DB ping
-	return nil
+	if h.db == nil {
+		return fmt.Errorf("database connection not initialized")
+	}
+	db, err := h.db.DB()
+	if err != nil {
+		return err
+	}
+	return db.Ping()
 }
 
 func (h *Handlers) simulateRedisPing() error {

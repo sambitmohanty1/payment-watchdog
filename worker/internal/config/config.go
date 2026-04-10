@@ -20,7 +20,7 @@ type Config struct {
 
 // isLocal checks if the host is a local loopback or standard internal network
 func isLocal(host string) bool {
-	return host == "localhost" || host == "127.0.0.1" || strings.Contains(host, "lexure-mvp-postgres") || strings.Contains(host, "svc.cluster.local")
+	return host == "localhost" || host == "127.0.0.1" || strings.Contains(host, "postgres-sovereign-au") || strings.Contains(host, "svc.cluster.local")
 }
 
 // IsSovereignCompliant checks if the infrastructure dependencies comply with AU residency laws.
@@ -96,11 +96,11 @@ func Load() (*Config, error) {
 	viper.SetDefault("server.https", false)
 	viper.SetDefault("server.cert_file", "./certs/server.crt")
 	viper.SetDefault("server.key_file", "./certs/server.key")
-	viper.SetDefault("database.host", "lexure-mvp-postgres")
+	viper.SetDefault("database.host", "postgres-sovereign-au")
 	viper.SetDefault("database.port", 5403)
-	viper.SetDefault("database.name", "lexure_intelligence_mvp")
+	viper.SetDefault("database.name", "payment_watchdog")
 	viper.SetDefault("database.user", "postgres")
-	viper.SetDefault("database.password", "password")
+	viper.SetDefault("database.password", "")
 	viper.SetDefault("database.ssl_mode", "disable")
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("sovereign_mode", false)

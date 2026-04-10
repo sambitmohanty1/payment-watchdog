@@ -103,17 +103,20 @@ func main() {
 		}),
 		fx.Provide(
 			// Provide WorkerConfig from environment variables
-			func() *config.WorkerConfig {
+			func(logger *zap.Logger) *config.WorkerConfig {
 				// Get database configuration from environment
-				dbHost := getEnvOrDefault("DATABASE_HOST", "lexure-mvp-postgres")
+				dbHost := getEnvOrDefault("DATABASE_HOST", "postgres-sovereign-au")
 				dbPort := getEnvIntOrDefault("DATABASE_PORT", 5403)
-				dbName := getEnvOrDefault("DATABASE_NAME", "lexure_intelligence_mvp")
+				dbName := getEnvOrDefault("DATABASE_NAME", "payment_watchdog")
 				dbUser := getEnvOrDefault("DATABASE_USER", "postgres")
-				dbPassword := getEnvOrDefault("DATABASE_PASSWORD", "password")
+				dbPassword := os.Getenv("DATABASE_PASSWORD")
+				if dbPassword == "" {
+					logger.Fatal("DATABASE_PASSWORD is required but not set")
+				}
 				dbSSLMode := getEnvOrDefault("DATABASE_SSL_MODE", "disable")
 
 				// Get Redis configuration from environment
-				redisHost := getEnvOrDefault("REDIS_HOST", "lexure-redis-sovereign-au.sovereign-au.svc.cluster.local")
+				redisHost := getEnvOrDefault("REDIS_HOST", "redis-sovereign-au")
 				redisPort := getEnvIntOrDefault("REDIS_PORT", 6379)
 				redisPassword := getEnvOrDefault("REDIS_PASSWORD", "")
 
@@ -175,7 +178,7 @@ func main() {
 
 					// Default values if environment variables are not set
 					if redisHost == "" {
-						redisHost = "lexure-redis-sovereign-au.sovereign-au.svc.cluster.local"
+						redisHost = "redis-sovereign-au.sovereign-au.svc.cluster.local"
 					}
 					if redisPort == "" {
 						redisPort = "6379"

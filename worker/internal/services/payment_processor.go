@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 
 	"github.com/sambitmohanty1/payment-watchdog/shared/events"
 	"github.com/sambitmohanty1/payment-watchdog/shared/interfaces"
@@ -89,13 +90,6 @@ func (s *PaymentProcessorService) handlePaymentFailure(ctx context.Context, even
 
 // processFailure processes the actual payment failure logic
 func (s *PaymentProcessorService) processFailure(ctx context.Context, event *events.PaymentEvent) error {
-	// TODO: Implement actual payment failure processing logic
-	// This would include:
-	// - Validate payment data
-	// - Determine recovery strategy
-	// - Execute recovery workflow
-	// - Update database records
-
 	s.logger.Info("Processing payment failure",
 		zap.String("company_id", event.CompanyID),
 		zap.String("payment_id", event.PaymentID),
@@ -103,8 +97,56 @@ func (s *PaymentProcessorService) processFailure(ctx context.Context, event *eve
 		zap.String("currency", event.Currency),
 	)
 
-	// Simulate processing
-	time.Sleep(100 * time.Millisecond)
+	// Attempt to extract the *gorm.DB instance
+	type gormDBProvider interface {
+		GetDB() *gorm.DB
+	}
+
+	if dbProvider, ok := s.db.(gormDBProvider); ok {
+		db := dbProvider.GetDB()
+
+		if db == nil {
+			s.logger.Warn("gorm DB is nil, cannot save payment failure event")
+			return nil
+		}
+
+		// Insert into the payment_failure_events table directly to avoid importing api models
+		// and respect bounded contexts in a microservice setup
+		err := db.Exec(`
+			INSERT INTO payment_failure_events (
+				id, company_id, provider_id, event_id, event_type, 
+				amount_cents, currency, customer_id, customer_email, 
+				customer_name, failure_reason, failure_code, failure_message, 
+				status, created_at, updated_at
+			) VALUES (
+				gen_random_uuid(), ?, ?, ?, ?,
+				?, ?, ?, ?,
+				?, ?, ?, ?,
+				'received', NOW(), NOW()
+			) ON CONFLICT (event_id) DO NOTHING
+		`, 
+			event.CompanyID, 
+			event.ProviderID, 
+			event.ID, 
+			event.ProviderEventType, 
+			int64(event.Amount * 100), // convert back to cents
+			event.Currency,
+			event.CustomerID,
+			event.CustomerEmail,
+			event.CustomerName,
+			event.FailureReason,
+			event.FailureCode,
+			event.FailureMessage,
+		).Error
+
+		if err != nil {
+			s.logger.Error("Failed to insert payment failure event to DB", zap.Error(err))
+		} else {
+			s.logger.Info("Successfully recorded payment failure event to DB")
+		}
+	} else {
+		s.logger.Warn("s.db does not implement GetDB(), skipping database insertion")
+	}
 
 	return nil
 }

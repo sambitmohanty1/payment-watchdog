@@ -15,6 +15,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/api"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/database"
 )
@@ -27,13 +28,13 @@ func main() {
 	}
 	defer logger.Sync()
 
-	_, err = config.Load()
+	c, err := config.Load()
 	if err != nil {
 		logger.Fatal("Failed to load config", zap.Error(err))
 	}
 
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
-		config.Get().Database.Host, config.Get().Database.User, config.Get().Database.Password, config.Get().Database.Name, config.Get().Database.Port)
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
+		c.Database.Host, c.Database.User, c.Database.Password, c.Database.Name, c.Database.Port, c.Database.SSLMode)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
@@ -50,23 +51,13 @@ func main() {
 		http.ListenAndServe(":9090", nil)
 	}()
 
-	r := gin.Default()
-	// Setup routes would go here (omitted for refactoring compatibility)
-
-	// Add health check route for P0-001
-	r.GET("/api/health", func(c *gin.Context) {
-		// Simple health check for now - can be expanded later
-		c.JSON(http.StatusOK, gin.H{
-			"status":      "healthy",
-			"timestamp":   time.Now().UTC().Format(time.RFC3339),
-			"version":     os.Getenv("APP_VERSION"),
-			"environment": os.Getenv("ENVIRONMENT"),
-		})
-	})
+	// Initialize Server with full routing
+	server := api.NewServer(logger, db, c)
+	server.SetupRoutes()
 
 	srv := &http.Server{
-		Addr:    ":" + config.Get().Server.Port,
-		Handler: r,
+		Addr:    ":" + c.Server.Port,
+		Handler: server.GetEngine(),
 	}
 
 	go func() {

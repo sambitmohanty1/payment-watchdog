@@ -53,6 +53,7 @@ func (s *Server) SetupRoutes() {
 
 	// Create handlers with available services
 	handlers := NewHandlers(
+		s.db,
 		paymentFailureService,
 		webhookService,
 		alertService,
