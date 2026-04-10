@@ -2,7 +2,6 @@ package eventbus
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/google/uuid"

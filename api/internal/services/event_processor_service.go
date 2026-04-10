@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 )
 
