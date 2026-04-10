@@ -111,6 +111,17 @@ func (s *PaymentProcessorService) processFailure(ctx context.Context, event *eve
 
 		// Insert into the payment_failure_events table directly to avoid importing api models
 		// and respect bounded contexts in a microservice setup
+		var providerID, providerEventType, customerID, customerEmail, customerName, failureReason, failureCode, failureMessage string
+
+		if val, ok := event.Metadata["provider"]; ok { providerID = fmt.Sprint(val) }
+		if val, ok := event.Metadata["provider_event_type"]; ok { providerEventType = fmt.Sprint(val) }
+		if val, ok := event.Metadata["customer_id"]; ok { customerID = fmt.Sprint(val) }
+		if val, ok := event.Metadata["customer_email"]; ok { customerEmail = fmt.Sprint(val) }
+		if val, ok := event.Metadata["customer_name"]; ok { customerName = fmt.Sprint(val) }
+		if val, ok := event.Metadata["reason"]; ok { failureReason = fmt.Sprint(val) }
+		if val, ok := event.Metadata["failure_code"]; ok { failureCode = fmt.Sprint(val) }
+		if val, ok := event.Metadata["failure_message"]; ok { failureMessage = fmt.Sprint(val) }
+
 		err := db.Exec(`
 			INSERT INTO payment_failure_events (
 				id, company_id, provider_id, event_id, event_type, 
@@ -125,17 +136,17 @@ func (s *PaymentProcessorService) processFailure(ctx context.Context, event *eve
 			) ON CONFLICT (event_id) DO NOTHING
 		`, 
 			event.CompanyID, 
-			event.ProviderID, 
+			providerID, 
 			event.ID, 
-			event.ProviderEventType, 
+			providerEventType, 
 			int64(event.Amount * 100), // convert back to cents
 			event.Currency,
-			event.CustomerID,
-			event.CustomerEmail,
-			event.CustomerName,
-			event.FailureReason,
-			event.FailureCode,
-			event.FailureMessage,
+			customerID,
+			customerEmail,
+			customerName,
+			failureReason,
+			failureCode,
+			failureMessage,
 		).Error
 
 		if err != nil {
