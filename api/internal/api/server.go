@@ -1,10 +1,13 @@
 package api
 
 import (
+	"context"
 	"time"
 
+	firebase "firebase.google.com/go/v4"
 	"github.com/gin-gonic/gin"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/middleware"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -12,15 +15,15 @@ import (
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/eventbus"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/mediators"
-	"context"
 )
 
 // Server represents the API server
 type Server struct {
-	engine *gin.Engine
-	logger *zap.Logger
-	db     *gorm.DB
-	config *config.Config
+	engine      *gin.Engine
+	logger      *zap.Logger
+	db          *gorm.DB
+	config      *config.Config
+	firebaseApp *firebase.App
 }
 
 // NewServer creates a new API server instance
@@ -28,15 +31,37 @@ func NewServer(logger *zap.Logger, db *gorm.DB, cfg *config.Config) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 
-	// Add middleware
+	// Initialise Firebase (non-fatal if not configured yet)
+	var fbApp *firebase.App
+	if cfg.Firebase.ProjectID != "" {
+		app, err := middleware.InitFirebase(
+			context.Background(),
+			cfg.Firebase.ProjectID,
+			cfg.Firebase.ServiceAccountPath,
+			logger,
+		)
+		if err != nil {
+			logger.Warn("Firebase init failed — auth middleware disabled", zap.Error(err))
+		} else {
+			fbApp = app
+			logger.Info("Firebase Auth initialised", zap.String("project", cfg.Firebase.ProjectID))
+		}
+	} else {
+		logger.Warn("Firebase not configured (FIREBASE_PROJECT_ID not set) — auth middleware disabled")
+	}
+
+	// Global middleware — applied to every request
 	engine.Use(gin.Logger())
 	engine.Use(gin.Recovery())
+	engine.Use(middleware.SecurityHeadersMiddleware())
+	engine.Use(middleware.CORSMiddleware(cfg.CORS.AllowedOrigins))
 
 	return &Server{
-		engine: engine,
-		logger: logger,
-		db:     db,
-		config: cfg,
+		engine:      engine,
+		logger:      logger,
+		db:          db,
+		config:      cfg,
+		firebaseApp: fbApp,
 	}
 }
 
@@ -114,36 +139,41 @@ func (s *Server) SetupRoutes() {
 	// API routes
 	api := s.engine.Group("/api")
 	{
-		// Health check endpoint
+		// === PUBLIC routes — no auth required ===
 		api.GET("/health", handlers.HealthCheck)
-
-		// Payment failures endpoints
-		api.GET("/payment-failures", handlers.GetPaymentFailures)
-		api.GET("/payment-failures/:id", handlers.GetPaymentFailure)
-		api.POST("/payment-failures/:id/retry", handlers.RetryPayment)
-
-		// Alerts endpoints
-		api.GET("/alerts", handlers.GetAlerts)
-		api.GET("/alerts/:id", handlers.GetAlert)
-
-		// Dashboard endpoints
-		api.GET("/dashboard/stats", handlers.GetDashboardStats)
-
-		// Data quality endpoints
-		api.GET("/data-quality/report", handlers.GetDataQualityReport)
-		api.GET("/data-quality/trends", handlers.GetDataQualityTrends)
-
-		// Analytics endpoints
-		api.GET("/analytics/company/summary", handlers.GetCompanyAnalyticsSummary)
-		api.POST("/analytics/company/payment-failures/analyze", handlers.AnalyzeCompanyPaymentFailures)
-		api.POST("/analytics/customer/payment-failures/analyze", handlers.AnalyzeCustomerPaymentFailures)
-		api.GET("/analytics/customer/risk-score", handlers.GetCustomerRiskScore)
-
-		// Export endpoints
-		api.GET("/export", handlers.ExportData)
-
-		// Webhooks
 		api.POST("/webhooks/stripe", handlers.HandleStripeWebhook)
+
+		// === PROTECTED routes — require valid Firebase ID token ===
+		protected := api.Group("")
+		if s.firebaseApp != nil {
+			protected.Use(middleware.AuthMiddleware(s.firebaseApp, s.logger))
+		}
+		{
+			// Payment failures endpoints
+			protected.GET("/payment-failures", handlers.GetPaymentFailures)
+			protected.GET("/payment-failures/:id", handlers.GetPaymentFailure)
+			protected.POST("/payment-failures/:id/retry", handlers.RetryPayment)
+
+			// Alerts endpoints
+			protected.GET("/alerts", handlers.GetAlerts)
+			protected.GET("/alerts/:id", handlers.GetAlert)
+
+			// Dashboard endpoints
+			protected.GET("/dashboard/stats", handlers.GetDashboardStats)
+
+			// Data quality endpoints
+			protected.GET("/data-quality/report", handlers.GetDataQualityReport)
+			protected.GET("/data-quality/trends", handlers.GetDataQualityTrends)
+
+			// Analytics endpoints
+			protected.GET("/analytics/company/summary", handlers.GetCompanyAnalyticsSummary)
+			protected.POST("/analytics/company/payment-failures/analyze", handlers.AnalyzeCompanyPaymentFailures)
+			protected.POST("/analytics/customer/payment-failures/analyze", handlers.AnalyzeCustomerPaymentFailures)
+			protected.GET("/analytics/customer/risk-score", handlers.GetCustomerRiskScore)
+
+			// Export endpoints
+			protected.GET("/export", handlers.ExportData)
+		}
 	}
 
 	// Recovery endpoints
