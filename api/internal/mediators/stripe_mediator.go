@@ -10,13 +10,14 @@ import (
 	"github.com/stripe/stripe-go/v74"
 	"github.com/stripe/stripe-go/v74/webhook"
 	"go.uber.org/zap"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 )
 
 // StripeMediator implements PaymentProvider for Stripe
 type StripeMediator struct {
 	*BaseMediator
 	webhookSecret string
-	eventBus      EventBus
+	eventBus      architecture.EventBus
 }
 
 // Stripe-specific configuration
@@ -62,7 +63,7 @@ type StripeCustomer struct {
 }
 
 // NewStripeMediator creates a new Stripe mediator
-func NewStripeMediator(config *ProviderConfig, eventBus EventBus, logger *zap.Logger) *StripeMediator {
+func NewStripeMediator(config *ProviderConfig, eventBus architecture.EventBus, logger *zap.Logger) *StripeMediator {
 	base := NewBaseMediator(config, eventBus, logger)
 
 	mediator := &StripeMediator{
@@ -155,7 +156,7 @@ func (s *StripeMediator) ProcessWebhook(ctx context.Context, payload []byte, sig
 }
 
 // GetPaymentFailures retrieves payment failures from Stripe
-func (s *StripeMediator) GetPaymentFailures(ctx context.Context, since time.Time) ([]*PaymentFailure, error) {
+func (s *StripeMediator) GetPaymentFailures(ctx context.Context, since time.Time) ([]*architecture.PaymentFailure, error) {
 	if !s.IsConnected() {
 		return nil, fmt.Errorf("Stripe mediator not connected")
 	}
@@ -163,42 +164,42 @@ func (s *StripeMediator) GetPaymentFailures(ctx context.Context, since time.Time
 	// For Stripe, we primarily get payment failures via webhooks
 	// This method could be used to query historical data if needed
 	// For now, return empty slice as failures are processed via webhooks
-	return []*PaymentFailure{}, nil
+	return []*architecture.PaymentFailure{}, nil
 }
 
 // GetInvoices retrieves invoices from Stripe
-func (s *StripeMediator) GetInvoices(ctx context.Context, since time.Time) ([]*Invoice, error) {
+func (s *StripeMediator) GetInvoices(ctx context.Context, since time.Time) ([]*architecture.Invoice, error) {
 	if !s.IsConnected() {
 		return nil, fmt.Errorf("Stripe mediator not connected")
 	}
 
 	// This would be implemented to get invoices from Stripe API
 	// For now, return empty slice
-	return []*Invoice{}, nil
+	return []*architecture.Invoice{}, nil
 }
 
 // GetCustomers retrieves customers from Stripe
-func (s *StripeMediator) GetCustomers(ctx context.Context) ([]*Customer, error) {
+func (s *StripeMediator) GetCustomers(ctx context.Context) ([]*architecture.Customer, error) {
 	if !s.IsConnected() {
 		return nil, fmt.Errorf("Stripe mediator not connected")
 	}
 
 	// This would be implemented to get customers from Stripe API
 	// For now, return empty slice
-	return []*Customer{}, nil
+	return []*architecture.Customer{}, nil
 }
 
 // mapRiskScoreToPriority maps a risk score to a priority level
-func (s *StripeMediator) mapRiskScoreToPriority(riskScore float64) PaymentFailurePriority {
+func (s *StripeMediator) mapRiskScoreToPriority(riskScore float64) architecture.PaymentFailurePriority {
 	switch {
 	case riskScore >= 80:
-		return PaymentFailurePriorityCritical
+		return architecture.PaymentFailurePriorityCritical
 	case riskScore >= 60:
-		return PaymentFailurePriorityHigh
+		return architecture.PaymentFailurePriorityHigh
 	case riskScore >= 40:
-		return PaymentFailurePriorityMedium
+		return architecture.PaymentFailurePriorityMedium
 	default:
-		return PaymentFailurePriorityLow
+		return architecture.PaymentFailurePriorityLow
 	}
 }
 
@@ -317,7 +318,7 @@ func (s *StripeMediator) processChargeFailure(ctx context.Context, event *stripe
 }
 
 // mapStripePaymentIntentToFailure maps a Stripe payment intent to unified PaymentFailure model
-func (s *StripeMediator) mapStripePaymentIntentToFailure(paymentIntent *stripe.PaymentIntent) *PaymentFailure {
+func (s *StripeMediator) mapStripePaymentIntentToFailure(paymentIntent *stripe.PaymentIntent) *architecture.PaymentFailure {
 	// Generate unique event ID
 	eventID := s.generateEventID()
 
@@ -325,11 +326,11 @@ func (s *StripeMediator) mapStripePaymentIntentToFailure(paymentIntent *stripe.P
 	riskScore := s.calculateRiskScore(float64(paymentIntent.Amount)/100, paymentIntent.LastPaymentError)
 
 	// Map to unified PaymentFailure model
-	failure := &PaymentFailure{
+	failure := &architecture.PaymentFailure{
 		ProviderID:        "stripe",
 		ProviderEventID:   eventID,
 		ProviderEventType: "payment_intent.payment_failed",
-		Amount:            float64(paymentIntent.Amount) / 100, // Convert from cents
+		AmountCents:       paymentIntent.Amount, // Stripe amount is already in cents
 		Currency:          string(paymentIntent.Currency),
 		CustomerID:        paymentIntent.Customer.ID,
 		CustomerEmail:     s.getCustomerEmail(paymentIntent.Customer),
@@ -337,7 +338,7 @@ func (s *StripeMediator) mapStripePaymentIntentToFailure(paymentIntent *stripe.P
 		FailureReason:     s.mapFailureReason(paymentIntent.LastPaymentError),
 		FailureCode:       string(paymentIntent.LastPaymentError.Code),
 		FailureMessage:    paymentIntent.LastPaymentError.Msg,
-		Status:            "received",
+		Status:            architecture.PaymentFailureStatusReceived,
 		Priority:          s.mapRiskScoreToPriority(riskScore),
 		RiskScore:         riskScore,
 		OccurredAt:        time.Unix(paymentIntent.Created, 0),
@@ -355,7 +356,7 @@ func (s *StripeMediator) mapStripePaymentIntentToFailure(paymentIntent *stripe.P
 }
 
 // mapStripeInvoiceToFailure maps a Stripe invoice to unified PaymentFailure model
-func (s *StripeMediator) mapStripeInvoiceToFailure(invoice *stripe.Invoice) *PaymentFailure {
+func (s *StripeMediator) mapStripeInvoiceToFailure(invoice *stripe.Invoice) *architecture.PaymentFailure {
 	// Generate unique event ID
 	eventID := s.generateEventID()
 
@@ -363,11 +364,11 @@ func (s *StripeMediator) mapStripeInvoiceToFailure(invoice *stripe.Invoice) *Pay
 	riskScore := s.calculateRiskScore(float64(invoice.AmountDue)/100, nil)
 
 	// Map to unified PaymentFailure model
-	failure := &PaymentFailure{
+	failure := &architecture.PaymentFailure{
 		ProviderID:        "stripe",
 		ProviderEventID:   eventID,
 		ProviderEventType: "invoice.payment_failed",
-		Amount:            float64(invoice.AmountDue) / 100, // Convert from cents
+		AmountCents:       invoice.AmountDue, // Stripe amount is already in cents
 		Currency:          string(invoice.Currency),
 		CustomerID:        invoice.Customer.ID,
 		CustomerEmail:     s.getCustomerEmail(invoice.Customer),
@@ -375,7 +376,7 @@ func (s *StripeMediator) mapStripeInvoiceToFailure(invoice *stripe.Invoice) *Pay
 		FailureReason:     "invoice_payment_failed",
 		FailureCode:       "INVOICE_PAYMENT_FAILED",
 		FailureMessage:    "Invoice payment failed",
-		Status:            "received",
+		Status:            architecture.PaymentFailureStatusReceived,
 		Priority:          s.mapRiskScoreToPriority(riskScore),
 		RiskScore:         riskScore,
 		OccurredAt:        time.Unix(invoice.Created, 0),
@@ -392,7 +393,7 @@ func (s *StripeMediator) mapStripeInvoiceToFailure(invoice *stripe.Invoice) *Pay
 }
 
 // mapStripeChargeToFailure maps a Stripe charge to unified PaymentFailure model
-func (s *StripeMediator) mapStripeChargeToFailure(charge *stripe.Charge) *PaymentFailure {
+func (s *StripeMediator) mapStripeChargeToFailure(charge *stripe.Charge) *architecture.PaymentFailure {
 	// Generate unique event ID
 	eventID := s.generateEventID()
 
@@ -400,11 +401,11 @@ func (s *StripeMediator) mapStripeChargeToFailure(charge *stripe.Charge) *Paymen
 	riskScore := s.calculateRiskScore(float64(charge.Amount)/100, nil)
 
 	// Map to unified PaymentFailure model
-	failure := &PaymentFailure{
+	failure := &architecture.PaymentFailure{
 		ProviderID:        "stripe",
 		ProviderEventID:   eventID,
 		ProviderEventType: "charge.failed",
-		Amount:            float64(charge.Amount) / 100, // Convert from cents
+		AmountCents:       charge.Amount, // Stripe amount is already in cents
 		Currency:          string(charge.Currency),
 		CustomerID:        charge.Customer.ID,
 		CustomerEmail:     s.getCustomerEmail(charge.Customer),
@@ -412,7 +413,7 @@ func (s *StripeMediator) mapStripeChargeToFailure(charge *stripe.Charge) *Paymen
 		FailureReason:     "charge_failed",
 		FailureCode:       "CHARGE_FAILED",
 		FailureMessage:    "Charge failed",
-		Status:            "received",
+		Status:            architecture.PaymentFailureStatusReceived,
 		Priority:          s.mapRiskScoreToPriority(riskScore),
 		RiskScore:         riskScore,
 		OccurredAt:        time.Unix(charge.Created, 0),

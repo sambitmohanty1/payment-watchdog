@@ -196,7 +196,7 @@ func TestXeroAPIIntegration(t *testing.T) {
 
 		// Verify the mapped payment failure
 		assert.Equal(t, "inv-001", paymentFailure.ProviderEventID)
-		assert.Equal(t, 1650.00, paymentFailure.Amount)
+		assert.Equal(t, int64(165000), paymentFailure.AmountCents) // 1650.00 * 100
 		assert.Equal(t, "AUD", paymentFailure.Currency)
 		assert.Equal(t, "contact-001", paymentFailure.CustomerID)
 		assert.Equal(t, "Test Customer 1", paymentFailure.CustomerName)
@@ -214,7 +214,7 @@ func TestXeroAPIIntegration(t *testing.T) {
 			name           string
 			invoice        *XeroInvoice
 			expectedReason string
-			expectedAmount float64
+			expectedAmount int64
 		}{
 			{
 				name: "Unpaid Invoice",
@@ -235,7 +235,7 @@ func TestXeroAPIIntegration(t *testing.T) {
 					CurrencyCode: "AUD",
 				},
 				expectedReason: "invoice_unpaid",
-				expectedAmount: 1650.00,
+				expectedAmount: 165000,
 			},
 			{
 				name: "Partially Paid Invoice",
@@ -256,7 +256,7 @@ func TestXeroAPIIntegration(t *testing.T) {
 					CurrencyCode: "AUD",
 				},
 				expectedReason: "invoice_partially_paid",
-				expectedAmount: 600.00,
+				expectedAmount: 60000,
 			},
 		}
 
@@ -266,7 +266,7 @@ func TestXeroAPIIntegration(t *testing.T) {
 				require.NotNil(t, paymentFailure)
 
 				assert.Equal(t, tc.invoice.ID, paymentFailure.ProviderEventID)
-				assert.Equal(t, tc.expectedAmount, paymentFailure.Amount)
+				assert.Equal(t, tc.expectedAmount, paymentFailure.AmountCents)
 				assert.Equal(t, tc.expectedReason, paymentFailure.FailureReason)
 				assert.Equal(t, "xero", paymentFailure.SyncSource)
 				assert.True(t, paymentFailure.RiskScore > 0)
@@ -302,7 +302,7 @@ func TestXeroAPIIntegration(t *testing.T) {
 
 		// Should have default/safe values for missing fields
 		assert.Equal(t, "", paymentFailure.ProviderEventID)
-		assert.Equal(t, 0.0, paymentFailure.Amount)
+		assert.Equal(t, int64(0), paymentFailure.AmountCents)
 		assert.Equal(t, "", paymentFailure.Currency)
 		assert.Equal(t, "", paymentFailure.CustomerID)
 		assert.Equal(t, "", paymentFailure.CustomerName)
@@ -325,7 +325,7 @@ func TestXeroAPIIntegration(t *testing.T) {
 
 		// Should have safe default values
 		assert.Equal(t, "", paymentFailure.ProviderEventID)
-		assert.Equal(t, 0.0, paymentFailure.Amount)
+		assert.Equal(t, int64(0), paymentFailure.AmountCents)
 		assert.Equal(t, "", paymentFailure.Currency)
 	})
 }
@@ -369,7 +369,7 @@ func TestXeroDataMapping(t *testing.T) {
 
 		// Verify mapping
 		assert.Equal(t, "inv-001", paymentFailure.ProviderEventID)
-		assert.Equal(t, 2500.00, paymentFailure.Amount)
+		assert.Equal(t, int64(250000), paymentFailure.AmountCents)
 		assert.Equal(t, "AUD", paymentFailure.Currency)
 		assert.Equal(t, "contact-001", paymentFailure.CustomerID)
 		assert.Equal(t, "Test Customer", paymentFailure.CustomerName)
@@ -383,21 +383,21 @@ func TestXeroDataMapping(t *testing.T) {
 	t.Run("Risk Score Calculation", func(t *testing.T) {
 		// Test different risk scenarios
 		testCases := []struct {
-			amount      float64
+			amountCents int64
 			overdueDays int
 			expectedMin float64
 			description string
 		}{
-			{100.00, 0, 50.0, "Low amount, not overdue"},                // Base 50 + 0 overdue = 50
-			{1000.00, 7, 65.0, "Medium amount, slightly overdue"},       // Base 50 + 10 amount + 5 overdue = 65
-			{5000.00, 30, 80.0, "High amount, moderately overdue"},      // Base 50 + 20 amount + 10 overdue = 80
-			{10000.00, 90, 100.0, "Very high amount, severely overdue"}, // Base 50 + 30 amount + 20 overdue = 100 (capped)
+			{10000, 0, 50.0, "Low amount, not overdue"},                // Base 50 + 0 overdue = 50
+			{100000, 7, 65.0, "Medium amount, slightly overdue"},       // Base 50 + 10 amount + 5 overdue = 65
+			{500000, 30, 80.0, "High amount, moderately overdue"},      // Base 50 + 20 amount + 10 overdue = 80
+			{1000000, 90, 100.0, "Very high amount, severely overdue"}, // Base 50 + 30 amount + 20 overdue = 100 (capped)
 		}
 
 		for _, tc := range testCases {
 			t.Run(tc.description, func(t *testing.T) {
 				dueDate := time.Now().AddDate(0, 0, -tc.overdueDays)
-				riskScore := mediator.calculateRiskScore(tc.amount, dueDate)
+				riskScore := mediator.calculateRiskScore(float64(tc.amountCents)/100, dueDate)
 				assert.GreaterOrEqual(t, riskScore, tc.expectedMin)
 				assert.LessOrEqual(t, riskScore, 100.0)
 			})
@@ -449,7 +449,7 @@ func TestXeroEventBusIntegration(t *testing.T) {
 			CompanyID:       "company-123",
 			ProviderID:      "xero",
 			ProviderEventID: "inv-001",
-			Amount:          2500.00,
+			AmountCents:     250000,
 			Currency:        "AUD",
 			CustomerID:      "contact-001",
 			CustomerName:    "Test Customer",
@@ -476,7 +476,7 @@ func TestXeroEventBusIntegration(t *testing.T) {
 		paymentFailureData := event["payment_failure"].(*architecture.PaymentFailure)
 		assert.Equal(t, "inv-001", paymentFailureData.ProviderEventID)
 		assert.Equal(t, "xero", paymentFailureData.ProviderID)
-		assert.Equal(t, 2500.00, paymentFailureData.Amount)
+		assert.Equal(t, int64(250000), paymentFailureData.AmountCents)
 		assert.Equal(t, "AUD", paymentFailureData.Currency)
 	})
 
@@ -487,7 +487,7 @@ func TestXeroEventBusIntegration(t *testing.T) {
 			CompanyID:       "company-123",
 			ProviderID:      "xero",
 			ProviderEventID: "inv-002",
-			Amount:          1000.00,
+			AmountCents:     100000,
 			Currency:        "AUD",
 			CustomerID:      "contact-002",
 			CustomerName:    "Test Customer 2",
@@ -523,7 +523,7 @@ func TestXeroEventBusIntegration(t *testing.T) {
 			CompanyID:       "company-123",
 			ProviderID:      "xero",
 			ProviderEventID: "inv-003",
-			Amount:          5000.00,
+			AmountCents:     500000,
 			Currency:        "AUD",
 			CustomerID:      "contact-003",
 			CustomerName:    "Test Customer 3",
@@ -619,7 +619,7 @@ func TestXeroErrorHandling(t *testing.T) {
 
 		// Should have safe default values
 		assert.Equal(t, "", paymentFailure.ProviderEventID)
-		assert.Equal(t, 0.0, paymentFailure.Amount)
+		assert.Equal(t, int64(0), paymentFailure.AmountCents)
 		assert.Equal(t, "", paymentFailure.Currency)
 	})
 }

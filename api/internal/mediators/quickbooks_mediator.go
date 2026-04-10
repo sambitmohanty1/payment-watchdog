@@ -70,7 +70,7 @@ type QuickBooksLineItem struct {
 }
 
 // NewQuickBooksMediator creates a new QuickBooks mediator
-func NewQuickBooksMediator(config *ProviderConfig, eventBus EventBus, logger *zap.Logger) *QuickBooksMediator {
+func NewQuickBooksMediator(config *ProviderConfig, eventBus architecture.EventBus, logger *zap.Logger) *QuickBooksMediator {
 	base := NewBaseMediator(config, eventBus, logger)
 
 	mediator := &QuickBooksMediator{
@@ -180,7 +180,7 @@ func (q *QuickBooksMediator) GetPaymentFailures(ctx context.Context, since time.
 }
 
 // GetInvoices retrieves invoices from QuickBooks
-func (q *QuickBooksMediator) GetInvoices(ctx context.Context, since time.Time) ([]*Invoice, error) {
+func (q *QuickBooksMediator) GetInvoices(ctx context.Context, since time.Time) ([]*architecture.Invoice, error) {
 	if !q.isConnected {
 		return nil, fmt.Errorf("QuickBooks mediator not connected")
 	}
@@ -191,7 +191,7 @@ func (q *QuickBooksMediator) GetInvoices(ctx context.Context, since time.Time) (
 		return nil, fmt.Errorf("failed to get invoices from QuickBooks: %w", err)
 	}
 
-	var invoices []*Invoice
+	var invoices []*architecture.Invoice
 
 	// Map QuickBooks invoices to unified model
 	for _, qbInvoice := range qbInvoices {
@@ -203,14 +203,14 @@ func (q *QuickBooksMediator) GetInvoices(ctx context.Context, since time.Time) (
 }
 
 // GetCustomers retrieves customers from QuickBooks
-func (q *QuickBooksMediator) GetCustomers(ctx context.Context) ([]*Customer, error) {
+func (q *QuickBooksMediator) GetCustomers(ctx context.Context) ([]*architecture.Customer, error) {
 	if !q.isConnected {
 		return nil, fmt.Errorf("QuickBooks mediator not connected")
 	}
 
 	// This would be implemented to get customers from QuickBooks
 	// For now, return empty slice
-	return []*Customer{}, nil
+	return []*architecture.Customer{}, nil
 }
 
 // StartSync starts QuickBooks synchronization
@@ -314,7 +314,7 @@ func (q *QuickBooksMediator) mapInvoiceToFailure(invoice *QuickBooksInvoice) *ar
 		ProviderID:        "quickbooks",
 		ProviderEventID:   eventID,
 		ProviderEventType: "invoice.payment_failed",
-		Amount:            invoice.Balance,
+		AmountCents:       int64(invoice.Balance * 100), // Convert to cents
 		Currency:          invoice.CurrencyRef.Value,
 		CustomerID:        invoice.CustomerRef.Value,
 		CustomerName:      invoice.CustomerRef.Name,
@@ -325,7 +325,7 @@ func (q *QuickBooksMediator) mapInvoiceToFailure(invoice *QuickBooksInvoice) *ar
 		FailureCode:       "INVOICE_OVERDUE",
 		FailureMessage: fmt.Sprintf("Invoice %s is overdue by %d days",
 			invoice.DocNumber, overdueDays),
-		Status:     "received",
+		Status:     architecture.PaymentFailureStatusReceived,
 		Priority:   q.mapRiskScoreToPriority(riskScore),
 		RiskScore:  riskScore,
 		OccurredAt: invoice.DueDate,
@@ -343,15 +343,15 @@ func (q *QuickBooksMediator) mapInvoiceToFailure(invoice *QuickBooksInvoice) *ar
 }
 
 // mapQuickBooksInvoiceToInvoice maps a QuickBooks invoice to unified Invoice model
-func (q *QuickBooksMediator) mapQuickBooksInvoiceToInvoice(qbInvoice *QuickBooksInvoice) *Invoice {
+func (q *QuickBooksMediator) mapQuickBooksInvoiceToInvoice(qbInvoice *QuickBooksInvoice) *architecture.Invoice {
 	// Map line items
 	lineItems, _ := json.Marshal(qbInvoice.LineItems)
 
-	invoice := &Invoice{
+	invoice := &architecture.Invoice{
 		ProviderID:        "quickbooks",
 		ProviderInvoiceID: qbInvoice.ID,
 		InvoiceNumber:     qbInvoice.DocNumber,
-		Amount:            qbInvoice.TotalTax,
+		AmountCents:       int64(qbInvoice.TotalTax * 100), // Convert to cents
 		Currency:          qbInvoice.CurrencyRef.Value,
 		Status: func() string {
 			if qbInvoice.Balance > 0 {
@@ -719,7 +719,7 @@ func (q *QuickBooksMediator) mapQuickBooksInvoiceToPaymentFailure(invoice *Quick
 	paymentFailure := &architecture.PaymentFailure{
 		ID:              uuid.New(),
 		ProviderEventID: invoice.ID,
-		Amount:          invoice.Balance,
+		AmountCents:     int64(invoice.Balance * 100), // Convert to cents
 		Currency:        invoice.CurrencyRef.Value,
 		CustomerID:      invoice.CustomerRef.Value,
 		CustomerName:    invoice.CustomerRef.Name,
@@ -728,8 +728,8 @@ func (q *QuickBooksMediator) mapQuickBooksInvoiceToPaymentFailure(invoice *Quick
 		RiskScore:       riskScore,
 		Status:          architecture.PaymentFailureStatusReceived,
 		Priority:        q.mapRiskScoreToPriority(riskScore),
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+		OccurredAt:      time.Now(),
+		DetectedAt:      time.Now(),
 	}
 
 	return paymentFailure

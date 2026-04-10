@@ -188,7 +188,7 @@ func createLowRiskEvent() map[string]interface{} {
 		CompanyID:       "company-benchmark",
 		ProviderID:      "stripe",
 		ProviderEventID: "pi_benchmark_low",
-		Amount:          500.00,
+		AmountCents:     50000, // $500.00 in cents
 		Currency:        "USD",
 		CustomerID:      "customer-benchmark",
 		CustomerName:    "Benchmark Customer",
@@ -215,7 +215,7 @@ func createMediumRiskEvent() map[string]interface{} {
 		CompanyID:       "company-benchmark",
 		ProviderID:      "xero",
 		ProviderEventID: "pi_benchmark_medium",
-		Amount:          2500.00,
+		AmountCents:     250000, // $2,500.00 in cents
 		Currency:        "AUD",
 		CustomerID:      "customer-benchmark",
 		CustomerName:    "Benchmark Customer",
@@ -242,7 +242,7 @@ func createHighRiskEvent() map[string]interface{} {
 		CompanyID:       "company-benchmark",
 		ProviderID:      "quickbooks",
 		ProviderEventID: "pi_benchmark_high",
-		Amount:          15000.00,
+		AmountCents:     1500000, // $15,000.00 in cents
 		Currency:        "USD",
 		CustomerID:      "customer-benchmark",
 		CustomerName:    "Benchmark Customer",
@@ -270,7 +270,7 @@ func createComplexEvent() map[string]interface{} {
 		CompanyID:        "company-benchmark",
 		ProviderID:       "stripe",
 		ProviderEventID:  "pi_benchmark_complex",
-		Amount:           8500.00,
+		AmountCents:      850000, // $8,500.00 in cents
 		Currency:         "EUR",
 		CustomerID:       "customer-benchmark",
 		CustomerName:     "Benchmark Customer",

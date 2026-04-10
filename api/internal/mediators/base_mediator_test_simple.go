@@ -4,8 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"time"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 )
 
 func TestNewBaseMediator(t *testing.T) {
@@ -26,7 +28,7 @@ func TestNewBaseMediator(t *testing.T) {
 	assert.Equal(t, eventBus, mediator.eventBus)
 	assert.Equal(t, logger, mediator.logger)
 	assert.False(t, mediator.IsConnected())
-	assert.Equal(t, "idle", mediator.syncStatus.Status)
+	assert.Equal(t, "inactive", mediator.syncStatus.Status)
 }
 
 func TestBaseMediator_ProviderInfo(t *testing.T) {
@@ -83,7 +85,8 @@ func TestBaseMediator_SyncStatus(t *testing.T) {
 	syncStatus := mediator.GetSyncStatus()
 	assert.NotNil(t, syncStatus)
 	assert.Equal(t, "test_provider", syncStatus.ProviderID)
-	assert.Equal(t, "idle", syncStatus.Status)
+	assert.Equal(t, "inactive", mediator.syncStatus.Status)
+	assert.Equal(t, "inactive", syncStatus.Status)
 }
 
 func TestBaseMediator_RateLimitInfo(t *testing.T) {
@@ -118,7 +121,7 @@ func (t *TestEventBus) Publish(ctx context.Context, topic string, event interfac
 	return nil
 }
 
-func (t *TestEventBus) Subscribe(ctx context.Context, topic string, handler EventHandler) (Subscription, error) {
+func (t *TestEventBus) Subscribe(ctx context.Context, topic string, handler architecture.EventHandler) (architecture.Subscription, error) {
 	// Simple test implementation
 	return &TestSubscription{}, nil
 }
@@ -138,12 +141,16 @@ func (t *TestEventBus) PublishAsync(ctx context.Context, topic string, event int
 	return t.Publish(ctx, topic, event)
 }
 
-func (t *TestEventBus) SubscribeAsync(ctx context.Context, topic string, handler EventHandler) (Subscription, error) {
+func (t *TestEventBus) SubscribeAsync(ctx context.Context, topic string, handler architecture.EventHandler) (architecture.Subscription, error) {
 	return t.Subscribe(ctx, topic, handler)
 }
 
-func (t *TestEventBus) Unsubscribe(subscription Subscription) error {
+func (t *TestEventBus) Unsubscribe(subscription architecture.Subscription) error {
 	return subscription.Unsubscribe()
+}
+
+func (t *TestEventBus) GetPaymentFailures(ctx context.Context, since time.Time) ([]*architecture.PaymentFailure, error) {
+	return nil, nil
 }
 
 type TestSubscription struct{}

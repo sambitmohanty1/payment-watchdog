@@ -30,7 +30,7 @@ func (r *RiskBasedRules) HighValuePaymentRule() EnterpriseRule {
 		Priority:    200,
 		Enabled:     true,
 		Conditions: []EnterpriseCondition{
-			&HighValueCondition{threshold: 10000.0},
+			&HighValueCondition{thresholdCents: 1000000}, // $10,000.00
 		},
 		Actions: []EnterpriseAction{
 			&ImmediateAlertAction{channel: "sms", priority: "critical"},
@@ -175,14 +175,14 @@ func (r *PatternBasedRules) FraudDetectionRule() EnterpriseRule {
 
 // HighValueCondition checks if payment amount exceeds threshold
 type HighValueCondition struct {
-	threshold float64
+	thresholdCents int64
 }
 
 func (c *HighValueCondition) Evaluate(ctx EnterpriseRuleContext) bool {
 	if ctx.PaymentFailure == nil {
 		return false
 	}
-	return ctx.PaymentFailure.Amount >= c.threshold
+	return ctx.PaymentFailure.AmountCents >= c.thresholdCents
 }
 
 func (c *HighValueCondition) GetType() string {
@@ -190,7 +190,7 @@ func (c *HighValueCondition) GetType() string {
 }
 
 func (c *HighValueCondition) GetDescription() string {
-	return fmt.Sprintf("Payment amount >= $%.2f", c.threshold)
+	return fmt.Sprintf("Payment amount >= $%.2f", float64(c.thresholdCents)/100)
 }
 
 // OverdueCondition checks if payment is overdue by threshold days
@@ -287,7 +287,7 @@ func (c *FraudPatternCondition) calculateFraudRisk(ctx EnterpriseRuleContext) fl
 
 	if ctx.PaymentFailure != nil {
 		// Amount-based risk
-		if ctx.PaymentFailure.Amount > 5000 {
+		if ctx.PaymentFailure.AmountCents >= 500000 { // $5,000
 			risk += 0.3
 		}
 

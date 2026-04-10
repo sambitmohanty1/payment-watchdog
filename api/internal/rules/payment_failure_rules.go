@@ -36,12 +36,12 @@ func (pfr *PaymentFailureRules) createHighValueAlertRule() *BasicRule {
 		Priority:    100,
 		Enabled:     true,
 		Condition: func(event *models.PaymentFailureEvent) bool {
-			return event.AmountCents >= 1000.0
+			return event.AmountCents >= 100000 // $1,000.00
 		},
 		Action: func(event *models.PaymentFailureEvent) (*BasicActionResult, error) {
 			pfr.logger.Info("High value payment failure detected",
 				zap.String("event_id", event.ID.String()),
-				zap.Float64("amount", float64(event.AmountCents)/100))
+				zap.Int64("amount_cents", event.AmountCents))
 
 			return &BasicActionResult{
 				RuleName:   "high_value_alert",
@@ -117,11 +117,11 @@ func (pfr *PaymentFailureRules) createRiskScoringRule() *BasicRule {
 func calculateRiskScore(event *models.PaymentFailureEvent) int {
 	baseScore := 0
 
-	if event.AmountCents >= 1000 {
+	if event.AmountCents >= 100000 { // $1,000
 		baseScore += 30
-	} else if event.AmountCents >= 500 {
+	} else if event.AmountCents >= 50000 { // $500
 		baseScore += 20
-	} else if event.AmountCents >= 100 {
+	} else if event.AmountCents >= 10000 { // $100
 		baseScore += 10
 	}
 

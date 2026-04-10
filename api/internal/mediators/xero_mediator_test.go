@@ -64,7 +64,7 @@ func TestXeroMediator_GetPaymentFailures(t *testing.T) {
 	mediator := NewXeroMediator(config, eventBus, logger)
 
 	// Test without connection
-	failures, err := mediator.GetPaymentFailuresLegacy(context.Background(), time.Now().Add(-24*time.Hour))
+	failures, err := mediator.GetPaymentFailures(context.Background(), time.Now().Add(-24*time.Hour))
 	assert.Error(t, err)
 	assert.Nil(t, failures)
 	assert.Contains(t, err.Error(), "not connected")

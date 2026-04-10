@@ -65,7 +65,7 @@ func (pd *DefaultPatternDetector) DetectCustomerPatterns(customerID string, even
 			CustomerID:  customerID,
 			Pattern:     pattern,
 			Frequency:   float64(pd.calculateFrequency(customerEvents, pattern.Type)),
-			TotalAmount: pd.calculateTotalAmount(customerEvents),
+			TotalAmountCents: pd.calculateTotalAmount(customerEvents),
 			RiskLevel:   pd.calculateCustomerRiskLevel(customerEvents),
 		}
 		patterns = append(patterns, customerPattern)
@@ -183,7 +183,7 @@ func (pd *DefaultPatternDetector) detectAmountPatterns(events []*architecture.Pa
 
 	// Calculate amount statistics
 	amounts := pd.extractAmounts(events)
-	sort.Float64s(amounts)
+	sort.Slice(amounts, func(i, j int) bool { return amounts[i] < amounts[j] })
 
 	// Detect high-value patterns
 	highValueThreshold := pd.calculateHighValueThreshold(amounts)
@@ -266,17 +266,17 @@ func (pd *DefaultPatternDetector) filterEventsByCustomer(events []*architecture.
 	return filtered
 }
 
-func (pd *DefaultPatternDetector) extractAmounts(events []*architecture.PaymentFailure) []float64 {
-	amounts := make([]float64, 0, len(events))
+func (pd *DefaultPatternDetector) extractAmounts(events []*architecture.PaymentFailure) []int64 {
+	amounts := make([]int64, 0, len(events))
 
 	for _, event := range events {
-		amounts = append(amounts, event.Amount)
+		amounts = append(amounts, event.AmountCents)
 	}
 
 	return amounts
 }
 
-func (pd *DefaultPatternDetector) calculateHighValueThreshold(amounts []float64) float64 {
+func (pd *DefaultPatternDetector) calculateHighValueThreshold(amounts []int64) int64 {
 	if len(amounts) == 0 {
 		return 0
 	}
@@ -290,11 +290,11 @@ func (pd *DefaultPatternDetector) calculateHighValueThreshold(amounts []float64)
 	return amounts[index]
 }
 
-func (pd *DefaultPatternDetector) filterHighValueEvents(events []*architecture.PaymentFailure, threshold float64) []*architecture.PaymentFailure {
+func (pd *DefaultPatternDetector) filterHighValueEvents(events []*architecture.PaymentFailure, threshold int64) []*architecture.PaymentFailure {
 	filtered := make([]*architecture.PaymentFailure, 0)
 
 	for _, event := range events {
-		if event.Amount >= threshold {
+		if event.AmountCents >= threshold {
 			filtered = append(filtered, event)
 		}
 	}
@@ -388,10 +388,10 @@ func (pd *DefaultPatternDetector) calculateFrequency(events []*architecture.Paym
 	return len(events)
 }
 
-func (pd *DefaultPatternDetector) calculateTotalAmount(events []*architecture.PaymentFailure) float64 {
-	total := 0.0
+func (pd *DefaultPatternDetector) calculateTotalAmount(events []*architecture.PaymentFailure) int64 {
+	total := int64(0)
 	for _, event := range events {
-		total += event.Amount
+		total += event.AmountCents
 	}
 	return total
 }
@@ -403,11 +403,11 @@ func (pd *DefaultPatternDetector) calculateCustomerRiskLevel(events []*architect
 
 	// Simple risk level calculation based on event count and amounts
 	eventCount := len(events)
-	totalAmount := pd.calculateTotalAmount(events)
+	totalAmountCents := pd.calculateTotalAmount(events)
 
-	if eventCount >= 5 || totalAmount >= 10000 {
+	if eventCount >= 5 || totalAmountCents >= 1000000 { // $10,000 in cents
 		return "high"
-	} else if eventCount >= 3 || totalAmount >= 5000 {
+	} else if eventCount >= 3 || totalAmountCents >= 500000 { // $5,000 in cents
 		return "medium"
 	}
 

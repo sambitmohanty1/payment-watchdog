@@ -28,7 +28,7 @@ func TestRuleEngine(t *testing.T) {
 			ProviderID:        "stripe",
 			EventID:           "evt_123",
 			EventType:         "payment_intent.payment_failed",
-			AmountCents:       2500,
+			AmountCents:       250000, // $2,500.00 (exceeds $1,000.00 threshold)
 			Currency:          "AUD",
 			CustomerID:        "cus_123",
 			CustomerEmail:     "test@example.com",

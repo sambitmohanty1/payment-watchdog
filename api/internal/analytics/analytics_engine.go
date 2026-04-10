@@ -122,7 +122,7 @@ type CustomerPattern struct {
 	CustomerID  string  `json:"customer_id"`
 	Pattern     Pattern `json:"pattern"`
 	Frequency   float64 `json:"frequency"`
-	TotalAmount float64 `json:"total_amount"`
+	TotalAmountCents int64   `json:"total_amount_cents"`
 	RiskLevel   string  `json:"risk_level"`
 }
 

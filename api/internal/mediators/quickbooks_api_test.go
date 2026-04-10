@@ -71,7 +71,7 @@ func TestQuickBooksAPIIntegration(t *testing.T) {
 
 		// Verify the mapped payment failure
 		assert.Equal(t, "inv-001", paymentFailure.ProviderEventID)
-		assert.Equal(t, 1650.00, paymentFailure.Amount)
+		assert.Equal(t, int64(165000), paymentFailure.AmountCents)
 		assert.Equal(t, "USD", paymentFailure.Currency)
 		assert.Equal(t, "customer-001", paymentFailure.CustomerID)
 		assert.Equal(t, "Test Customer 1", paymentFailure.CustomerName)
@@ -88,7 +88,7 @@ func TestQuickBooksAPIIntegration(t *testing.T) {
 			name           string
 			invoice        *QuickBooksInvoice
 			expectedReason string
-			expectedAmount float64
+			expectedAmount int64
 		}{
 			{
 				name: "Unpaid Invoice",
@@ -107,7 +107,7 @@ func TestQuickBooksAPIIntegration(t *testing.T) {
 					CurrencyRef: QuickBooksRef{Value: "USD"},
 				},
 				expectedReason: "invoice_unpaid",
-				expectedAmount: 1650.00,
+				expectedAmount: 165000,
 			},
 			{
 				name: "Partially Paid Invoice",
@@ -126,7 +126,7 @@ func TestQuickBooksAPIIntegration(t *testing.T) {
 					CurrencyRef: QuickBooksRef{Value: "USD"},
 				},
 				expectedReason: "invoice_partially_paid",
-				expectedAmount: 600.00,
+				expectedAmount: 60000,
 			},
 		}
 
@@ -136,7 +136,7 @@ func TestQuickBooksAPIIntegration(t *testing.T) {
 				require.NotNil(t, paymentFailure)
 
 				assert.Equal(t, tc.invoice.ID, paymentFailure.ProviderEventID)
-				assert.Equal(t, tc.expectedAmount, paymentFailure.Amount)
+				assert.Equal(t, tc.expectedAmount, paymentFailure.AmountCents)
 				assert.Equal(t, tc.expectedReason, paymentFailure.FailureReason)
 				assert.Equal(t, "quickbooks", paymentFailure.SyncSource)
 				assert.True(t, paymentFailure.RiskScore > 0)
@@ -170,7 +170,7 @@ func TestQuickBooksAPIIntegration(t *testing.T) {
 
 		// Should have default/safe values for missing fields
 		assert.Equal(t, "", paymentFailure.ProviderEventID)
-		assert.Equal(t, 0.0, paymentFailure.Amount)
+		assert.Equal(t, int64(0), paymentFailure.AmountCents)
 		assert.Equal(t, "", paymentFailure.Currency)
 		assert.Equal(t, "", paymentFailure.CustomerID)
 		assert.Equal(t, "", paymentFailure.CustomerName)
@@ -193,7 +193,7 @@ func TestQuickBooksAPIIntegration(t *testing.T) {
 
 		// Should have safe default values
 		assert.Equal(t, "", paymentFailure.ProviderEventID)
-		assert.Equal(t, 0.0, paymentFailure.Amount)
+		assert.Equal(t, int64(0), paymentFailure.AmountCents)
 		assert.Equal(t, "", paymentFailure.Currency)
 	})
 }
@@ -233,7 +233,7 @@ func TestQuickBooksDataMapping(t *testing.T) {
 
 		// Verify mapping
 		assert.Equal(t, "inv-001", paymentFailure.ProviderEventID)
-		assert.Equal(t, 2200.00, paymentFailure.Amount)
+		assert.Equal(t, int64(220000), paymentFailure.AmountCents)
 		assert.Equal(t, "USD", paymentFailure.Currency)
 		assert.Equal(t, "customer-001", paymentFailure.CustomerID)
 		assert.Equal(t, "Test Customer", paymentFailure.CustomerName)
@@ -311,7 +311,7 @@ func TestQuickBooksEventBusIntegration(t *testing.T) {
 			CompanyID:       "company-123",
 			ProviderID:      "quickbooks",
 			ProviderEventID: "inv-001",
-			Amount:          2500.00,
+			AmountCents:     250000,
 			Currency:        "USD",
 			CustomerID:      "customer-001",
 			CustomerName:    "Test Customer",
@@ -338,7 +338,7 @@ func TestQuickBooksEventBusIntegration(t *testing.T) {
 		paymentFailureData := event["payment_failure"].(*architecture.PaymentFailure)
 		assert.Equal(t, "inv-001", paymentFailureData.ProviderEventID)
 		assert.Equal(t, "quickbooks", paymentFailureData.ProviderID)
-		assert.Equal(t, 2500.00, paymentFailureData.Amount)
+		assert.Equal(t, int64(250000), paymentFailureData.AmountCents)
 		assert.Equal(t, "USD", paymentFailureData.Currency)
 	})
 
@@ -349,7 +349,7 @@ func TestQuickBooksEventBusIntegration(t *testing.T) {
 			CompanyID:       "company-123",
 			ProviderID:      "quickbooks",
 			ProviderEventID: "inv-002",
-			Amount:          1000.00,
+			AmountCents:     100000,
 			Currency:        "USD",
 			CustomerID:      "customer-002",
 			CustomerName:    "Test Customer 2",
@@ -385,7 +385,7 @@ func TestQuickBooksEventBusIntegration(t *testing.T) {
 			CompanyID:       "company-123",
 			ProviderID:      "quickbooks",
 			ProviderEventID: "inv-003",
-			Amount:          5000.00,
+			AmountCents:     500000,
 			Currency:        "USD",
 			CustomerID:      "customer-003",
 			CustomerName:    "Test Customer 3",
@@ -479,7 +479,7 @@ func TestQuickBooksErrorHandling(t *testing.T) {
 
 		// Should have safe default values
 		assert.Equal(t, "", paymentFailure.ProviderEventID)
-		assert.Equal(t, 0.0, paymentFailure.Amount)
+		assert.Equal(t, int64(0), paymentFailure.AmountCents)
 		assert.Equal(t, "", paymentFailure.Currency)
 	})
 }

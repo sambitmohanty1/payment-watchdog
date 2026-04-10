@@ -293,18 +293,18 @@ func (ta *DefaultTrendAnalyzer) calculateAverageAmounts(data []*architecture.Pay
 		windowEnd := currentTime.Add(windowSize)
 
 		// Calculate average amount in this window
-		totalAmount := 0.0
+		totalAmountCents := int64(0)
 		eventCount := 0
 
 		for _, event := range data {
 			if event.OccurredAt.After(currentTime) && event.OccurredAt.Before(windowEnd) {
-				totalAmount += event.Amount
+				totalAmountCents += event.AmountCents
 				eventCount++
 			}
 		}
 
 		if eventCount > 0 {
-			averageAmount := totalAmount / float64(eventCount)
+			averageAmount := float64(totalAmountCents) / float64(eventCount)
 			amounts = append(amounts, averageAmount)
 		} else {
 			amounts = append(amounts, 0.0)

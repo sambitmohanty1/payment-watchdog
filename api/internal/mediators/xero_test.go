@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 )
 
 // XeroTest is a test implementation
@@ -15,7 +16,7 @@ type XeroTest struct {
 }
 
 // NewXeroTest creates a new test mediator
-func NewXeroTest(config *ProviderConfig, eventBus EventBus, logger *zap.Logger) *XeroTest {
+func NewXeroTest(config *ProviderConfig, eventBus architecture.EventBus, logger *zap.Logger) *XeroTest {
 	base := NewBaseMediator(config, eventBus, logger)
 
 	return &XeroTest{

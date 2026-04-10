@@ -168,15 +168,15 @@ func (fp *DefaultFailurePredictor) calculateAmountScore(history []*architecture.
 	}
 
 	// Calculate total amount and average amount
-	totalAmount := 0.0
+	totalAmountCents := int64(0)
 	for _, event := range history {
-		totalAmount += event.Amount
+		totalAmountCents += event.AmountCents
 	}
-	averageAmount := totalAmount / float64(len(history))
+	averageAmountCents := float64(totalAmountCents) / float64(len(history))
 
 	// Score based on average amount (higher amounts = higher risk)
-	// Normalize: $1000 = 50 points, $10000 = 100 points
-	amountScore := (averageAmount / 1000.0) * 50.0
+	// Normalize: $1000 (100000 cents) = 50 points, $10000 (1000000 cents) = 100 points
+	amountScore := (averageAmountCents / 100000.0) * 50.0
 
 	// Cap at 100
 	return math.Min(100.0, amountScore)
@@ -215,14 +215,20 @@ func (fp *DefaultFailurePredictor) calculateConsistencyScore(history []*architec
 		return 0.0
 	}
 
+	// Sort history by timestamp
+	sortedHistory := fp.sortByTimestamp(history)
+
 	// Calculate time gaps between failures
-	timeGaps := fp.calculateTimeGaps(history)
+	timeGaps := fp.calculateTimeGaps(sortedHistory)
 	if len(timeGaps) == 0 {
 		return 0.0
 	}
 
 	// Calculate standard deviation of gaps
 	meanGap := fp.calculateAverageGap(timeGaps)
+	if meanGap <= 0 {
+		return 100.0 // Maximum consistency if mean gap is zero or negative
+	}
 	variance := 0.0
 
 	for _, gap := range timeGaps {
@@ -239,6 +245,9 @@ func (fp *DefaultFailurePredictor) calculateConsistencyScore(history []*architec
 
 	// Invert: lower CV = higher consistency = higher risk
 	consistencyScore := 100.0 - (normalizedStdDev * 100.0)
+	if math.IsNaN(consistencyScore) {
+		return 100.0
+	}
 
 	// Ensure score is in valid range
 	return math.Max(0.0, math.Min(100.0, consistencyScore))
@@ -360,14 +369,20 @@ func (fp *DefaultFailurePredictor) calculateConsistencyConfidence(history []*arc
 		return 0.0
 	}
 
+	// Sort history by timestamp
+	sortedHistory := fp.sortByTimestamp(history)
+
 	// Calculate time gaps between failures
-	timeGaps := fp.calculateTimeGaps(history)
+	timeGaps := fp.calculateTimeGaps(sortedHistory)
 	if len(timeGaps) == 0 {
 		return 0.0
 	}
 
 	// Calculate coefficient of variation
 	meanGap := fp.calculateAverageGap(timeGaps)
+	if meanGap <= 0 {
+		return 0.1 // Maximum confidence bonus if mean gap is zero or negative
+	}
 	variance := 0.0
 
 	for _, gap := range timeGaps {
@@ -379,6 +394,9 @@ func (fp *DefaultFailurePredictor) calculateConsistencyConfidence(history []*arc
 	// Lower variance = higher consistency = higher confidence
 	stdDev := math.Sqrt(variance)
 	coefficientOfVariation := stdDev / float64(meanGap)
+	if math.IsNaN(coefficientOfVariation) {
+		return 0.1
+	}
 
 	// Convert to confidence bonus (0.0 to 0.1)
 	confidenceBonus := math.Max(0.0, 0.1-0.1*coefficientOfVariation)
@@ -395,11 +413,11 @@ func (fp *DefaultFailurePredictor) identifyRiskFactors(customerID string, histor
 	}
 
 	// Factor 2: High amounts
-	totalAmount := 0.0
+	totalAmountCents := int64(0)
 	for _, event := range history {
-		totalAmount += event.Amount
+		totalAmountCents += event.AmountCents
 	}
-	if totalAmount >= 10000 {
+	if totalAmountCents >= 1000000 { // $10,000 in cents
 		factors = append(factors, "High total failure amount")
 	}
 

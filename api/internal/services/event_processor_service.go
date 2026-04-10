@@ -15,6 +15,7 @@ import (
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
+	"sync/atomic"
 )
 
 // EventProcessorConfig holds configuration for event processor
@@ -65,6 +66,9 @@ type EventProcessorMetrics struct {
 	EventsByProvider      map[string]int64
 	EventsByStatus        map[string]int64
 	ProcessingErrors      []ProcessingError
+	// Reconciliation stats (PW-102)
+	ReconciliationMatches int64
+	ReconciliationErrors  int64
 }
 
 // ProcessingError represents an error during event processing
@@ -125,7 +129,7 @@ func (e *EventProcessorService) ProcessPaymentFailureEvent(ctx context.Context, 
 		zap.String("event_id", paymentFailure.ID.String()),
 		zap.String("provider", paymentFailure.ProviderID),
 		zap.String("company_id", paymentFailure.CompanyID),
-		zap.Float64("amount", paymentFailure.Amount))
+		zap.Int64("amount_cents", paymentFailure.AmountCents))
 
 	// Update metrics
 	e.metrics.TotalEventsProcessed++
@@ -238,7 +242,7 @@ func (e *EventProcessorService) enrichFailureData(ctx context.Context, failure *
 	}
 
 	// Add tags based on failure characteristics
-	if failure.Amount > 10000 {
+	if failure.AmountCents > 1000000 { // $10,000 in cents
 		failure.Tags = append(failure.Tags, "high_value")
 	}
 
@@ -258,11 +262,11 @@ func (e *EventProcessorService) calculateRiskScore(ctx context.Context, failure 
 	riskScore := 50.0
 
 	// Factor 1: Amount-based risk
-	if failure.Amount >= 10000 {
+	if failure.AmountCents >= 1000000 { // $10,000
 		riskScore += 30
-	} else if failure.Amount >= 5000 {
+	} else if failure.AmountCents >= 500000 { // $5,000
 		riskScore += 20
-	} else if failure.Amount >= 1000 {
+	} else if failure.AmountCents >= 100000 { // $1,000
 		riskScore += 10
 	}
 
@@ -382,7 +386,7 @@ func (e *EventProcessorService) handleRuleResult(ctx context.Context, failure *a
 func (e *EventProcessorService) createHighRiskAlert(ctx context.Context, failure *architecture.PaymentFailure) error {
 	e.logger.Info("Creating high-risk alert",
 		zap.String("event_id", failure.ID.String()),
-		zap.Float64("amount", failure.Amount),
+		zap.Int64("amount_cents", failure.AmountCents),
 		zap.Float64("risk_score", failure.RiskScore))
 
 	// TODO: Implement alert creation logic
@@ -606,6 +610,9 @@ func (e *EventProcessorService) handleReconciliationEvent(ctx context.Context, e
 
 	// Find matching payment failure in database
 	var failure models.PaymentFailureEvent
+	
+	// Increment metrics
+	atomic.AddInt64(&e.metrics.TotalEventsProcessed, 1)
 	// Strict match: Reference contains InvoiceNumber AND Amount matches
 	// Fallback: Amount matches AND status is not resolved
 	query := e.db.Where("company_id = ? AND status != 'resolved' AND amount_cents = ?", companyID, amountCents)
@@ -646,8 +653,12 @@ func (e *EventProcessorService) handleReconciliationEvent(ctx context.Context, e
 	failure.NormalizedData = string(normalizedBytes)
 
 	if err := e.db.Save(&failure).Error; err != nil {
+		atomic.AddInt64(&e.metrics.ReconciliationErrors, 1)
 		return fmt.Errorf("failed to resolve payment failure: %w", err)
 	}
+
+	atomic.AddInt64(&e.metrics.ReconciliationMatches, 1)
+	atomic.AddInt64(&e.metrics.SuccessfullyProcessed, 1)
 
 	// Publish resolution event
 	resolutionEvent := map[string]interface{}{

@@ -113,7 +113,7 @@ func TestEventProcessorService(t *testing.T) {
 			CompanyID:       "company-123",
 			ProviderID:      "stripe",
 			ProviderEventID: "pi_123",
-			Amount:          2500.00,
+			AmountCents:     250000, // $2,500.00
 			Currency:        "USD",
 			CustomerID:      "customer-123",
 			CustomerName:    "Test Customer",
@@ -157,7 +157,7 @@ func TestEventProcessorService(t *testing.T) {
 		paymentFailure := &architecture.PaymentFailure{
 			ID:              uuid.New(),
 			ProviderEventID: "pi_124",
-			Amount:          1000.00,
+			AmountCents:     100000, // $1,000.00
 			Currency:        "AUD",
 			Status:          architecture.PaymentFailureStatusReceived,
 			CreatedAt:       time.Now(),
@@ -184,15 +184,15 @@ func TestEventProcessorService(t *testing.T) {
 
 	t.Run("Risk Score Calculation", func(t *testing.T) {
 		testCases := []struct {
-			amount      float64
+			amountCents int64
 			overdueDays int
 			expectedMin float64
 			description string
 		}{
-			{500.00, 0, 50.0, "Low amount, not overdue"},
-			{1500.00, 7, 60.0, "Medium amount, slightly overdue"},      // Base 50 + 10 (amount) + 0 (overdue) = 60
-			{7500.00, 30, 70.0, "High amount, moderately overdue"},     // Base 50 + 20 (amount) + 0 (overdue) = 70
-			{15000.00, 90, 90.0, "Very high amount, severely overdue"}, // Base 50 + 30 (amount) + 10 (overdue) = 90
+			{50000, 0, 50.0, "Low amount, not overdue"},
+			{150000, 7, 60.0, "Medium amount, slightly overdue"},      // Base 50 + 10 (amount) + 0 (overdue) = 60
+			{750000, 30, 70.0, "High amount, moderately overdue"},     // Base 50 + 20 (amount) + 0 (overdue) = 70
+			{1500000, 90, 90.0, "Very high amount, severely overdue"}, // Base 50 + 30 (amount) + 10 (overdue) = 90
 		}
 
 		for _, tc := range testCases {
@@ -201,7 +201,7 @@ func TestEventProcessorService(t *testing.T) {
 				paymentFailure := &architecture.PaymentFailure{
 					ID:              uuid.New(),
 					ProviderEventID: "pi_125",
-					Amount:          tc.amount,
+					AmountCents:     tc.amountCents,
 					Currency:        "USD",
 					Status:          architecture.PaymentFailureStatusReceived,
 					DueDate:         &dueDate,
@@ -239,7 +239,7 @@ func TestEventProcessorService(t *testing.T) {
 				paymentFailure := &architecture.PaymentFailure{
 					ID:               uuid.New(),
 					ProviderEventID:  "pi_126",
-					Amount:           1000.00,
+					AmountCents:      100000,
 					Currency:         "USD",
 					BusinessCategory: tc.category,
 					Status:           architecture.PaymentFailureStatusReceived,
@@ -283,7 +283,7 @@ func TestEventProcessorService(t *testing.T) {
 		paymentFailure := &architecture.PaymentFailure{
 			ID:              uuid.New(),
 			ProviderEventID: "pi_127",
-			Amount:          2000.00,
+			AmountCents:     200000,
 			Currency:        "EUR",
 			Status:          architecture.PaymentFailureStatusReceived,
 			CreatedAt:       time.Now(),
@@ -363,7 +363,7 @@ func TestEventProcessorService(t *testing.T) {
 			paymentFailure := &architecture.PaymentFailure{
 				ID:              uuid.New(),
 				ProviderEventID: fmt.Sprintf("pi_%d", i),
-				Amount:          1000.00 + float64(i*500),
+				AmountCents:     100000 + int64(i*50000),
 				Currency:        "USD",
 				Status:          architecture.PaymentFailureStatusReceived,
 				CreatedAt:       time.Now(),
@@ -398,7 +398,7 @@ func TestEventProcessorPipelineStages(t *testing.T) {
 		failure := &architecture.PaymentFailure{
 			ID:              uuid.New(),
 			ProviderEventID: "pi_128",
-			Amount:          15000.00, // Use amount > 10000 to trigger high_value tag
+			AmountCents:     1500000, // Use amount > 1000000 to trigger high_value tag
 			CreatedAt:       time.Now(),
 			UpdatedAt:       time.Now(),
 		}
@@ -418,7 +418,7 @@ func TestEventProcessorPipelineStages(t *testing.T) {
 		failure := &architecture.PaymentFailure{
 			ID:              uuid.New(),
 			ProviderEventID: "pi_129",
-			Amount:          8000.00,
+			AmountCents:     800000,
 			CreatedAt:       time.Now(),
 			UpdatedAt:       time.Now(),
 		}
@@ -434,7 +434,7 @@ func TestEventProcessorPipelineStages(t *testing.T) {
 		failure := &architecture.PaymentFailure{
 			ID:              uuid.New(),
 			ProviderEventID: "pi_130",
-			Amount:          1000.00,
+			AmountCents:     100000,
 			Status:          architecture.PaymentFailureStatusReceived,
 			CreatedAt:       time.Now(),
 			UpdatedAt:       time.Now(),

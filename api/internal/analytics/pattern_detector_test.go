@@ -26,9 +26,9 @@ func TestDetectPatterns_Recurring(t *testing.T) {
 	now := time.Now()
 
 	events := []*architecture.PaymentFailure{
-		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-3 * time.Hour), Amount: 100},
-		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-2 * time.Hour), Amount: 100},
-		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-1 * time.Hour), Amount: 100},
+		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-3 * time.Hour), AmountCents: 10000},
+		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-2 * time.Hour), AmountCents: 10000},
+		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-1 * time.Hour), AmountCents: 10000},
 	}
 
 	patterns := pd.DetectPatterns(events)
@@ -56,9 +56,9 @@ func TestDetectPatterns_Amount(t *testing.T) {
 	events := make([]*architecture.PaymentFailure, 10)
 	for i := 0; i < 10; i++ {
 		events[i] = &architecture.PaymentFailure{
-			ID:         uuid.New(),
-			Amount:     float64(i+1) * 100,
-			OccurredAt: now.Add(time.Duration(-i) * time.Hour),
+			ID:          uuid.New(),
+			AmountCents: int64(i+1) * 10000,
+			OccurredAt:  now.Add(time.Duration(-i) * time.Hour),
 		}
 	}
 
@@ -69,7 +69,7 @@ func TestDetectPatterns_Amount(t *testing.T) {
 		if p.Type == PatternTypeAmount {
 			found = true
 			assert.Contains(t, p.Description, "High-value")
-			assert.Equal(t, float64(1000), p.Metadata["threshold"])
+			assert.Equal(t, int64(100000), p.Metadata["threshold"])
 		}
 	}
 	assert.True(t, found, "Amount pattern should be detected")
@@ -83,8 +83,8 @@ func TestDetectPatterns_Business(t *testing.T) {
 	now := time.Now()
 
 	events := []*architecture.PaymentFailure{
-		{ID: uuid.New(), BusinessCategory: category, OccurredAt: now.Add(-2 * time.Hour), Amount: 100},
-		{ID: uuid.New(), BusinessCategory: category, OccurredAt: now.Add(-1 * time.Hour), Amount: 100},
+		{ID: uuid.New(), BusinessCategory: category, OccurredAt: now.Add(-2 * time.Hour), AmountCents: 10000},
+		{ID: uuid.New(), BusinessCategory: category, OccurredAt: now.Add(-1 * time.Hour), AmountCents: 10000},
 	}
 
 	patterns := pd.DetectPatterns(events)
@@ -114,16 +114,16 @@ func TestDetectPatterns_DayOfWeek(t *testing.T) {
 	fri := monday.AddDate(0, 0, 4)
 
 	events := []*architecture.PaymentFailure{
-		{ID: uuid.New(), OccurredAt: monday, Amount: 100},
-		{ID: uuid.New(), OccurredAt: monday, Amount: 100},
-		{ID: uuid.New(), OccurredAt: monday, Amount: 100}, // 3/10 = 0.3
-		{ID: uuid.New(), OccurredAt: tue, Amount: 100},
-		{ID: uuid.New(), OccurredAt: tue, Amount: 100},
-		{ID: uuid.New(), OccurredAt: wed, Amount: 100},
-		{ID: uuid.New(), OccurredAt: wed, Amount: 100},
-		{ID: uuid.New(), OccurredAt: thu, Amount: 100},
-		{ID: uuid.New(), OccurredAt: thu, Amount: 100},
-		{ID: uuid.New(), OccurredAt: fri, Amount: 100},
+		{ID: uuid.New(), OccurredAt: monday, AmountCents: 10000},
+		{ID: uuid.New(), OccurredAt: monday, AmountCents: 10000},
+		{ID: uuid.New(), OccurredAt: monday, AmountCents: 10000}, // 3/10 = 0.3
+		{ID: uuid.New(), OccurredAt: tue, AmountCents: 10000},
+		{ID: uuid.New(), OccurredAt: tue, AmountCents: 10000},
+		{ID: uuid.New(), OccurredAt: wed, AmountCents: 10000},
+		{ID: uuid.New(), OccurredAt: wed, AmountCents: 10000},
+		{ID: uuid.New(), OccurredAt: thu, AmountCents: 10000},
+		{ID: uuid.New(), OccurredAt: thu, AmountCents: 10000},
+		{ID: uuid.New(), OccurredAt: fri, AmountCents: 10000},
 	}
 
 	patterns := pd.DetectPatterns(events)
@@ -159,9 +159,9 @@ func TestDetectPatterns_TimeOfDay(t *testing.T) {
 			hour = 10 // first 4 events at 10:00
 		}
 		events[i] = &architecture.PaymentFailure{
-			ID:         uuid.New(),
-			OccurredAt: now.Add(time.Duration(hour-10) * time.Hour),
-			Amount:     100,
+			ID:          uuid.New(),
+			OccurredAt:  now.Add(time.Duration(hour-10) * time.Hour),
+			AmountCents: 10000,
 		}
 	}
 
@@ -186,10 +186,10 @@ func TestDetectCustomerPatterns(t *testing.T) {
 	now := time.Now()
 
 	events := []*architecture.PaymentFailure{
-		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-3 * time.Hour), Amount: 1000},
-		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-2 * time.Hour), Amount: 2000},
-		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-1 * time.Hour), Amount: 3000},
-		{ID: uuid.New(), CustomerID: "other", OccurredAt: now, Amount: 500},
+		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-3 * time.Hour), AmountCents: 100000},
+		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-2 * time.Hour), AmountCents: 200000},
+		{ID: uuid.New(), CustomerID: customerID, OccurredAt: now.Add(-1 * time.Hour), AmountCents: 300000},
+		{ID: uuid.New(), CustomerID: "other", OccurredAt: now, AmountCents: 50000},
 	}
 
 	patterns := pd.DetectCustomerPatterns(customerID, events)
@@ -198,8 +198,8 @@ func TestDetectCustomerPatterns(t *testing.T) {
 	assert.Equal(t, customerID, patterns[0].CustomerID)
 	assert.Equal(t, PatternTypeRecurring, patterns[0].Pattern.Type)
 	assert.Equal(t, float64(3), patterns[0].Frequency)
-	assert.Equal(t, float64(6000), patterns[0].TotalAmount)
-	assert.Equal(t, "medium", patterns[0].RiskLevel) // 3 events and 6000 amount -> medium
+	assert.Equal(t, int64(600000), patterns[0].TotalAmountCents)
+	assert.Equal(t, "medium", patterns[0].RiskLevel) // 3 events and 600000 cents -> medium
 }
 
 func TestDetectTemporalPatterns(t *testing.T) {
@@ -216,9 +216,9 @@ func TestDetectTemporalPatterns(t *testing.T) {
 			day = 0 // Monday
 		}
 		events[i] = &architecture.PaymentFailure{
-			ID:         uuid.New(),
-			OccurredAt: monday.AddDate(0, 0, day),
-			Amount:     100,
+			ID:          uuid.New(),
+			OccurredAt:  monday.AddDate(0, 0, day),
+			AmountCents: 10000,
 		}
 	}
 
@@ -242,8 +242,8 @@ func TestDetectBusinessPatterns(t *testing.T) {
 
 	category := "retail"
 	events := []*architecture.PaymentFailure{
-		{ID: uuid.New(), BusinessCategory: category, OccurredAt: time.Now(), Amount: 100},
-		{ID: uuid.New(), BusinessCategory: category, OccurredAt: time.Now(), Amount: 100},
+		{ID: uuid.New(), BusinessCategory: category, OccurredAt: time.Now(), AmountCents: 10000},
+		{ID: uuid.New(), BusinessCategory: category, OccurredAt: time.Now(), AmountCents: 10000},
 	}
 
 	patterns := pd.DetectBusinessPatterns(events)

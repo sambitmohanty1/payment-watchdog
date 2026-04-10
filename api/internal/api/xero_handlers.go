@@ -100,10 +100,9 @@ type XeroPaymentFailure struct {
 	InvoiceNumber string  `json:"invoice_number"`
 	CustomerName  string  `json:"customer_name"`
 	CustomerEmail string  `json:"customer_email"`
-	Amount        float64 `json:"amount"`
+	AmountCents   int64   `json:"amount_cents"`
 	Currency      string  `json:"currency"`
 	DueDate       string  `json:"due_date"`
-	DaysOverdue   int     `json:"days_overdue"`
 	FailureReason string  `json:"failure_reason"`
 	Status        string  `json:"status"`
 }
@@ -312,7 +311,9 @@ func (h *XeroHandlers) GetPaymentFailures(c *gin.Context) {
 	}
 
 	// Get payment failures using mediator
-	failures, err := h.xeroMediator.GetPaymentFailures(context.Background(), accessToken, tenantID)
+	// For now, get failures from the last 30 days
+	since := time.Now().AddDate(0, 0, -30)
+	failures, err := h.xeroMediator.GetPaymentFailures(c.Request.Context(), since)
 	if err != nil {
 		h.logger.Error("Failed to get Xero payment failures", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -325,17 +326,21 @@ func (h *XeroHandlers) GetPaymentFailures(c *gin.Context) {
 	// Convert to response format
 	xeroFailures := make([]XeroPaymentFailure, len(failures))
 	for i, failure := range failures {
+		dueDateStr := ""
+		if failure.DueDate != nil {
+			dueDateStr = failure.DueDate.Format(time.RFC3339)
+		}
+
 		xeroFailures[i] = XeroPaymentFailure{
-			ID:            failure.ID,
+			ID:            failure.ID.String(),
 			InvoiceNumber: failure.InvoiceNumber,
 			CustomerName:  failure.CustomerName,
 			CustomerEmail: failure.CustomerEmail,
-			Amount:        failure.Amount,
+			AmountCents:   failure.AmountCents,
 			Currency:      failure.Currency,
-			DueDate:       failure.DueDate,
-			DaysOverdue:   failure.DaysOverdue,
+			DueDate:       dueDateStr,
 			FailureReason: failure.FailureReason,
-			Status:        failure.Status,
+			Status:        string(failure.Status),
 		}
 	}
 

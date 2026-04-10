@@ -1,0 +1,100 @@
+﻿=== RUN   TestEnterpriseRuleEngineCreation
+--- PASS: TestEnterpriseRuleEngineCreation (0.00s)
+=== RUN   TestEnterpriseRuleEngineAddRule
+2026-04-10T21:54:16.537+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "high_value_payment_rule", "rule_name": "High Value Payment Alert", "priority": 200}
+--- PASS: TestEnterpriseRuleEngineAddRule (0.00s)
+=== RUN   TestEnterpriseRuleEngineAddRuleValidation
+--- PASS: TestEnterpriseRuleEngineAddRuleValidation (0.00s)
+=== RUN   TestEnterpriseRuleEngineRuleManagement
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "high_value_payment_rule", "rule_name": "High Value Payment Alert", "priority": 200}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "overdue_payment_rule", "rule_name": "Overdue Payment Escalation", "priority": 180}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "recurring_failure_rule", "rule_name": "Recurring Failure Pattern", "priority": 160}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:184	Enterprise rule removed	{"rule_id": "overdue_payment_rule"}
+--- PASS: TestEnterpriseRuleEngineRuleManagement (0.00s)
+=== RUN   TestEnterpriseRuleEngineExecution
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "high_value_payment_rule", "rule_name": "High Value Payment Alert", "priority": 200}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:282	Executing enterprise rules	{"total_rules": 1, "context_id": "b1e5e5e9-6b46-4274-97fb-3375aa490201"}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:306	Enterprise rules execution completed	{"rules_executed": 1, "total_time": "0s"}
+--- PASS: TestEnterpriseRuleEngineExecution (0.00s)
+=== RUN   TestEnterpriseRuleEngineMetrics
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "high_value_payment_rule", "rule_name": "High Value Payment Alert", "priority": 200}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "overdue_payment_rule", "rule_name": "Overdue Payment Escalation", "priority": 180}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:282	Executing enterprise rules	{"total_rules": 2, "context_id": "d422f645-5c2e-48a4-879a-092283cd4901"}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:306	Enterprise rules execution completed	{"rules_executed": 2, "total_time": "0s"}
+    enterprise_rule_engine_test.go:196: 
+        	Error Trace:	C:/Personal/project/payment-watchdog/api/internal/rules/enterprise_rule_engine_test.go:196
+        	Error:      	Should be true
+        	Test:       	TestEnterpriseRuleEngineMetrics
+--- FAIL: TestEnterpriseRuleEngineMetrics (0.00s)
+=== RUN   TestEnterpriseRuleEnginePriorityOrdering
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "high_value_payment_rule", "rule_name": "High Value Payment Alert", "priority": 200}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "overdue_payment_rule", "rule_name": "Overdue Payment Escalation", "priority": 180}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "business_hours_rule", "rule_name": "Business Hours Processing", "priority": 120}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "fraud_detection_rule", "rule_name": "Fraud Detection", "priority": 250}
+--- PASS: TestEnterpriseRuleEnginePriorityOrdering (0.00s)
+=== RUN   TestEnterpriseRuleEngineDuplicateRuleID
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "high_value_payment_rule", "rule_name": "High Value Payment Alert", "priority": 200}
+--- PASS: TestEnterpriseRuleEngineDuplicateRuleID (0.00s)
+=== RUN   TestEnterpriseRuleEngineEnableDisable
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "high_value_payment_rule", "rule_name": "High Value Payment Alert", "priority": 200}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:259	Enterprise rule disabled	{"rule_id": "high_value_payment_rule"}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:241	Enterprise rule enabled	{"rule_id": "high_value_payment_rule"}
+--- PASS: TestEnterpriseRuleEngineEnableDisable (0.00s)
+=== RUN   TestEnterpriseRuleEngineIntegration
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "high_value_payment_rule", "rule_name": "High Value Payment Alert", "priority": 200}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "overdue_payment_rule", "rule_name": "Overdue Payment Escalation", "priority": 180}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "business_hours_rule", "rule_name": "Business Hours Processing", "priority": 120}
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:168	Enterprise rule added	{"rule_id": "fraud_detection_rule", "rule_name": "Fraud Detection", "priority": 250}
+=== RUN   TestEnterpriseRuleEngineIntegration/High_value_payment
+2026-04-10T21:54:16.538+1000	INFO	rules/enterprise_rule_engine.go:282	Executing enterprise rules	{"total_rules": 4, "context_id": "7c03ca61-eb95-46db-988c-32c10bd1d4e4"}
+2026-04-10T21:54:16.539+1000	INFO	rules/enterprise_rule_engine.go:306	Enterprise rules execution completed	{"rules_executed": 4, "total_time": "522.4┬╡s"}
+    enterprise_rule_engine_test.go:393: Rules triggered: 1 out of 4
+=== RUN   TestEnterpriseRuleEngineIntegration/Low_value_payment
+2026-04-10T21:54:16.539+1000	INFO	rules/enterprise_rule_engine.go:282	Executing enterprise rules	{"total_rules": 4, "context_id": "c4f34c8d-a8af-4b7c-abfc-522ba97a1a68"}
+2026-04-10T21:54:16.539+1000	INFO	rules/enterprise_rule_engine.go:306	Enterprise rules execution completed	{"rules_executed": 4, "total_time": "0s"}
+    enterprise_rule_engine_test.go:393: Rules triggered: 0 out of 4
+=== RUN   TestEnterpriseRuleEngineIntegration/Overdue_payment
+2026-04-10T21:54:16.539+1000	INFO	rules/enterprise_rule_engine.go:282	Executing enterprise rules	{"total_rules": 4, "context_id": "c58358b0-1b67-487f-bb60-a1ce359ce11b"}
+2026-04-10T21:54:16.539+1000	INFO	rules/enterprise_rule_engine.go:306	Enterprise rules execution completed	{"rules_executed": 4, "total_time": "0s"}
+    enterprise_rule_engine_test.go:393: Rules triggered: 1 out of 4
+--- PASS: TestEnterpriseRuleEngineIntegration (0.00s)
+    --- PASS: TestEnterpriseRuleEngineIntegration/High_value_payment (0.00s)
+    --- PASS: TestEnterpriseRuleEngineIntegration/Low_value_payment (0.00s)
+    --- PASS: TestEnterpriseRuleEngineIntegration/Overdue_payment (0.00s)
+=== RUN   TestRuleEngine
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:55	Rule added	{"rule_name": "high_value_alert", "priority": 100}
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:55	Rule added	{"rule_name": "insufficient_funds_retry", "priority": 70}
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:55	Rule added	{"rule_name": "risk_scoring", "priority": 10}
+2026-04-10T21:54:16.539+1000	INFO	rules/factory.go:50	Basic rule engine created for Sprint 3	{"total_rules": 3}
+=== RUN   TestRuleEngine/High_Value_Payment_Failure
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:62	Executing rules	{"event_id": "a57b4a50-f7ae-4485-8a15-c47917a1b161", "provider": "stripe", "failure_reason": "card_declined"}
+2026-04-10T21:54:16.539+1000	DEBUG	rules/basic_rule_engine.go:74	Rule condition met	{"rule_name": "risk_scoring", "event_id": "a57b4a50-f7ae-4485-8a15-c47917a1b161"}
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:97	Rules execution completed	{"event_id": "a57b4a50-f7ae-4485-8a15-c47917a1b161", "rules_executed": 1}
+    example_test.go:61: Expected high-value alert rule to execute
+=== RUN   TestRuleEngine/Insufficient_Funds_Payment_Failure
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:62	Executing rules	{"event_id": "6061aa81-53fa-4c2c-bd82-e82d961e1168", "provider": "stripe", "failure_reason": "insufficient_funds"}
+2026-04-10T21:54:16.539+1000	DEBUG	rules/basic_rule_engine.go:74	Rule condition met	{"rule_name": "insufficient_funds_retry", "event_id": "6061aa81-53fa-4c2c-bd82-e82d961e1168"}
+2026-04-10T21:54:16.539+1000	INFO	rules/payment_failure_rules.go:71	Insufficient funds detected, scheduling retry	{"event_id": "6061aa81-53fa-4c2c-bd82-e82d961e1168"}
+2026-04-10T21:54:16.539+1000	DEBUG	rules/basic_rule_engine.go:74	Rule condition met	{"rule_name": "risk_scoring", "event_id": "6061aa81-53fa-4c2c-bd82-e82d961e1168"}
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:97	Rules execution completed	{"event_id": "6061aa81-53fa-4c2c-bd82-e82d961e1168", "rules_executed": 2}
+=== RUN   TestRuleEngine/Expired_Card_Payment_Failure
+    example_test.go:109: No expired card rule in default rules
+--- FAIL: TestRuleEngine (0.00s)
+    --- FAIL: TestRuleEngine/High_Value_Payment_Failure (0.00s)
+    --- PASS: TestRuleEngine/Insufficient_Funds_Payment_Failure (0.00s)
+    --- SKIP: TestRuleEngine/Expired_Card_Payment_Failure (0.00s)
+=== RUN   TestRuleEngineStats
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:55	Rule added	{"rule_name": "high_value_alert", "priority": 100}
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:55	Rule added	{"rule_name": "insufficient_funds_retry", "priority": 70}
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:55	Rule added	{"rule_name": "risk_scoring", "priority": 10}
+2026-04-10T21:54:16.539+1000	INFO	rules/factory.go:50	Basic rule engine created for Sprint 3	{"total_rules": 3}
+--- PASS: TestRuleEngineStats (0.00s)
+=== RUN   TestRuleEngineEnableDisable
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:55	Rule added	{"rule_name": "high_value_alert", "priority": 100}
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:55	Rule added	{"rule_name": "insufficient_funds_retry", "priority": 70}
+2026-04-10T21:54:16.539+1000	INFO	rules/basic_rule_engine.go:55	Rule added	{"rule_name": "risk_scoring", "priority": 10}
+2026-04-10T21:54:16.539+1000	INFO	rules/factory.go:50	Basic rule engine created for Sprint 3	{"total_rules": 3}
+--- PASS: TestRuleEngineEnableDisable (0.00s)
+FAIL
+FAIL	github.com/sambitmohanty1/payment-watchdog/api/internal/rules	0.191s
+FAIL

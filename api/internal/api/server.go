@@ -12,7 +12,6 @@ import (
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/eventbus"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/mediators"
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/architecture"
 	"context"
 )
 
@@ -76,18 +75,18 @@ func (s *Server) SetupRoutes() {
 	}
 
 	// 3. Create Xero Mediator with appropriate config
-	xeroProviderConfig := &architecture.ProviderConfig{
+	xeroProviderConfig := &mediators.ProviderConfig{
 		ProviderID:   "xero-primary",
-		ProviderType: architecture.ProviderTypeOAuth,
+		ProviderType: mediators.ProviderTypeOAuth,
 		CompanyID:    "global", // In production, this would be dynamic
-		OAuthConfig: &architecture.OAuthConfig{
+		OAuthConfig: &mediators.OAuthConfig{
 			ClientID:     "XERO_CLIENT_ID", // Placeholder, will be injected via ENV or DB
 			ClientSecret: "XERO_CLIENT_SECRET",
 			TokenURL:     "https://identity.xero.com/connect/token",
 			AuthURL:      "https://login.xero.com/identity/connect/authorize",
 			Scopes:       []string{"offline_access", "accounting.transactions", "accounting.contacts"},
 		},
-		SyncConfig: &architecture.SyncConfig{
+		SyncConfig: &mediators.SyncConfig{
 			Frequency: 30 * time.Minute,
 			Enabled:   true,
 		},

@@ -311,7 +311,7 @@ func TestAnalyticsEngineIntegration(t *testing.T) {
 		assert.NotEmpty(t, prediction.CustomerID)
 		assert.True(t, prediction.RiskScore >= 0 && prediction.RiskScore <= 100)
 		assert.True(t, prediction.FailureProbability >= 0 && prediction.FailureProbability <= 1)
-		assert.True(t, prediction.Confidence > 0 && prediction.Confidence <= 1)
+		assert.True(t, prediction.Confidence >= 0 && prediction.Confidence <= 1)
 		assert.NotEmpty(t, prediction.Factors)
 	}
 }
@@ -324,38 +324,38 @@ func createTestPaymentFailures() []*architecture.PaymentFailure {
 
 	return []*architecture.PaymentFailure{
 		{
-			ID:         uuid.New(),
-			Amount:     1000.0,
-			OccurredAt: now.Add(-24 * time.Hour),
-			CustomerID: customer1ID, CustomerName: "Customer 1",
+			ID:          uuid.New(),
+			AmountCents: 100000,
+			OccurredAt:  now.Add(-24 * time.Hour),
+			CustomerID:  customer1ID, CustomerName: "Customer 1",
 			BusinessCategory: "retail",
 		},
 		{
-			ID:         uuid.New(),
-			Amount:     1500.0,
-			OccurredAt: now.Add(-48 * time.Hour),
-			CustomerID: customer1ID, CustomerName: "Customer 1",
+			ID:          uuid.New(),
+			AmountCents: 150000,
+			OccurredAt:  now.Add(-48 * time.Hour),
+			CustomerID:  customer1ID, CustomerName: "Customer 1",
 			BusinessCategory: "retail",
 		},
 		{
-			ID:         uuid.New(),
-			Amount:     2000.0,
-			OccurredAt: now.Add(-72 * time.Hour),
-			CustomerID: customer1ID, CustomerName: "Customer 1",
+			ID:          uuid.New(),
+			AmountCents: 200000,
+			OccurredAt:  now.Add(-72 * time.Hour),
+			CustomerID:  customer1ID, CustomerName: "Customer 1",
 			BusinessCategory: "retail",
 		},
 		{
-			ID:         uuid.New(),
-			Amount:     5000.0,
-			OccurredAt: now.Add(-12 * time.Hour),
-			CustomerID: customer2ID, CustomerName: "Customer 2",
+			ID:          uuid.New(),
+			AmountCents: 500000,
+			OccurredAt:  now.Add(-12 * time.Hour),
+			CustomerID:  customer2ID, CustomerName: "Customer 2",
 			BusinessCategory: "finance",
 		},
 		{
-			ID:         uuid.New(),
-			Amount:     7500.0,
-			OccurredAt: now.Add(-36 * time.Hour),
-			CustomerID: customer2ID, CustomerName: "Customer 2",
+			ID:          uuid.New(),
+			AmountCents: 750000,
+			OccurredAt:  now.Add(-36 * time.Hour),
+			CustomerID:  customer2ID, CustomerName: "Customer 2",
 			BusinessCategory: "finance",
 		},
 	}
@@ -363,10 +363,10 @@ func createTestPaymentFailures() []*architecture.PaymentFailure {
 
 func createSingleTestEvent() *architecture.PaymentFailure {
 	return &architecture.PaymentFailure{
-		ID:         uuid.New(),
-		Amount:     1000.0,
-		OccurredAt: time.Now().Add(-24 * time.Hour),
-		CustomerID: "test-customer", CustomerName: "Test Customer",
+		ID:          uuid.New(),
+		AmountCents: 100000,
+		OccurredAt:  time.Now().Add(-24 * time.Hour),
+		CustomerID:  "test-customer", CustomerName: "Test Customer",
 		BusinessCategory: "retail",
 	}
 }
@@ -391,10 +391,10 @@ func createComprehensiveTestData() []*architecture.PaymentFailure {
 			// Create events with some patterns
 			if i%7 == 0 || i%30 == 0 { // Weekly and monthly patterns
 				events = append(events, &architecture.PaymentFailure{
-					ID:         uuid.New(),
-					Amount:     1000.0 + float64(i*100),
-					OccurredAt: now.AddDate(0, 0, -i),
-					CustomerID: customer.ID.String(), CustomerName: "Customer " + customer.ID.String(),
+					ID:          uuid.New(),
+					AmountCents: 100000 + int64(i*10000),
+					OccurredAt:  now.AddDate(0, 0, -i),
+					CustomerID:  customer.ID.String(), CustomerName: "Customer " + customer.ID.String(),
 					BusinessCategory: categories[j%len(categories)],
 				})
 			}

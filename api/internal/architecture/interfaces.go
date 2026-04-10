@@ -29,9 +29,9 @@ type PaymentProvider interface {
 	IsConnected() bool
 
 	// Data retrieval
-	GetPaymentFailures(ctx context.Context, since time.Time) ([]interface{}, error)
-	GetInvoices(ctx context.Context, since time.Time) ([]interface{}, error)
-	GetCustomers(ctx context.Context, since time.Time) ([]interface{}, error)
+	GetPaymentFailures(ctx context.Context, since time.Time) ([]*PaymentFailure, error)
+	GetInvoices(ctx context.Context, since time.Time) ([]*Invoice, error)
+	GetCustomers(ctx context.Context, since time.Time) ([]*Customer, error)
 
 	// Health and status
 	GetHealthStatus() *HealthStatus
@@ -206,7 +206,7 @@ type PaymentFailure struct {
 	ProviderEventType string `json:"provider_event_type" gorm:"not null"`
 
 	// Payment details
-	Amount        float64 `json:"amount" gorm:"not null"`
+	AmountCents   int64  `json:"amount_cents" gorm:"not null"`
 	Currency      string  `json:"currency" gorm:"default:'AUD'"`
 	PaymentMethod string  `json:"payment_method"`
 
@@ -293,8 +293,8 @@ type Invoice struct {
 	ProviderInvoiceID string `json:"provider_invoice_id" gorm:"not null;uniqueIndex"`
 
 	// Invoice details
-	InvoiceNumber string  `json:"invoice_number" gorm:"not null"`
-	Amount        float64 `json:"amount" gorm:"not null"`
+	InvoiceNumber string `json:"invoice_number" gorm:"not null"`
+	AmountCents   int64  `json:"amount_cents" gorm:"not null"`
 	Currency      string  `json:"currency" gorm:"default:'AUD'"`
 	Status        string  `json:"status" gorm:"index"`
 
@@ -341,9 +341,9 @@ type Customer struct {
 	Address json.RawMessage `json:"address" gorm:"type:jsonb"`
 
 	// Payment history
-	TotalInvoiced     float64 `json:"total_invoiced" gorm:"default:0"`
-	TotalPaid         float64 `json:"total_paid" gorm:"default:0"`
-	OutstandingAmount float64 `json:"outstanding_amount" gorm:"default:0"`
+	TotalInvoicedCents     int64 `json:"total_invoiced_cents" gorm:"default:0"`
+	TotalPaidCents         int64 `json:"total_paid_cents" gorm:"default:0"`
+	OutstandingAmountCents int64 `json:"outstanding_amount_cents" gorm:"default:0"`
 
 	// Risk assessment
 	RiskScore    float64 `json:"risk_score" gorm:"default:0"`
