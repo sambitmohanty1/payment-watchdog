@@ -358,6 +358,11 @@ patches:
                 value: "payment_watchdog"
               - name: DATABASE_USER
                 value: "postgres"
+              - name: DATABASE_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: postgres-secrets
+                    key: database_password
               - name: REDIS_HOST
                 value: "redis-sovereign-au.sovereign-au.svc.cluster.local"
               - name: REDIS_PORT
