@@ -501,8 +501,4 @@ replicas:
   - name: recovery-orchestration
     count: 2
 
-# Secrets for sovereign environment
-secretGenerator:
-  - name: cloudflare-tunnel-secret
-    literals:
-      - tunnel-token=REPLACE_WITH_YOUR_CLOUDFLARE_TOKEN
+# No secretGenerator needed for manual secrets like cloudflare-tunnel-secret
