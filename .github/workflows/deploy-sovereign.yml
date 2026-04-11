@@ -144,7 +144,6 @@ jobs:
           allowed-conclusions: success
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-        continue-on-error: true
 
       - name: Decode Kubeconfig
         id: decode
@@ -250,6 +249,60 @@ jobs:
             echo "image_tag=$LATEST_SHA" >> $GITHUB_OUTPUT
           fi
 
+      - name: Validate Image Integrity (Verified Latest)
+        run: |
+          echo "## Validating Image Integrity" >> $GITHUB_STEP_SUMMARY
+          
+          TARGET_TAG="${{ steps.tag.outputs.image_tag }}"
+          CURRENT_SHA="${{ github.sha }}"
+          
+          echo "Target Tag: $TARGET_TAG"
+          echo "Expected SHA: $CURRENT_SHA"
+          
+          # Log in to registry to enable manifest inspection
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
+          SERVICES=("api" "web" "worker")
+          FORCED_FAILURE=0
+          
+          for SERVICE in "${SERVICES[@]}"; do
+            IMAGE_URL="ghcr.io/sambitmohanty1/payment-watchdog/$SERVICE:$TARGET_TAG"
+            echo "Checking image: $IMAGE_URL"
+            
+            # Inspect manifest to get the revision label
+            MANIFEST_JSON=$(docker manifest inspect --verbose "$IMAGE_URL" 2>/dev/null || echo "")
+            
+            if [ -z "$MANIFEST_JSON" ]; then
+              echo "❌ ERROR: Image $IMAGE_URL not found in registry!" >> $GITHUB_STEP_SUMMARY
+              FORCED_FAILURE=1
+              continue
+            fi
+            
+            # Extract revision label (org.opencontainers.image.revision)
+            # Both single manifest and multi-arch manifest structures are handled
+            REVISION=$(echo "$MANIFEST_JSON" | jq -r 'if type == "array" then .[0] else . end | .Config.Labels["org.opencontainers.image.revision"] // empty')
+            
+            if [ "$TARGET_TAG" == "latest" ] || [ "$TARGET_TAG" == "main" ]; then
+              if [ "$REVISION" != "$CURRENT_SHA" ]; then
+                echo "❌ ERROR: Registry image '$SERVICE:latest' is out of sync!" >> $GITHUB_STEP_SUMMARY
+                echo "  - Registry SHA: $REVISION" >> $GITHUB_STEP_SUMMARY
+                echo "  - Expected SHA: $CURRENT_SHA" >> $GITHUB_STEP_SUMMARY
+                echo "  - STATUS: Stale image detected. Build/Push might have failed or is lagging." >> $GITHUB_STEP_SUMMARY
+                FORCED_FAILURE=1
+              else
+                echo "✅ $SERVICE:latest matches current SHA ($REVISION)" >> $GITHUB_STEP_SUMMARY
+              fi
+            else
+              echo "✅ $SERVICE:$TARGET_TAG exists (Revision: $REVISION)" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          if [ "$FORCED_FAILURE" -eq 1 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🛑 Deployment aborted due to image integrity failure." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
       - name: Update Sovereign AU Deployment
         run: |
           echo "## Deploying to Oracle Cloud Australia Sovereign Environment" >> $GITHUB_STEP_SUMMARY
@@ -303,6 +356,22 @@ jobs:
             echo "  Pod: $pod" >> $GITHUB_STEP_SUMMARY
             kubectl describe pod $pod -n sovereign-au | grep -E "Status:|Reason:|Message:" | head -5 | sed 's/^/    /' >> $GITHUB_STEP_SUMMARY 2>/dev/null
           done
+
+          echo "### Critical Infrastructure Check" >> $GITHUB_STEP_SUMMARY
+          CRITICAL_SECRETS=("api-secrets" "firebase-credentials" "postgres-secrets" "ghcr-secret")
+          MISSING_SECRET=0
+          for SECRET in "${CRITICAL_SECRETS[@]}"; do
+            if kubectl get secret "$SECRET" -n sovereign-au >/dev/null 2>&1; then
+              echo "- Secret '$SECRET': ✅ FOUND" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Secret '$SECRET': ❌ MISSING" >> $GITHUB_STEP_SUMMARY
+              MISSING_SECRET=1
+            fi
+          done
+
+          if [ "$MISSING_SECRET" -eq 1 ]; then
+             echo "WARNING: One or more critical secrets are missing. Rollout may fail." >> $GITHUB_STEP_SUMMARY
+          fi
           
           # Clean up existing deployments and stuck pods
           echo "### Cleaning Up Existing Sovereign AU Resources" >> $GITHUB_STEP_SUMMARY
@@ -379,6 +448,14 @@ jobs:
             echo "- 🔄 Forcing rollout restart for all components..." >> $GITHUB_STEP_SUMMARY
             kubectl rollout restart deployment -n sovereign-au -l app.kubernetes.io/part-of=payment-watchdog
           fi
+
+          echo "### Metadata Imprinting (SHA Traceability)" >> $GITHUB_STEP_SUMMARY
+          DEPLOYMENTS=$(kubectl get deployments -n sovereign-au -l app.kubernetes.io/part-of=payment-watchdog -o name)
+          for DEP in $DEPLOYMENTS; do
+            kubectl annotate "$DEP" -n sovereign-au github.com/sha="${{ github.sha }}" --overwrite
+            kubectl annotate "$DEP" -n sovereign-au github.com/run_id="${{ github.run_id }}" --overwrite
+            echo "- Imprinted SHA ${{ github.sha }} onto $DEP" >> $GITHUB_STEP_SUMMARY
+          done
 
       - name: Wait for AU Deployment Rollout
         run: |
@@ -492,6 +569,15 @@ jobs:
               echo '```' >> $GITHUB_STEP_SUMMARY
               kubectl describe pod "$pod" -n sovereign-au 2>&1 | tail -30 >> $GITHUB_STEP_SUMMARY || true
               echo '```' >> $GITHUB_STEP_SUMMARY
+              
+              # Deep dive into ReplicaSet for detailed failures
+              RS_NAME=$(kubectl get pod "$pod" -n sovereign-au -o jsonpath='{.metadata.ownerReferences[0].name}')
+              echo "#### ReplicaSet Failure Details ($RS_NAME)" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              kubectl describe replicaset "$RS_NAME" -n sovereign-au | grep -A 20 "Events:" >> $GITHUB_STEP_SUMMARY || true
+              echo '```' >> $GITHUB_STEP_SUMMARY
+
+              echo '#### Container Logs' >> $GITHUB_STEP_SUMMARY
               echo '```' >> $GITHUB_STEP_SUMMARY
               kubectl logs "$pod" -n sovereign-au --tail=100 --all-containers 2>&1 >> $GITHUB_STEP_SUMMARY || true
               echo '```' >> $GITHUB_STEP_SUMMARY
