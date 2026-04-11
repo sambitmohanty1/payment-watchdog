@@ -358,7 +358,7 @@ jobs:
           done
 
           echo "### Critical Infrastructure Check" >> $GITHUB_STEP_SUMMARY
-          CRITICAL_SECRETS=("api-secrets" "firebase-credentials" "postgres-secrets" "ghcr-secret")
+          CRITICAL_SECRETS=("api-secrets" "firebase-credentials" "postgres-secrets" "ghcr-secret" "postgres-ssl-certs" "db-ca-cert")
           MISSING_SECRET=0
           for SECRET in "${CRITICAL_SECRETS[@]}"; do
             if kubectl get secret "$SECRET" -n sovereign-au >/dev/null 2>&1; then
