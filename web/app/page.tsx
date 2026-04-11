@@ -7,20 +7,7 @@ import { Button } from '../components/ui'
 import { ReconciliationHub } from '../components/reconciliation/ReconciliationHub'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Activity, 
-  Shield, 
-  Globe, 
-  ChevronRight, 
-  RefreshCw,
-  Zap,
-  Layout
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-
-interface DetailModal {
-  title: string
-  status: any
-}
+import { MaterialIcon } from '@/components/ui'
 
 export default function HomePage() {
   const [detailModal, setDetailModal] = useState<DetailModal | null>(null)
@@ -54,7 +41,7 @@ export default function HomePage() {
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl blur opacity-40 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
                 <div className="relative w-11 h-11 bg-slate-950 rounded-xl flex items-center justify-center border border-white/10 group-hover:border-white/20 transition-colors">
-                  <Shield className="w-6 h-6 text-indigo-400" />
+                  <MaterialIcon name="shield" className="text-2xl text-indigo-400 font-bold" />
                 </div>
               </div>
               <div>
@@ -79,7 +66,7 @@ export default function HomePage() {
                 <div className="flex flex-col items-end">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Region</span>
                   <div className="flex items-center space-x-1">
-                    <Globe className="w-3 h-3 text-slate-400" />
+                    <MaterialIcon name="public" className="text-sm text-slate-400" />
                     <span className="text-xs font-semibold text-slate-300">Australia East</span>
                   </div>
                 </div>
@@ -111,7 +98,7 @@ export default function HomePage() {
                   disabled={isRefreshing}
                   className="w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-600/20 disabled:opacity-50 transition-all active:scale-95 flex items-center justify-center border border-indigo-400/30"
                 >
-                  <RefreshCw className={cn("w-5 h-5", isRefreshing && "animate-spin")} />
+                  <MaterialIcon name="sync" className={cn("text-xl", isRefreshing && "animate-spin")} />
                 </button>
               </div>
             </div>
@@ -124,9 +111,9 @@ export default function HomePage() {
         <section className="mb-12 relative flex items-center justify-between">
           <div className="relative">
             <div className="absolute -left-12 -top-12 w-32 h-32 bg-indigo-600/10 blur-[80px] rounded-full"></div>
-            <div className="flex items-center space-x-2 text-indigo-400 mb-3">
-              <Activity className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-[0.3em]">Operational Intelligence</span>
+            <div className="flex items-center space-x-2 text-indigo-400 mb-3 text-[10px] font-black uppercase tracking-[0.3em]">
+              <MaterialIcon name="bolt" className="text-sm" />
+              <span>Operational Intelligence</span>
             </div>
             <h2 className="text-4xl font-extrabold text-white mb-2 leading-tight">
               Recovery <span className="text-indigo-400">Orchestrator</span>
@@ -155,7 +142,7 @@ export default function HomePage() {
             className="premium-glass border-rose-500/30 bg-rose-500/5 rounded-3xl p-6 mb-12 flex items-center space-x-6"
           >
             <div className="w-14 h-14 bg-rose-500/10 rounded-2xl flex items-center justify-center border border-rose-500/20 text-rose-500">
-              <Zap className="w-7 h-7" />
+              <MaterialIcon name="electric_bolt" className="text-3xl" />
             </div>
             <div className="flex-1">
               <h3 className="text-rose-400 font-bold uppercase tracking-widest text-xs">Connectivity Incident</h3>

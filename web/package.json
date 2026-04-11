@@ -33,7 +33,6 @@
     "class-variance-authority": "0.7.0",
     "@radix-ui/react-slot": "1.0.2",
     "tailwind-merge": "2.3.0",
-    "lucide-react": "0.378.0",
     "recharts": "2.12.7",
     "date-fns": "3.6.0",
     "react-hook-form": "7.51.4",
@@ -71,17 +70,7 @@
     "react-day-picker": "8.10.1",
     "react-hot-toast": "2.4.1",
     "socket.io-client": "4.7.5",
-    "react-table": "7.8.0",
     "@tanstack/react-table": "8.17.3",
-    "react-window": "1.8.8",
-    "d3": "7.9.0",
-    "@types/d3": "7.4.3",
-    "chart.js": "4.4.2",
-    "react-chartjs-2": "5.2.0",
-    "react-syntax-highlighter": "15.5.0",
-    "@types/react-syntax-highlighter": "15.5.13",
-    "react-markdown": "9.0.1",
-    "remark-gfm": "4.0.0",
     "next-themes": "0.3.0",
     "cmdk": "1.0.0",
     "sonner": "1.4.41",
@@ -107,8 +96,6 @@
     "@storybook/react": "8.1.6",
     "@storybook/test": "8.1.6",
     "storybook": "8.1.6",
-    "prettier": "3.2.5",
-    "@types/react-table": "7.7.20",
-    "@types/react-window": "1.8.8"
+    "prettier": "3.2.5"
   }
 }

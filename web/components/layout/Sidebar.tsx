@@ -4,29 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import {
-  LayoutDashboard,
-  RefreshCw,
-  BarChart3,
-  MessageSquare,
-  AlertTriangle,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui";
-
-import { Workflow } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { MaterialIcon } from "@/components/ui/MaterialIcon";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Recovery", href: "/recovery", icon: RefreshCw },
-  { name: "Workflows", href: "/workflows", icon: Workflow },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Communications", href: "/communications", icon: MessageSquare },
-  { name: "Failures", href: "/failures", icon: AlertTriangle },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Dashboard", href: "/", icon: "dashboard" },
+  { name: "Recovery", href: "/recovery", icon: "sync" },
+  { name: "Workflows", href: "/workflows", icon: "account_tree" },
+  { name: "Analytics", href: "/analytics", icon: "analytics" },
+  { name: "Communications", href: "/communications", icon: "forum" },
+  { name: "Failures", href: "/failures", icon: "warning" },
+  { name: "Settings", href: "/settings", icon: "settings" },
 ];
 
 interface SidebarProps {
@@ -70,11 +59,7 @@ export function Sidebar({ className }: SidebarProps) {
           onClick={() => setCollapsed(!collapsed)}
           className="ml-auto"
         >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+          <MaterialIcon name={collapsed ? "chevron_right" : "chevron_left"} className="h-4 w-4" />
         </Button>
       </div>
 
@@ -96,7 +81,7 @@ export function Sidebar({ className }: SidebarProps) {
                     : "text-muted-foreground hover:text-foreground hover:bg-accent",
                 )}
               >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
+                <MaterialIcon name={item.icon} className="h-5 w-5 flex-shrink-0" />
                 {!collapsed && (
                   <motion.span
                     initial={{ opacity: 0 }}
