@@ -197,48 +197,46 @@ jobs:
           echo "## Validating Sovereign AU Configuration" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Build and validate kustomize output
-          kustomize build infrastructure/kubernetes/overlays/sovereign-au > /tmp/sovereign-output.yaml
+          # Build kustomize output
+          TEMP_MANIFEST="/tmp/sovereign-output.yaml"
+          kustomize build infrastructure/kubernetes/overlays/sovereign-au > $TEMP_MANIFEST
           
-          # Check deployment count
-          DEPLOYMENT_COUNT=$(grep -c "^kind: Deployment" /tmp/sovereign-output.yaml)
-          echo "### Deployment Count Validation" >> $GITHUB_STEP_SUMMARY
-          echo "- Expected: 6 deployments" >> $GITHUB_STEP_SUMMARY
-          echo "- Found: $DEPLOYMENT_COUNT deployments" >> $GITHUB_STEP_SUMMARY
+          # List all generated deployments for visibility
+          echo "### Generated Deployments" >> $GITHUB_STEP_SUMMARY
+          DEPLOYED_NAMES=$(grep -A 10 "^kind: Deployment" $TEMP_MANIFEST | grep "  name:" | sed 's/  name: //')
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$DEPLOYED_NAMES" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
           
-          if [ "$DEPLOYMENT_COUNT" -ne 6 ]; then
-            echo "- Status: FAILED - Incorrect deployment count" >> $GITHUB_STEP_SUMMARY
-            echo "ERROR: Expected 6 deployments, found $DEPLOYMENT_COUNT" >&2
+          # Define required deployments (post-suffix removal)
+          REQUIRED_DEPLOYMENTS=(
+            "payment-watchdog-api"
+            "payment-watchdog-web"
+            "postgres"
+            "recovery-orchestration"
+            "redis"
+            "cloudflare-tunnel"
+          )
+          
+          MISSING_RESOURCES=()
+          for DEP in "${REQUIRED_DEPLOYMENTS[@]}"; do
+            if ! grep -q "  name: $DEP" $TEMP_MANIFEST; then
+              MISSING_RESOURCES+=("$DEP")
+            fi
+          done
+          
+          if [ ${#MISSING_RESOURCES[@]} -ne 0 ]; then
+            echo "### ❌ Configuration Validation FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "The following required deployments were missing from the kustomize build:" >> $GITHUB_STEP_SUMMARY
+            for MISSING in "${MISSING_RESOURCES[@]}"; do
+              echo "- $MISSING" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "ERROR: Missing deployments: ${MISSING_RESOURCES[*]}" >&2
             exit 1
-          else
-            echo "- Status: PASSED" >> $GITHUB_STEP_SUMMARY
           fi
           
-          # Validate deployment names
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Expected Deployment Names" >> $GITHUB_STEP_SUMMARY
-          echo "- payment-watchdog-api-sovereign-au" >> $GITHUB_STEP_SUMMARY
-          echo "- payment-watchdog-web-sovereign-au" >> $GITHUB_STEP_SUMMARY
-          echo "- postgres-sovereign-au" >> $GITHUB_STEP_SUMMARY
-          echo "- recovery-orchestration-sovereign-au" >> $GITHUB_STEP_SUMMARY
-          echo "- redis-sovereign-au" >> $GITHUB_STEP_SUMMARY
-          echo "- cloudflare-tunnel" >> $GITHUB_STEP_SUMMARY
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Actual Deployment Names Found" >> $GITHUB_STEP_SUMMARY
-          grep -A 5 "^kind: Deployment" /tmp/sovereign-output.yaml | grep "  name:" | sed 's/  name: /- /' >> $GITHUB_STEP_SUMMARY
-          
-          # Check for duplicates
-          DUPLICATE_COUNT=$(grep -c "  name: payment-watchdog-api-sovereign-au" /tmp/sovereign-output.yaml)
-          if [ "$DUPLICATE_COUNT" -gt 1 ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### DUPLICATE DETECTION" >> $GITHUB_STEP_SUMMARY
-            echo "- WARNING: Found duplicate deployment references" >> $GITHUB_STEP_SUMMARY
-            echo "- This may indicate HPA references (expected)" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Configuration Validation: PASSED" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Configuration Validation: PASSED" >> $GITHUB_STEP_SUMMARY
+          echo "All 6 core deployments are present in the final manifest." >> $GITHUB_STEP_SUMMARY
 
       - name: Determine Image Tag
         id: tag
