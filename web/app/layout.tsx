@@ -16,6 +16,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+      </head>
       <body className="font-sans antialiased overflow-x-hidden">
         {children}
       </body>

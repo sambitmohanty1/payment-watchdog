@@ -19,13 +19,5 @@ export {
 } from './dropdown-menu'
 export { Progress } from './progress'
 export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
-export { 
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from './table'
+export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from './table'
+export { MaterialIcon } from './MaterialIcon'
