@@ -49,6 +49,9 @@ spec:
         - name: postgres-config
           mountPath: /etc/postgresql/postgresql.conf
           subPath: postgresql.conf
+        - name: postgres-certs
+          mountPath: /etc/postgresql/certs
+          readOnly: true
         resources:
           requests:
             cpu: 100m
@@ -83,6 +86,10 @@ spec:
       - name: postgres-config
         configMap:
           name: postgres-config
+      - name: postgres-certs
+        secret:
+          secretName: postgres-ssl-certs
+          defaultMode: 0400
       securityContext:
         runAsUser: 999
         runAsGroup: 999

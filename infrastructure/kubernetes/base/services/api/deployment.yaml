@@ -39,6 +39,8 @@ spec:
             name: payment-watchdog-config
         - secretRef:
             name: payment-watchdog-secrets
+        - name: DATABASE_SSL_ROOT_CERT
+          value: /etc/db-certs/ca.crt
         resources:
           requests:
             cpu: 100m
@@ -62,11 +64,18 @@ spec:
         - name: config-volume
           mountPath: /app/config
           readOnly: true
+        - name: db-certs
+          mountPath: /etc/db-certs
+          readOnly: true
       volumes:
       - name: config-volume
         configMap:
           name: payment-watchdog-config
           optional: false
+      - name: db-certs
+        secret:
+          secretName: db-ca-cert
+          defaultMode: 0400
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

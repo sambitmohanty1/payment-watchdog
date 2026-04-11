@@ -53,7 +53,8 @@ type DatabaseConfig struct {
 	Name     string `mapstructure:"name"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
-	SSLMode  string `mapstructure:"ssl_mode"`
+	SSLMode     string `mapstructure:"ssl_mode"`
+	SSLRootCert string `mapstructure:"ssl_root_cert"`
 }
 
 // StripeConfig holds Stripe configuration
@@ -102,6 +103,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("database.user", "postgres")
 	viper.SetDefault("database.password", "")
 	viper.SetDefault("database.ssl_mode", "disable")
+	viper.SetDefault("database.ssl_root_cert", "")
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("sovereign_mode", false)
 
@@ -171,6 +173,14 @@ func Load() (*Config, error) {
 	if err := viper.BindEnv("database.password", "DATABASE_PASSWORD"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_PASSWORD: %v\n", err)
 		return nil, fmt.Errorf("failed to bind DATABASE_PASSWORD: %w", err)
+	}
+	if err := viper.BindEnv("database.ssl_mode", "DATABASE_SSL_MODE"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_SSL_MODE: %v\n", err)
+		return nil, fmt.Errorf("failed to bind DATABASE_SSL_MODE: %w", err)
+	}
+	if err := viper.BindEnv("database.ssl_root_cert", "DATABASE_SSL_ROOT_CERT"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind DATABASE_SSL_ROOT_CERT: %v\n", err)
+		return nil, fmt.Errorf("failed to bind DATABASE_SSL_ROOT_CERT: %w", err)
 	}
 	if err := viper.BindEnv("stripe.secret_key", "STRIPE_SECRET_KEY"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind STRIPE_SECRET_KEY: %v\n", err)

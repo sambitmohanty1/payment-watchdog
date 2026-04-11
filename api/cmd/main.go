@@ -35,6 +35,9 @@ func main() {
 
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
 		c.Database.Host, c.Database.User, c.Database.Password, c.Database.Name, c.Database.Port, c.Database.SSLMode)
+	if c.Database.SSLRootCert != "" {
+		dsn = fmt.Sprintf("%s sslrootcert=%s", dsn, c.Database.SSLRootCert)
+	}
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
