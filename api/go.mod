@@ -1,6 +1,6 @@
 module github.com/sambitmohanty1/payment-watchdog/api
 
-go 1.25.0
+go 1.23.0
 
 require (
 	firebase.google.com/go/v4 v4.19.0

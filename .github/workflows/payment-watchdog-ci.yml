@@ -48,7 +48,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.23.0'
           cache: true # Native caching enabled
           cache-dependency-path: "**/*.sum"
 
@@ -68,7 +68,7 @@ jobs:
       - name: Run API unit tests
         run: |
           cd api
-          go test -v -race -coverprofile=coverage-api.out ./...
+          GOTOOLCHAIN=local go test -v -race -coverprofile=coverage-api.out ./...
 
       # Temporarily disabled - Worker unit tests
       # - name: Run Worker unit tests
@@ -233,7 +233,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.23.0'
           cache: true
           cache-dependency-path: "**/*.sum"
 
