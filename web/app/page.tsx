@@ -6,8 +6,13 @@ import { StatusCard, StatusDetail } from '../components/ui/StatusCard'
 import { Button } from '../components/ui'
 import { ReconciliationHub } from '../components/reconciliation/ReconciliationHub'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
 import { MaterialIcon } from '@/components/ui'
+import { cn } from '@/lib/utils'
+
+interface DetailModal {
+  title: string
+  status: any
+}
 
 export default function HomePage() {
   const [detailModal, setDetailModal] = useState<DetailModal | null>(null)
