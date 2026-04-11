@@ -14,6 +14,7 @@ resources:
   - ../../base/services/api
   - ../../base/services/worker
   - ../../base/services/web
+  - cloudflare-tunnel.yaml
 
 # Environment-specific namespace
 namespace: sovereign-au
