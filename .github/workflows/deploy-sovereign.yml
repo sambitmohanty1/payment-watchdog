@@ -40,6 +40,10 @@ jobs:
     environment:
       name: sovereign-au
       url: https://130.162.198.32.ap-melbourne-1.oraclecloudapps.com
+    permissions:
+      contents: read
+      checks: read
+      packages: read
 
     steps:
       - name: Checkout code
@@ -143,7 +147,7 @@ jobs:
           wait-interval: 30
           allowed-conclusions: success
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Decode Kubeconfig
         id: decode
