@@ -47,7 +47,7 @@ const nextConfig = {
       {
         source: '/api/system/:path*',
         destination: process.env.INTERNAL_API_URL 
-          ? `${process.env.INTERNAL_API_URL}/api/:path*`
+          ? `${process.env.INTERNAL_API_URL}/:path*`
           : 'http://localhost:8085/:path*',
       },
     ];
