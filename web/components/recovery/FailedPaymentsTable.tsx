@@ -43,11 +43,34 @@ const statusConfig = {
   needs_attention: { icon: 'warning', color: 'bg-orange-500/10 text-orange-500 border-orange-500/20' },
 }
 
+import { useAppStore } from '@/lib/store'
+import { AuditTrailSheet } from './AuditTrailSheet'
+
 export function FailedPaymentsTable() {
+  const { isPrivacyMode } = useAppStore()
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
+  
+  const maskPII = (text: string) => {
+    if (!isPrivacyMode || !text) return text
+    if (text.includes('@')) {
+      const [name, domain] = text.split('@')
+      return `${name[0]}***@${domain}`
+    }
+    return `${text[0]}${'*'.repeat(text.length - 1)}`
+  }
+  
   const [error, setError] = useState<string | null>(null)
   const [failedPayments, setFailedPayments] = useState<FailedPayment[]>([])
+  
+  // Audit Trail State
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [focusedPayment, setFocusedPayment] = useState<{id: string, name: string} | null>(null)
+
+  const openAuditTrail = (payment: FailedPayment) => {
+    setFocusedPayment({ id: payment.id, name: maskPII(payment.customer.name) })
+    setIsSheetOpen(true)
+  }
   
   useEffect(() => {
     const fetchData = async () => {
@@ -66,7 +89,7 @@ export function FailedPaymentsTable() {
             status: item.status === 'resolved' ? 'succeeded' : item.status === 'escalated' ? 'failed' : 'pending',
             provider: item.provider_id || 'stripe',
             lastAttempt: new Date(item.created_at),
-            nextRetry: null, // Would be fetched from a retry schedule endpoint
+            nextRetry: null, 
             retryCount: 0,
             maxRetries: 5,
           }))
@@ -99,12 +122,13 @@ export function FailedPaymentsTable() {
   }
 
   return (
+    <>
     <div className="rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-2xl">
       <Table>
         <TableHeader className="bg-slate-800/50">
           <TableRow className="border-slate-800 hover:bg-transparent">
-            <TableHead className="w-12 text-center">
-              <MaterialIcon name="bolt" className="text-amber-500 text-sm" />
+            <TableHead className="w-12 text-center text-[10px] text-slate-500 font-black uppercase tracking-tighter">
+              Audit
             </TableHead>
             <TableHead className="text-slate-300 font-semibold">Customer</TableHead>
             <TableHead className="text-slate-300 font-semibold">Amount</TableHead>
@@ -117,25 +141,40 @@ export function FailedPaymentsTable() {
         <TableBody>
           {failedPayments.map((payment) => {
             const config = statusConfig[payment.status] || statusConfig.pending
+            const isHighValue = payment.amount >= 100000 // $1,000
             
             return (
-              <TableRow key={payment.id} className="border-slate-800 hover:bg-slate-800/30 transition-colors group">
-                <TableCell className="text-center">
+              <TableRow 
+                key={payment.id} 
+                className={cn(
+                  "border-slate-800 hover:bg-slate-800/30 transition-colors group cursor-pointer",
+                  isHighValue && "bg-blue-500/5"
+                )}
+                onClick={() => openAuditTrail(payment)}
+              >
+                <TableCell className="text-center relative">
+                  {isHighValue && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                  )}
                   <MaterialIcon 
-                    name={selectedRows.has(payment.id) ? 'check_box' : 'check_box_outline_blank'} 
-                    className="text-slate-600 cursor-pointer hover:text-blue-400 transition-colors"
-                    onClick={() => {
-                        const next = new Set(selectedRows)
-                        if (next.has(payment.id)) next.delete(payment.id)
-                        else next.add(payment.id)
-                        setSelectedRows(next)
-                    }}
+                    name={isHighValue ? "priority_high" : "manage_search"} 
+                    className={cn(
+                      "transition-colors",
+                      isHighValue ? "text-blue-400 font-bold" : "text-slate-600 hover:text-blue-400"
+                    )}
                   />
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col">
-                    <span className="font-bold text-slate-100">{payment.customer.name}</span>
-                    <span className="text-xs text-slate-500 group-hover:text-slate-400 transition-colors">{payment.customer.email}</span>
+                    <div className="flex items-center gap-2">
+                       <span className="font-bold text-slate-100">{maskPII(payment.customer.name)}</span>
+                       {isHighValue && (
+                         <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1 rounded font-black tracking-tighter border border-blue-500/30">
+                           HEAVYWEIGHT
+                         </span>
+                       )}
+                    </div>
+                    <span className="text-xs text-slate-500 group-hover:text-slate-400 transition-colors">{maskPII(payment.customer.email)}</span>
                   </div>
                 </TableCell>
                 <TableCell className="font-mono font-bold text-slate-200">
@@ -161,7 +200,7 @@ export function FailedPaymentsTable() {
                   </div>
                 </TableCell>
                 <TableCell className="text-right whitespace-nowrap">
-                  <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-400">
                       <MaterialIcon name="send" className="text-lg" />
                     </Button>
@@ -215,5 +254,14 @@ export function FailedPaymentsTable() {
         </div>
       </div>
     </div>
+
+    <AuditTrailSheet 
+        isOpen={isSheetOpen} 
+        onClose={() => setIsSheetOpen(false)} 
+        paymentId={focusedPayment?.id || null} 
+        customerName={focusedPayment?.name || ''} 
+    />
+    </>
   )
 }
+
