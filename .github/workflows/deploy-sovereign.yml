@@ -203,12 +203,12 @@ jobs:
           # Check deployment count
           DEPLOYMENT_COUNT=$(grep -c "^kind: Deployment" /tmp/sovereign-output.yaml)
           echo "### Deployment Count Validation" >> $GITHUB_STEP_SUMMARY
-          echo "- Expected: 5 deployments" >> $GITHUB_STEP_SUMMARY
+          echo "- Expected: 6 deployments" >> $GITHUB_STEP_SUMMARY
           echo "- Found: $DEPLOYMENT_COUNT deployments" >> $GITHUB_STEP_SUMMARY
           
-          if [ "$DEPLOYMENT_COUNT" -ne 5 ]; then
+          if [ "$DEPLOYMENT_COUNT" -ne 6 ]; then
             echo "- Status: FAILED - Incorrect deployment count" >> $GITHUB_STEP_SUMMARY
-            echo "ERROR: Expected 5 deployments, found $DEPLOYMENT_COUNT" >&2
+            echo "ERROR: Expected 6 deployments, found $DEPLOYMENT_COUNT" >&2
             exit 1
           else
             echo "- Status: PASSED" >> $GITHUB_STEP_SUMMARY
@@ -222,6 +222,7 @@ jobs:
           echo "- postgres-sovereign-au" >> $GITHUB_STEP_SUMMARY
           echo "- recovery-orchestration-sovereign-au" >> $GITHUB_STEP_SUMMARY
           echo "- redis-sovereign-au" >> $GITHUB_STEP_SUMMARY
+          echo "- cloudflare-tunnel" >> $GITHUB_STEP_SUMMARY
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Actual Deployment Names Found" >> $GITHUB_STEP_SUMMARY
