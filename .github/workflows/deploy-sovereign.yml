@@ -523,7 +523,7 @@ jobs:
           
           # API Service
           echo "### Checking API Service Rollout" >> $GITHUB_STEP_SUMMARY
-          if kubectl rollout status deployment/payment-watchdog-api-sovereign-au --timeout=300s --request-timeout=30s; then
+          if kubectl rollout status deployment/payment-watchdog-api --timeout=300s --request-timeout=30s; then
             echo "- API Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- API Service: FAILED" >> $GITHUB_STEP_SUMMARY
@@ -532,7 +532,7 @@ jobs:
           
           # Web Service
           echo "### Checking Web Service Rollout" >> $GITHUB_STEP_SUMMARY
-          if kubectl rollout status deployment/payment-watchdog-web-sovereign-au --timeout=300s --request-timeout=30s; then
+          if kubectl rollout status deployment/payment-watchdog-web --timeout=300s --request-timeout=30s; then
             echo "- Web Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Web Service: FAILED" >> $GITHUB_STEP_SUMMARY
@@ -541,7 +541,7 @@ jobs:
           
           # Worker Service
           echo "### Checking Worker Service Rollout" >> $GITHUB_STEP_SUMMARY
-          if kubectl rollout status deployment/recovery-orchestration-sovereign-au --timeout=300s --request-timeout=30s; then
+          if kubectl rollout status deployment/recovery-orchestration --timeout=300s --request-timeout=30s; then
             echo "- Worker Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Worker Service: FAILED" >> $GITHUB_STEP_SUMMARY
@@ -550,7 +550,7 @@ jobs:
           
           # Database Service
           echo "### Checking Database Service Rollout" >> $GITHUB_STEP_SUMMARY
-          if kubectl rollout status deployment/postgres-sovereign-au --timeout=300s --request-timeout=30s; then
+          if kubectl rollout status deployment/postgres --timeout=300s --request-timeout=30s; then
             echo "- Database Service: DEPLOYED" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Database Service: FAILED" >> $GITHUB_STEP_SUMMARY
@@ -601,7 +601,7 @@ jobs:
           echo "### Health Checks" >> $GITHUB_STEP_SUMMARY
           
           # API Health Check
-          if kubectl exec deployment/payment-watchdog-api-sovereign-au -- curl -s -f http://localhost:8085/health; then
+          if kubectl exec deployment/payment-watchdog-api -- curl -s -f http://localhost:8085/health; then
             echo "- API Health: PASS" >> $GITHUB_STEP_SUMMARY
           else
             echo "- API Health: FAIL" >> $GITHUB_STEP_SUMMARY
@@ -635,19 +635,19 @@ jobs:
           
           echo "### Rolling Back Services" >> $GITHUB_STEP_SUMMARY
           
-          if kubectl rollout undo deployment/payment-watchdog-api-sovereign-au; then
+          if kubectl rollout undo deployment/payment-watchdog-api; then
             echo "- API Service: ROLLED BACK" >> $GITHUB_STEP_SUMMARY
           else
             echo "- API Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
           fi
           
-          if kubectl rollout undo deployment/payment-watchdog-web-sovereign-au; then
+          if kubectl rollout undo deployment/payment-watchdog-web; then
             echo "- Web Service: ROLLED BACK" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Web Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
           fi
           
-          if kubectl rollout undo deployment/recovery-orchestration-sovereign-au; then
+          if kubectl rollout undo deployment/recovery-orchestration; then
             echo "- Worker Service: ROLLED BACK" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Worker Service: ROLLBACK FAILED" >> $GITHUB_STEP_SUMMARY
