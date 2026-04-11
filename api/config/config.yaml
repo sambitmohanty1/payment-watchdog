@@ -1,9 +1,7 @@
 server:
   port: "8085"
   host: "0.0.0.0"
-  https: true
-  cert_file: "./certs/server.crt"
-  key_file: "./certs/server.key"
+  https: false
 
 database:
   host: "postgres-sovereign-au.sovereign-au.svc.cluster.local"

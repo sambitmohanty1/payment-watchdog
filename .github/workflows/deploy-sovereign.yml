@@ -39,7 +39,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     environment:
       name: sovereign-au
-      url: https://130.162.198.32.ap-melbourne-1.oraclecloudapps.com
+      url: http://152.69.179.49
     permissions:
       contents: read
       checks: read

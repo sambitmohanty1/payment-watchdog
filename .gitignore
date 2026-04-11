@@ -63,6 +63,8 @@ coverage/
 *.key
 *.crt
 *.pem
+*.csr
+*.srl
 
 # OCI configuration and credentials
 oci config/

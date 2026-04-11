@@ -178,7 +178,7 @@ patches:
               - name: INTERNAL_API_URL
                 value: "http://payment-watchdog-api-sovereign-au.sovereign-au.svc.cluster.local"
               - name: NEXT_PUBLIC_API_URL
-                value: "http://payment-watchdog-api-sovereign-au.sovereign-au.svc.cluster.local:80"
+                value: "http://207.211.159.224"
               - name: NO_PROXY
                 value: "localhost,127.0.0.1,::1,payment-watchdog-api-sovereign-au.sovereign-au.svc.cluster.local"
               - name: no_proxy
@@ -389,15 +389,20 @@ patches:
                     name: api-secrets
                     key: XERO_CLIENT_SECRET
               - name: XERO_REDIRECT_URI
-                value: "https://207.211.159.224:8085/xero/oauth/callback"
+                value: "http://207.211.159.224/xero/oauth/callback"
               # Stripe payment credentials (add to api-secrets when ready)
               - name: STRIPE_SECRET_KEY
                 value: ""  # TODO: move to secretKeyRef once added to api-secrets
               - name: STRIPE_WEBHOOK_SECRET
                 value: ""  # TODO: move to secretKeyRef once added to api-secrets
+              - name: DATABASE_SSL_ROOT_CERT
+                value: "/etc/db-certs/ca.crt"
               volumeMounts:
               - name: firebase-credentials
                 mountPath: /app/secrets/firebase
+                readOnly: true
+              - name: db-certs
+                mountPath: /etc/db-certs
                 readOnly: true
             volumes:
             - name: firebase-credentials
@@ -406,6 +411,10 @@ patches:
                 items:
                 - key: service-account.json
                   path: service-account.json
+            - name: db-certs
+              secret:
+                secretName: db-ca-cert
+                defaultMode: 0400
 
   # Fix worker environment for sovereign deployment
   - target:
@@ -442,9 +451,20 @@ patches:
                 value: "5432"
               - name: REDIS_ADDR
                 value: "redis-sovereign-au.sovereign-au.svc.cluster.local:6379"
+              - name: DATABASE_SSL_ROOT_CERT
+                value: "/etc/db-certs/ca.crt"
               # Remove HTTP probes - this is a background stream consumer, not an HTTP server
               livenessProbe: null
               readinessProbe: null
+              volumeMounts:
+              - name: db-certs
+                mountPath: /etc/db-certs
+                readOnly: true
+            volumes:
+            - name: db-certs
+              secret:
+                secretName: db-ca-cert
+                defaultMode: 0400
 
 # Replicas for sovereign environment
 replicas:
