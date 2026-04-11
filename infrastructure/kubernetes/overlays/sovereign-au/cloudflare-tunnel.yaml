@@ -22,7 +22,10 @@ spec:
         - "--no-autoupdate"
         - run
         - "--token"
-        - "REPLACE_WITH_YOUR_CLOUDFLARE_TOKEN"
+        - valueFrom:
+            secretKeyRef:
+              name: cloudflare-tunnel-secret
+              key: tunnel-token
         resources:
           requests:
             cpu: 100m

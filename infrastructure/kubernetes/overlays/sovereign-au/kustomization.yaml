@@ -109,6 +109,35 @@ patches:
         path: /spec/storageClassName
         value: oci-bv
 
+  # Fix for postgres cert mounting - handles both standard TLS secrets and custom ones
+  - target:
+      kind: Deployment
+      name: postgres
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: postgres
+      spec:
+        template:
+          spec:
+            volumes:
+            - name: postgres-certs
+              secret:
+                secretName: postgres-ssl-certs
+                items:
+                - key: server.crt
+                  path: server.crt
+                - key: server.key
+                  path: server.key
+                - key: ca.crt
+                  path: ca.crt
+                - key: tls.crt
+                  path: server.crt
+                - key: tls.key
+                  path: server.key
+                defaultMode: 0400
+
   # API service configuration patch - CRITICAL for fixing pod crashes
   - target:
       kind: ConfigMap
@@ -482,3 +511,9 @@ replicas:
     count: 1
   - name: recovery-orchestration
     count: 2
+
+# Secrets for sovereign environment
+secretGenerator:
+  - name: cloudflare-tunnel-secret
+    literals:
+      - tunnel-token=REPLACE_WITH_YOUR_CLOUDFLARE_TOKEN
