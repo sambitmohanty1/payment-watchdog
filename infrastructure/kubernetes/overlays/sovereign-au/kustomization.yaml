@@ -124,17 +124,6 @@ patches:
             - name: postgres-certs
               secret:
                 secretName: postgres-ssl-certs
-                items:
-                - key: server.crt
-                  path: server.crt
-                - key: server.key
-                  path: server.key
-                - key: ca.crt
-                  path: ca.crt
-                - key: tls.crt
-                  path: server.crt
-                - key: tls.key
-                  path: server.key
                 defaultMode: 0400
 
   # API service configuration patch - CRITICAL for fixing pod crashes
