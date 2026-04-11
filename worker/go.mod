@@ -1,6 +1,6 @@
 module github.com/sambitmohanty1/payment-watchdog/worker
 
-go 1.24.0
+go 1.25.0
 
 
 // Local shared packages
