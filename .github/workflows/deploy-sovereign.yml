@@ -142,12 +142,11 @@ jobs:
       - name: Wait for CI to complete
         uses: lewagon/wait-on-check-action@v1.3.4
         with:
-          ref: ${{ github.ref }}
-          check-name: 'Build and Push Images'
+          ref: ${{ github.sha }}
+          check-name: 'Notify CI/CD Status'
+          repo-token: ${{ github.token }}
           wait-interval: 30
           allowed-conclusions: success
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Decode Kubeconfig
         id: decode
@@ -247,10 +246,8 @@ jobs:
             echo "Using provided image tag: ${{ github.event.inputs.image_tag }}"
             echo "image_tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
           else
-            echo "No image tag provided. Getting latest build from main branch..."
-            LATEST_SHA=$(git rev-parse origin/main)
-            echo "Using latest build: $LATEST_SHA"
-            echo "image_tag=$LATEST_SHA" >> $GITHUB_OUTPUT
+            echo "No image tag provided. Using current commit SHA: ${{ github.sha }}"
+            echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Validate Image Integrity (Verified Latest)
@@ -427,7 +424,7 @@ jobs:
           
           # Test image pull manually
           echo "- Testing image pull..." >> $GITHUB_STEP_SUMMARY
-          if kubectl run test-pull --rm -i --restart=Never --image=ghcr.io/sambitmohanty1/payment-watchdog/api:latest --image-pull-policy=Always --overrides='{"spec":{"imagePullSecrets":[{"name":"ghcr-secret"}]}' -n sovereign-au --command -- echo "Image pull successful" 2>/dev/null; then
+          if kubectl run test-pull-$(date +%s) --rm -i --restart=Never --image=ghcr.io/sambitmohanty1/payment-watchdog/api:latest --image-pull-policy=Always --overrides='{"spec":{"imagePullSecrets":[{"name":"ghcr-secret"}]}}' -n sovereign-au --command -- echo "Image pull successful" 2>/dev/null; then
             echo "- Image pull test: SUCCESS" >> $GITHUB_STEP_SUMMARY
           else
             echo "- Image pull test: FAILED" >> $GITHUB_STEP_SUMMARY

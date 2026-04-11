@@ -72,10 +72,8 @@ jobs:
             echo "Using provided image tag: ${{ github.event.inputs.image_tag }}"
             echo "image_tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
           else
-            echo "No image tag provided. Getting latest build from main branch..."
-            LATEST_SHA=$(git rev-parse origin/main)
-            echo "Using latest build: $LATEST_SHA"
-            echo "image_tag=$LATEST_SHA" >> $GITHUB_OUTPUT
+            echo "No image tag provided. Using current commit SHA: ${{ github.sha }}"
+            echo "image_tag=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup Kustomize
