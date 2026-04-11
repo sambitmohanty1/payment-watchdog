@@ -182,7 +182,7 @@ export function FailedPaymentsTable() {
                   {formatCurrency(payment.amount)}
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={`${config.color} py-1 px-2 flex items-center gap-1.5 w-fit border`}>
+                  <Badge variant="default" className={`${config.color} py-1 px-2 flex items-center gap-1.5 w-fit border`}>
                     <MaterialIcon name={config.icon} className="text-sm" />
                     <span className="capitalize">{payment.status.replace('_', ' ')}</span>
                   </Badge>
