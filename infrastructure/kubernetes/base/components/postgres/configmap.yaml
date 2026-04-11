@@ -40,3 +40,9 @@ data:
     # Performance
     random_page_cost = 1.1
     effective_io_concurrency = 200
+    
+    # SSL Configuration
+    ssl = on
+    ssl_cert_file = '/etc/postgresql/certs/server.crt'
+    ssl_key_file = '/etc/postgresql/certs/server.key'
+    ssl_ca_file = '/etc/postgresql/certs/ca.crt'

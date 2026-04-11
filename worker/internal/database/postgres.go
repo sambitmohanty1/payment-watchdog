@@ -37,6 +37,9 @@ func (p *PostgresDatabase) Connect(ctx context.Context) error {
 		p.config.Name,
 		p.config.SSLMode,
 	)
+	if p.config.SSLRootCert != "" {
+		dsn = fmt.Sprintf("%s sslrootcert=%s", dsn, p.config.SSLRootCert)
+	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

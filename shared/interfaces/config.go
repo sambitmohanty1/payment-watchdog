@@ -7,7 +7,8 @@ type DatabaseConfig struct {
 	Name     string `mapstructure:"name"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
-	SSLMode  string `mapstructure:"ssl_mode"`
+	SSLMode     string `mapstructure:"ssl_mode"`
+	SSLRootCert string `mapstructure:"ssl_root_cert"`
 }
 
 // RedisConfig represents Redis configuration

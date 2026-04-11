@@ -70,7 +70,8 @@ type DatabaseConfig struct {
 	Name     string `mapstructure:"name"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
-	SSLMode  string `mapstructure:"ssl_mode"`
+	SSLMode     string `mapstructure:"ssl_mode"`
+	SSLRootCert string `mapstructure:"ssl_root_cert"`
 }
 
 // RedisConfig holds Redis configuration
@@ -145,6 +146,7 @@ func setDefaults() {
 	viper.SetDefault("database.user", "postgres")
 	viper.SetDefault("database.password", "")
 	viper.SetDefault("database.ssl_mode", "disable")
+	viper.SetDefault("database.ssl_root_cert", "")
 	viper.SetDefault("redis.host", "redis-sovereign-au")
 	viper.SetDefault("redis.port", 6379)
 	viper.SetDefault("redis.password", "")
@@ -183,6 +185,8 @@ func bindEnvironment() error {
 	viper.BindEnv("database.user", "DATABASE_USER")
 	viper.BindEnv("database.name", "DATABASE_NAME")
 	viper.BindEnv("database.port", "DATABASE_PORT")
+	viper.BindEnv("database.ssl_mode", "DATABASE_SSL_MODE")
+	viper.BindEnv("database.ssl_root_cert", "DATABASE_SSL_ROOT_CERT")
 
 	// Bind Stripe secrets from environment — never hardcode these
 	viper.BindEnv("stripe.secret_key", "STRIPE_SECRET_KEY")

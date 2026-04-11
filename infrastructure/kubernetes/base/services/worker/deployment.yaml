@@ -70,6 +70,8 @@ spec:
               key: database_password
         - name: DATABASE_SSL_MODE
           value: "require"
+        - name: DATABASE_SSL_ROOT_CERT
+          value: /etc/db-certs/ca.crt
         
         # Redis configuration
         - name: REDIS_ADDR
@@ -93,6 +95,9 @@ spec:
         volumeMounts:
         - name: config-volume
           mountPath: /etc/payment-watchdog
+          readOnly: true
+        - name: db-certs
+          mountPath: /etc/db-certs
           readOnly: true
         
         resources:
@@ -125,6 +130,10 @@ spec:
       - name: config-volume
         configMap:
           name: worker-config
+      - name: db-certs
+        secret:
+          secretName: db-ca-cert
+          defaultMode: 0400
       
       securityContext:
         runAsNonRoot: true
