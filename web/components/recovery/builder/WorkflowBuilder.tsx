@@ -3,14 +3,7 @@
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import {
-  Plus,
-  ArrowDown,
-  Settings,
-  Trash2,
-  GripVertical,
-  AlertTriangle,
-} from "lucide-react";
+import { MaterialIcon } from "@/components/ui/MaterialIcon";
 
 export type StepType =
   | "retry_payment"
@@ -135,7 +128,7 @@ export function WorkflowBuilder({
               className="justify-start w-full"
               onClick={() => addStep(type as StepType)}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <MaterialIcon name="add" className="mr-2 h-4 w-4" />
               {label}
             </Button>
           ))}
@@ -151,7 +144,7 @@ export function WorkflowBuilder({
         <CardContent>
           {steps.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-muted-foreground border-2 border-dashed rounded-lg">
-              <AlertTriangle className="h-12 w-12 mb-4 text-muted-foreground/50" />
+              <MaterialIcon name="warning" className="h-12 w-12 mb-4 text-muted-foreground/50" />
               <p>
                 No steps defined. Add steps from the sidebar to create a
                 workflow.
@@ -176,7 +169,7 @@ export function WorkflowBuilder({
                     `}
                   >
                     <div className="mr-4 text-muted-foreground">
-                      <GripVertical className="h-5 w-5" />
+                      <MaterialIcon name="drag_indicator" className="h-5 w-5" />
                     </div>
 
                     <div className="flex-1">
@@ -195,7 +188,7 @@ export function WorkflowBuilder({
 
                     <div className="ml-4 flex gap-2">
                       <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Settings className="h-4 w-4" />
+                        <MaterialIcon name="settings" className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -203,7 +196,7 @@ export function WorkflowBuilder({
                         className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => removeStep(step.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <MaterialIcon name="delete" className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -212,7 +205,7 @@ export function WorkflowBuilder({
                   {idx < steps.length - 1 && (
                     <div className="h-10 flex items-center justify-center">
                       <div className="w-0.5 h-full bg-border relative">
-                        <ArrowDown className="h-4 w-4 absolute -bottom-2 -left-[7px] text-border bg-background" />
+                        <MaterialIcon name="south" className="h-4 w-4 absolute -bottom-2 -left-[7px] text-border bg-background" />
                       </div>
                     </div>
                   )}

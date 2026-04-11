@@ -1,7 +1,7 @@
 'use client'
 
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui'
-import { Plus, RefreshCw, Download, Filter } from 'lucide-react'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
@@ -43,7 +43,7 @@ export function JobActions({
         className="h-8"
         onClick={onRefresh}
       >
-        <RefreshCw className="mr-2 h-4 w-4" />
+        <MaterialIcon name="sync" className="mr-2 h-4 w-4" />
         Refresh
       </Button>
       
@@ -53,34 +53,34 @@ export function JobActions({
         className="h-8"
         onClick={() => handleExport(false)}
       >
-        <Download className="mr-2 h-4 w-4" />
+        <MaterialIcon name="download" className="mr-2 h-4 w-4" />
         Export
       </Button>
       
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="h-8">
-            <Filter className="mr-2 h-4 w-4" />
+            <MaterialIcon name="filter_alt" className="mr-2 h-4 w-4" />
             Actions
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={handleNewJob}>
-            <Plus className="mr-2 h-4 w-4" />
+            <MaterialIcon name="add" className="mr-2 h-4 w-4" />
             New Recovery Job
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={handleRetrySelected}
             disabled={selectedCount === 0}
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <MaterialIcon name="sync" className="mr-2 h-4 w-4" />
             Retry Selected
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={() => handleExport(true)}
             disabled={selectedCount === 0}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <MaterialIcon name="download" className="mr-2 h-4 w-4" />
             Export Selected
           </DropdownMenuItem>
         </DropdownMenuContent>

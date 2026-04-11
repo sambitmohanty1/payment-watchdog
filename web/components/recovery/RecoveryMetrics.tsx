@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { RefreshCw, CheckCircle, Clock, AlertCircle, TrendingUp } from 'lucide-react'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Card, CardContent, CardHeader, CardTitle, LoadingSpinner } from '@/components/ui'
 
 interface RecoveryMetric {
@@ -10,7 +10,7 @@ interface RecoveryMetric {
   value: string | number
   change: string
   trend: 'up' | 'down' | 'neutral'
-  icon: React.ComponentType<{ className?: string }>
+  icon: string
 }
 
 const mockMetrics: RecoveryMetric[] = [
@@ -19,28 +19,28 @@ const mockMetrics: RecoveryMetric[] = [
     value: 247,
     change: '+12%',
     trend: 'up',
-    icon: RefreshCw
+    icon: 'sync'
   },
   {
     label: 'Success Rate',
     value: '94.2%',
     change: '+2.1%',
     trend: 'up',
-    icon: CheckCircle
+    icon: 'check_circle'
   },
   {
     label: 'Avg Processing Time',
     value: '2.4m',
     change: '-15%',
     trend: 'down',
-    icon: Clock
+    icon: 'schedule'
   },
   {
     label: 'Failed Jobs',
     value: 18,
     change: '-8%',
     trend: 'down',
-    icon: AlertCircle
+    icon: 'warning'
   }
 ]
 
@@ -69,17 +69,18 @@ export function RecoveryMetrics() {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {metric.label}
               </CardTitle>
-              <metric.icon className="h-4 w-4 text-muted-foreground" />
+              <MaterialIcon name={metric.icon} className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{metric.value}</div>
               <div className="flex items-center space-x-1 text-xs">
-                <TrendingUp 
+                <MaterialIcon 
+                  name="trending_up"
                   className={`h-3 w-3 ${
                     metric.trend === 'up' 
                       ? 'text-green-500 rotate-0' 
                       : metric.trend === 'down'
-                      ? 'text-red-500 rotate-180'
+                      ? 'text-red-500 rotate-180 transition-transform'
                       : 'text-gray-500'
                   }`} 
                 />

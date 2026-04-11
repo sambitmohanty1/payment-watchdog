@@ -1,7 +1,7 @@
 import React from 'react'
 import { ServiceStatus } from '../../hooks/useSystemStatus'
 import { cn } from '@/lib/utils'
-import { Activity, ShieldCheck, Zap, AlertCircle } from 'lucide-react'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 
 interface StatusCardProps {
   title: string
@@ -74,13 +74,13 @@ export const StatusCard: React.FC<StatusCardProps> = ({
         <div className="mt-6 pt-6 border-t border-white/5 space-y-3">
           {status.error ? (
             <div className="flex items-center space-x-2 text-rose-400">
-              <AlertCircle className="w-3 h-3" />
+              <MaterialIcon name="warning" className="w-3 h-3" />
               <p className="text-[10px] font-bold uppercase truncate">{status.error}</p>
             </div>
           ) : (
              <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                   <Zap className="w-3 h-3 text-indigo-400" />
+                   <MaterialIcon name="bolt" className="w-3 h-3 text-indigo-400" />
                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                      {status.responseTime ? `${status.responseTime}ms` : 'Syncing'}
                    </span>
@@ -121,7 +121,7 @@ export const StatusDetail: React.FC<StatusDetailProps> = ({
           "w-12 h-12 rounded-2xl flex items-center justify-center border",
           status.status === 'healthy' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
         )}>
-          {status.status === 'healthy' ? <ShieldCheck className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+          {status.status === 'healthy' ? <MaterialIcon name="verified_user" className="w-6 h-6" /> : <MaterialIcon name="warning" className="w-6 h-6" />}
         </div>
         <div>
           <p className="font-black text-slate-500 uppercase tracking-[0.2em] text-[10px]">Service Operational Integrity</p>
@@ -148,7 +148,7 @@ export const StatusDetail: React.FC<StatusDetailProps> = ({
       {status.error && (
         <div className="bg-rose-500/5 border border-rose-500/20 p-5 rounded-3xl">
           <div className="flex items-center space-x-2 mb-2">
-            <Zap className="w-3 h-3 text-rose-500" />
+            <MaterialIcon name="bolt" className="w-3 h-3 text-rose-500" />
             <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em]">Fault Log</p>
           </div>
           <p className="text-xs text-slate-300 leading-relaxed font-mono bg-black/20 p-3 rounded-xl border border-white/5">{status.error}</p>
@@ -157,7 +157,7 @@ export const StatusDetail: React.FC<StatusDetailProps> = ({
       
       <div className="bg-indigo-500/5 p-5 rounded-3xl border border-indigo-500/10">
         <div className="flex items-center justify-center space-x-2 mb-3">
-          <Activity className="w-3 h-3 text-indigo-400" />
+          <MaterialIcon name="monitoring" className="w-3 h-3 text-indigo-400" />
           <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Sovereignty Intelligence</p>
         </div>
         <div className="text-xs text-slate-400 leading-relaxed text-center italic px-4">

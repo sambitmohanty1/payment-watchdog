@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { GitBranch, Zap, Users, DollarSign } from 'lucide-react'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Card, CardContent, CardHeader, CardTitle, Progress, LoadingSpinner } from '@/components/ui'
 
 interface WorkflowMetric {
@@ -56,7 +56,7 @@ export function WorkflowStatus() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
-          <GitBranch className="h-5 w-5" />
+          <MaterialIcon name="account_tree" className="h-5 w-5" />
           <span>Workflow Performance</span>
         </CardTitle>
       </CardHeader>
@@ -82,19 +82,19 @@ export function WorkflowStatus() {
               
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div className="flex items-center space-x-2">
-                  <Zap className="h-4 w-4 text-muted-foreground" />
+                  <MaterialIcon name="bolt" className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Success:</span>
                   <span className="font-medium">{workflow.successRate}%</span>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <MaterialIcon name="attach_money" className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Recovered:</span>
                   <span className="font-medium">${workflow.totalRecovered.toLocaleString()}</span>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <MaterialIcon name="group" className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Avg Time:</span>
                   <span className="font-medium">{workflow.avgTime}</span>
                 </div>

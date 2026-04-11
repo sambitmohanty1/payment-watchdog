@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Loader2 } from 'lucide-react'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { cn } from '@/lib/utils'
 
 interface LoadingSpinnerProps {
@@ -9,9 +9,9 @@ interface LoadingSpinnerProps {
 
 export function LoadingSpinner({ size = 'md', className }: LoadingSpinnerProps) {
   const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-6 w-6',
-    lg: 'h-8 w-8'
+    sm: 'text-sm',
+    md: 'text-xl',
+    lg: 'text-4xl'
   }
 
   return (
@@ -19,8 +19,9 @@ export function LoadingSpinner({ size = 'md', className }: LoadingSpinnerProps) 
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+        className="flex items-center justify-center"
       >
-        <Loader2 className={cn(sizeClasses[size], 'text-primary')} />
+        <MaterialIcon name="sync" className={cn(sizeClasses[size], 'text-primary')} />
       </motion.div>
     </div>
   )

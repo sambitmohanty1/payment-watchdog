@@ -1,6 +1,4 @@
 'use client'
-
-import { Bell, Search, User, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button, Input } from '@/components/ui'
 import {

@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { Play, Pause, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, LoadingSpinner } from '@/components/ui'
 
 interface RecoveryJob {
@@ -50,10 +50,10 @@ const mockJobs: RecoveryJob[] = [
 ]
 
 const statusIcons = {
-  running: Play,
-  paused: Pause,
-  completed: CheckCircle,
-  failed: XCircle
+  running: 'play_arrow',
+  paused: 'pause',
+  completed: 'check_circle',
+  failed: 'cancel'
 }
 
 const statusColors = {
@@ -85,8 +85,6 @@ export function ActiveJobsOverview() {
       <CardContent>
         <div className="space-y-4">
           {jobs?.map((job, index) => {
-            const StatusIcon = statusIcons[job.status]
-            
             return (
               <motion.div
                 key={job.id}
@@ -97,7 +95,7 @@ export function ActiveJobsOverview() {
               >
                 <div className="flex items-center space-x-4">
                   <div className={`p-2 rounded-full ${statusColors[job.status]}`}>
-                    <StatusIcon className="h-4 w-4 text-white" />
+                    <MaterialIcon name={statusIcons[job.status]} className="text-sm text-white" />
                   </div>
                   
                   <div>
@@ -128,16 +126,16 @@ export function ActiveJobsOverview() {
                   <div className="flex items-center space-x-2">
                     {job.status === 'running' && (
                       <Button variant="ghost" size="sm">
-                        <Pause className="h-4 w-4" />
+                        <MaterialIcon name="pause" className="h-4 w-4" />
                       </Button>
                     )}
                     {job.status === 'paused' && (
                       <Button variant="ghost" size="sm">
-                        <Play className="h-4 w-4" />
+                        <MaterialIcon name="play_arrow" className="h-4 w-4" />
                       </Button>
                     )}
                     <Button variant="ghost" size="sm">
-                      <Clock className="h-4 w-4" />
+                      <MaterialIcon name="schedule" className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

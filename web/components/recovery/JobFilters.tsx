@@ -1,6 +1,6 @@
 'use client'
 
-import { Search } from 'lucide-react'
+import { MaterialIcon } from '@/components/ui/MaterialIcon'
 import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui'
 
 type FilterValues = {
@@ -36,7 +36,7 @@ export function JobFilters({
   return (
     <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
       <div className="relative w-full md:max-w-sm">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <MaterialIcon name="search" className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           type="search"
           placeholder="Search payments..."

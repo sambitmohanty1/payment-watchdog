@@ -2,7 +2,7 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { motion } from "framer-motion"
-import { Loader2 } from "lucide-react"
+import { MaterialIcon } from "@/components/ui/MaterialIcon"
 
 import { cn } from "@/lib/utils"
 
@@ -69,7 +69,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || loading}
         {...props}
       >
-        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {loading && <MaterialIcon name="sync" className="mr-2 h-4 w-4 animate-spin" />}
         {icon && !loading && <span className="mr-2">{icon}</span>}
         {children}
       </button>
