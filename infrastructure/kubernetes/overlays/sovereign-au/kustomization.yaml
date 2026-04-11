@@ -369,6 +369,43 @@ patches:
                 value: "redis-sovereign-au.sovereign-au.svc.cluster.local"
               - name: REDIS_PORT
                 value: "6379"
+              # Firebase Auth configuration
+              - name: FIREBASE_PROJECT_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: FIREBASE_PROJECT_ID
+              - name: FIREBASE_SERVICE_ACCOUNT_PATH
+                value: "/app/secrets/firebase/service-account.json"
+              # Xero OAuth credentials
+              - name: XERO_CLIENT_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: XERO_CLIENT_ID
+              - name: XERO_CLIENT_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: XERO_CLIENT_SECRET
+              - name: XERO_REDIRECT_URI
+                value: "https://207.211.159.224:8085/xero/oauth/callback"
+              # Stripe payment credentials (add to api-secrets when ready)
+              - name: STRIPE_SECRET_KEY
+                value: ""  # TODO: move to secretKeyRef once added to api-secrets
+              - name: STRIPE_WEBHOOK_SECRET
+                value: ""  # TODO: move to secretKeyRef once added to api-secrets
+              volumeMounts:
+              - name: firebase-credentials
+                mountPath: /app/secrets/firebase
+                readOnly: true
+            volumes:
+            - name: firebase-credentials
+              secret:
+                secretName: firebase-credentials
+                items:
+                - key: service-account.json
+                  path: service-account.json
 
   # Fix worker environment for sovereign deployment
   - target:
