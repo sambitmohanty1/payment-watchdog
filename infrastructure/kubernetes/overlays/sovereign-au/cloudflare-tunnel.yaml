@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: tunnel
-        image: cloudflare/cloudflared:latest
+        image: docker.io/cloudflare/cloudflared:latest
         args:
         - tunnel
         - "--no-autoupdate"
