@@ -17,15 +17,18 @@ spec:
       containers:
       - name: tunnel
         image: docker.io/cloudflare/cloudflared:latest
+        env:
+        - name: TUNNEL_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: cloudflare-tunnel-secret
+              key: tunnel-token
         args:
         - tunnel
         - "--no-autoupdate"
         - run
         - "--token"
-        - valueFrom:
-            secretKeyRef:
-              name: cloudflare-tunnel-secret
-              key: tunnel-token
+        - "$(TUNNEL_TOKEN)"
         resources:
           requests:
             cpu: 100m
