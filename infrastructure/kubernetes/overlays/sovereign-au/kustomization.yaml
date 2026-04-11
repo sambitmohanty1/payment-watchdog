@@ -454,9 +454,6 @@ patches:
                 value: "redis-sovereign-au.sovereign-au.svc.cluster.local:6379"
               - name: DATABASE_SSL_ROOT_CERT
                 value: "/etc/db-certs/ca.crt"
-              # Remove HTTP probes - this is a background stream consumer, not an HTTP server
-              livenessProbe: null
-              readinessProbe: null
               volumeMounts:
               - name: db-certs
                 mountPath: /etc/db-certs
@@ -466,6 +463,16 @@ patches:
               secret:
                 secretName: db-ca-cert
                 defaultMode: 0400
+
+  # Safely remove probes for background worker using JSON patch to avoid strategic merge null issues
+  - target:
+      kind: Deployment
+      name: recovery-orchestration
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/containers/0/livenessProbe
+      - op: remove
+        path: /spec/template/spec/containers/0/readinessProbe
 
 # Replicas for sovereign environment
 replicas:

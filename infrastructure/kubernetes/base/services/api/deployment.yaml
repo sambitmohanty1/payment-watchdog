@@ -28,63 +28,64 @@ spec:
     spec:
       serviceAccountName: payment-watchdog-api
       containers:
-      - name: app
-        image: ghcr.io/sambitmohanty1/payment-watchdog/api:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8085
-          name: http
-        envFrom:
-        - configMapRef:
-            name: payment-watchdog-config
-        - secretRef:
-            name: payment-watchdog-secrets
-        - name: DATABASE_SSL_ROOT_CERT
-          value: /etc/db-certs/ca.crt
-        resources:
-          requests:
-            cpu: 100m
-            memory: 256Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-        livenessProbe:
-          httpGet:
-            path: /api/health
-            port: 8085
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /api/health
-            port: 8085
-          initialDelaySeconds: 5
-          periodSeconds: 5
-        volumeMounts:
-        - name: config-volume
-          mountPath: /app/config
-          readOnly: true
-        - name: db-certs
-          mountPath: /etc/db-certs
-          readOnly: true
+        - name: app
+          image: ghcr.io/sambitmohanty1/payment-watchdog/api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8085
+              name: http
+          envFrom:
+            - configMapRef:
+                name: payment-watchdog-config
+            - secretRef:
+                name: payment-watchdog-secrets
+          env:
+            - name: DATABASE_SSL_ROOT_CERT
+              value: /etc/db-certs/ca.crt
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8085
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8085
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/config
+              readOnly: true
+            - name: db-certs
+              mountPath: /etc/db-certs
+              readOnly: true
       volumes:
-      - name: config-volume
-        configMap:
-          name: payment-watchdog-config
-          optional: false
-      - name: db-certs
-        secret:
-          secretName: db-ca-cert
-          defaultMode: 0400
+        - name: config-volume
+          configMap:
+            name: payment-watchdog-config
+            optional: false
+        - name: db-certs
+          secret:
+            secretName: db-ca-cert
+            defaultMode: 0400
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: app.kubernetes.io/name
-                  operator: In
-                  values:
-                  - payment-watchdog-api
-              topologyKey: "kubernetes.io/hostname"
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                        - payment-watchdog-api
+                topologyKey: "kubernetes.io/hostname"
