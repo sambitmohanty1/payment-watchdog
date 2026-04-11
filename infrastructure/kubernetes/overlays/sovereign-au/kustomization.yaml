@@ -1,6 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+
 metadata:
   name: sovereign-au-overlay
 
@@ -19,8 +20,6 @@ resources:
 # Environment-specific namespace
 namespace: sovereign-au
 
-# Name suffix for all resources
-nameSuffix: "-sovereign-au"
 
 # Environment-specific labels
 labels:
@@ -156,7 +155,7 @@ patches:
             shutdownTimeout: 30s
             
           database:
-            host: postgres-sovereign-au.sovereign-au.svc.cluster.local
+            host: postgres.sovereign-au.svc.cluster.local
             port: 5432
             name: payment_watchdog
             sslMode: require
@@ -165,7 +164,7 @@ patches:
             connMaxLifetime: 1h
             
           redis:
-            addr: redis-sovereign-au.sovereign-au.svc.cluster.local:6379
+            addr: redis.sovereign-au.svc.cluster.local:6379
             db: 0
             poolSize: 100
             
@@ -206,13 +205,13 @@ patches:
             - name: payment-watchdog-web
               env:
               - name: INTERNAL_API_URL
-                value: "http://payment-watchdog-api-sovereign-au.sovereign-au.svc.cluster.local"
+                value: "http://payment-watchdog-api.sovereign-au.svc.cluster.local"
               - name: NEXT_PUBLIC_API_URL
                 value: "http://207.211.159.224"
               - name: NO_PROXY
-                value: "localhost,127.0.0.1,::1,payment-watchdog-api-sovereign-au.sovereign-au.svc.cluster.local"
+                value: "localhost,127.0.0.1,::1,payment-watchdog-api.sovereign-au.svc.cluster.local"
               - name: no_proxy
-                value: "localhost,127.0.0.1,::1,payment-watchdog-api-sovereign-au.sovereign-au.svc.cluster.local"
+                value: "localhost,127.0.0.1,::1,payment-watchdog-api.sovereign-au.svc.cluster.local"
 
   # Worker service configuration patch - CRITICAL for fixing pod crashes
   - target:
@@ -230,7 +229,7 @@ patches:
             host: 0.0.0.0
             
           database:
-            host: postgres-sovereign-au.sovereign-au.svc.cluster.local
+            host: postgres.sovereign-au.svc.cluster.local
             port: 5432
             name: payment_watchdog
             user: postgres
@@ -240,7 +239,7 @@ patches:
             conn_max_lifetime: 1h
             
           redis:
-            addr: redis-sovereign-au.sovereign-au.svc.cluster.local:6379
+            addr: redis.sovereign-au.svc.cluster.local:6379
             password: redis
             db: 0
             pool_size: 100
@@ -383,7 +382,7 @@ patches:
               - name: ENVIRONMENT
                 value: "sovereign-au"
               - name: DATABASE_HOST
-                value: "postgres-sovereign-au.sovereign-au.svc.cluster.local"
+                value: "postgres.sovereign-au.svc.cluster.local"
               - name: DATABASE_PORT
                 value: "5432"
               - name: DATABASE_NAME
@@ -396,7 +395,7 @@ patches:
                     name: postgres-secrets
                     key: database_password
               - name: REDIS_HOST
-                value: "redis-sovereign-au.sovereign-au.svc.cluster.local"
+                value: "redis.sovereign-au.svc.cluster.local"
               - name: REDIS_PORT
                 value: "6379"
               # Firebase Auth configuration
@@ -476,7 +475,7 @@ patches:
               - name: REDIS_SERVICE_PORT
                 value: "6379"
               - name: DATABASE_HOST
-                value: "postgres-sovereign-au.sovereign-au.svc.cluster.local"
+                value: "postgres.sovereign-au.svc.cluster.local"
               - name: DATABASE_PORT
                 value: "5432"
               - name: REDIS_ADDR
