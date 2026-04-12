@@ -81,6 +81,15 @@ func AuthMiddleware(app *firebase.App, logger *zap.Logger) gin.HandlerFunc {
 			c.Set("user_email", email)
 		}
 
+		// EXTRACT TENANT ID from custom claims (crucial for SaaS scaling)
+		if tenantID, ok := token.Claims["tenant_id"].(string); ok {
+			c.Set("tenant_id", tenantID)
+			logger.Debug("Auth: tenant_id identified", zap.String("tenant_id", tenantID))
+		} else {
+			// During migration, some users might lack a tenant_id
+			logger.Warn("Auth: user has no tenant_id claim", zap.String("user_id", token.UID))
+		}
+
 		c.Next()
 	}
 }

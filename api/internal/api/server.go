@@ -56,6 +56,12 @@ func NewServer(logger *zap.Logger, db *gorm.DB, cfg *config.Config) *Server {
 	engine.Use(middleware.SecurityHeadersMiddleware())
 	engine.Use(middleware.CORSMiddleware(cfg.CORS.AllowedOrigins))
 
+	// SaaS: Inject DB into every request context for isolation middleware
+	engine.Use(func(c *gin.Context) {
+		c.Set("db", db)
+		c.Next()
+	})
+
 	return &Server{
 		engine:      engine,
 		logger:      logger,
@@ -147,6 +153,8 @@ func (s *Server) SetupRoutes() {
 		protected := api.Group("")
 		if s.firebaseApp != nil {
 			protected.Use(middleware.AuthMiddleware(s.firebaseApp, s.logger))
+			// SaaS: Multi-tenant database isolation
+			protected.Use(middleware.TenantIsolationMiddleware(s.logger))
 		}
 		{
 			// Payment failures endpoints
