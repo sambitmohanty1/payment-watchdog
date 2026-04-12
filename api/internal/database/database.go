@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -34,6 +35,59 @@ func RunMigrations(db *gorm.DB) error {
 	}
 
 	return nil
+}
+
+// ProvisionTenantSchema ensures a tenant's schema exists and is fully migrated
+func ProvisionTenantSchema(db *gorm.DB, tenantID string) error {
+	// 1. Strict validation of tenantID to prevent SQL injection
+	re := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	if !re.MatchString(tenantID) {
+		return fmt.Errorf("invalid tenant ID format: %s", tenantID)
+	}
+
+	schemaName := fmt.Sprintf("tenant_%s", tenantID)
+
+	// 2. Check if schema exists
+	exists, err := SchemaExists(db, schemaName)
+	if err != nil {
+		return fmt.Errorf("failed to check schema existence: %w", err)
+	}
+
+	if !exists {
+		// 3. Create schema
+		if err := CreateSchema(db, schemaName); err != nil {
+			return fmt.Errorf("failed to create tenant schema: %w", err)
+		}
+	}
+
+	// 4. Run migrations within the schema
+	// We set the search_path for this transaction/connection
+	tx := db.Begin()
+	if err := tx.Exec(fmt.Sprintf("SET search_path TO %s, public", schemaName)).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to set search_path for provisioning: %w", err)
+	}
+
+	if err := RunMigrations(tx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to run migrations for tenant: %w", err)
+	}
+
+	return tx.Commit().Error
+}
+
+// SchemaExists checks if a PostgreSQL schema exists
+func SchemaExists(db *gorm.DB, schemaName string) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = ?)"
+	err := db.Raw(query, schemaName).Scan(&exists).Error
+	return exists, err
+}
+
+// CreateSchema creates a new PostgreSQL schema
+func CreateSchema(db *gorm.DB, schemaName string) error {
+	// WARNING: schemaName must be validated before calling this (done in ProvisionTenantSchema)
+	return db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", schemaName)).Error
 }
 
 // createMigrationsTable creates the migrations tracking table
