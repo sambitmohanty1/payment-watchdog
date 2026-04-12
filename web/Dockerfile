@@ -33,11 +33,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4896
 
-# Set proxy bypass environment variables for production
-ENV NO_PROXY=localhost,127.0.0.1,::1,lexure-intelligence-mvp.lexure-mvp.svc.cluster.local
-ENV no_proxy=localhost,127.0.0.1,::1,lexure-intelligence-mvp.lexure-mvp.svc.cluster.local
-ENV NEXT_PUBLIC_DEV_PROXY_BYPASS=true
-ENV NEXT_PUBLIC_LOCALHOST_BYPASS=true
+# Set production environment variables
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
