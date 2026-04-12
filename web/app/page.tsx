@@ -115,26 +115,36 @@ export default function HomePage() {
         {/* Welcome Section */}
         <section className="mb-12 relative flex items-center justify-between">
           <div className="relative">
-            <div className="absolute -left-12 -top-12 w-32 h-32 bg-indigo-600/10 blur-[80px] rounded-full"></div>
-            <div className="flex items-center space-x-2 text-indigo-400 mb-3 text-[10px] font-black uppercase tracking-[0.3em]">
-              <MaterialIcon name="bolt" className="text-sm" />
+            <div className="absolute -left-12 -top-12 w-32 h-32 bg-primary-600/20 blur-[80px] rounded-full animate-pulse-slow"></div>
+            <div className="flex items-center space-x-3 text-primary-400 mb-4 text-sm font-display font-bold uppercase tracking-widest bg-primary-600/10 px-4 py-2 rounded-full border border-primary-500/30">
+              <MaterialIcon name="bolt" className="text-lg" />
               <span>Operational Intelligence</span>
             </div>
-            <h2 className="text-4xl font-extrabold text-white mb-2 leading-tight">
-              Recovery <span className="text-indigo-400">Orchestrator</span>
+            <h2 className="text-5xl font-display font-extrabold text-white mb-4 leading-tight">
+              Recovery <span className="text-primary-400 text-glow">Orchestrator</span>
             </h2>
-            <p className="text-slate-400 max-w-xl font-medium text-sm leading-relaxed">
+            <p className="text-neutral-300 max-w-xl font-medium text-lg leading-relaxed">
               Monitoring AI-driven recovery across Australian payment rails. Automated cross-method reconciliation is currently active.
             </p>
+            <div className="mt-6 flex items-center space-x-4">
+              <div className="flex items-center space-x-2 text-success-400">
+                <MaterialIcon name="check_circle" className="text-xl" />
+                <span className="text-sm font-medium">System Active</span>
+              </div>
+              <div className="flex items-center space-x-2 text-info-400">
+                <MaterialIcon name="schedule" className="text-xl" />
+                <span className="text-sm font-medium">Real-time Monitoring</span>
+              </div>
+            </div>
           </div>
 
           <div className="hidden md:flex space-x-4">
-             <div className="premium-glass p-1 rounded-2xl flex">
-               <div className="px-4 py-2 bg-indigo-600/10 text-indigo-400 rounded-xl border border-indigo-500/20">
-                 <span className="text-xs font-bold uppercase tracking-widest">Overview</span>
+             <div className="card-base p-1 rounded-xl flex">
+               <div className="px-4 py-2 bg-primary-600/10 text-primary-400 rounded-lg border border-primary-500/30">
+                 <span className="text-xs font-display font-bold uppercase tracking-widest">Overview</span>
                </div>
-               <div className="px-4 py-2 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
-                 <span className="text-xs font-bold uppercase tracking-widest">History</span>
+               <div className="px-4 py-2 text-neutral-500 hover:text-neutral-300 transition-colors cursor-pointer rounded-lg">
+                 <span className="text-xs font-display font-bold uppercase tracking-widest">History</span>
                </div>
              </div>
           </div>
@@ -144,18 +154,18 @@ export default function HomePage() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="premium-glass border-rose-500/30 bg-rose-500/5 rounded-3xl p-6 mb-12 flex items-center space-x-6"
+            className="card-base border-error-500/30 bg-error-500/5 rounded-3xl p-6 mb-12 flex items-center space-x-6"
           >
-            <div className="w-14 h-14 bg-rose-500/10 rounded-2xl flex items-center justify-center border border-rose-500/20 text-rose-500">
+            <div className="w-14 h-14 bg-error-500/10 rounded-xl flex items-center justify-center border border-error-500/20 text-error-500">
               <MaterialIcon name="electric_bolt" className="text-3xl" />
             </div>
             <div className="flex-1">
-              <h3 className="text-rose-400 font-bold uppercase tracking-widest text-xs">Connectivity Incident</h3>
-              <p className="text-slate-400 text-sm mt-1">{error}</p>
+              <h3 className="text-error-400 font-display font-bold uppercase tracking-widest text-xs">Connectivity Incident</h3>
+              <p className="text-neutral-400 text-sm mt-1">{error}</p>
             </div>
             <button
                onClick={refresh}
-               className="px-6 py-2.5 bg-rose-500 hover:bg-rose-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-rose-500/20 active:scale-95"
+               className="px-6 py-2.5 bg-error-600 hover:bg-error-700 text-white text-xs font-display font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-error-500/20 active:scale-95"
             >
               Restore Sync
             </button>

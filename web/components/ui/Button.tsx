@@ -7,28 +7,29 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "btn-base",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-green-600 text-white hover:bg-green-700",
-        warning: "bg-yellow-600 text-white hover:bg-yellow-700",
+        default: "bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500",
+        destructive: "bg-error-600 text-white hover:bg-error-700 focus-visible:ring-error-500",
+        outline: "border border-neutral-700 bg-neutral-900/50 hover:bg-neutral-800/50 text-neutral-50 focus-visible:ring-primary-500",
+        secondary: "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 focus-visible:ring-neutral-500",
+        ghost: "hover:bg-neutral-800/50 text-neutral-400 hover:text-neutral-300 focus-visible:ring-neutral-500",
+        link: "text-primary-600 underline-offset-4 hover:underline focus-visible:ring-primary-500",
+        success: "bg-success-600 text-white hover:bg-success-700 focus-visible:ring-success-500",
+        warning: "bg-warning-600 text-white hover:bg-warning-700 focus-visible:ring-warning-500",
+        info: "bg-info-600 text-white hover:bg-info-700 focus-visible:ring-info-500",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        xl: "h-12 rounded-lg px-10 text-base",
-        icon: "h-10 w-10",
+        xs: "h-8 rounded-md px-2 text-xs",
+        sm: "h-9 rounded-lg px-3 text-sm",
+        default: "h-10 rounded-lg px-4 text-sm",
+        lg: "h-11 rounded-lg px-6 text-base",
+        xl: "h-12 rounded-xl px-8 text-lg",
+        icon: "h-10 w-10 rounded-lg",
+        "icon-sm": "h-8 w-8 rounded-md",
+        "icon-lg": "h-12 w-12 rounded-xl",
       },
     },
     defaultVariants: {
@@ -60,19 +61,38 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       )
     }
 
-    const { onAnimationStart, onAnimationEnd, ...restProps } = props
+    // Filter out motion-specific props that don't belong on button
+    const { 
+      onAnimationStart, 
+      onAnimationEnd, 
+      whileHover, 
+      whileTap, 
+      transition, 
+      initial, 
+      animate, 
+      exit, 
+      variants, 
+      ...buttonProps 
+    } = props as any
     
     return (
-      <button
+      <motion.button
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || loading}
-        {...props}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+        {...buttonProps}
       >
-        {loading && <MaterialIcon name="sync" className="mr-2 h-4 w-4 animate-spin" />}
-        {icon && !loading && <span className="mr-2">{icon}</span>}
+        {loading && (
+          <MaterialIcon name="sync" className="mr-2 h-4 w-4 animate-spin" />
+        )}
+        {icon && !loading && (
+          <span className="mr-2 flex items-center">{icon}</span>
+        )}
         {children}
-      </button>
+      </motion.button>
     )
   }
 )

@@ -7,6 +7,12 @@ export const metadata: Metadata = {
   keywords: 'payment recovery, sovereign cloud, fintech, payment watchdog, data residency',
   authors: [{ name: 'Payment Watchdog Principal Engineering' }],
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon-192x192.svg',
+    apple: '/favicon-192x192.svg',
+  },
+  manifest: '/site.webmanifest',
 };
 
 export default function RootLayout({

@@ -6,12 +6,16 @@ const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & {
     hover?: boolean
+    elevated?: boolean
+    outlined?: boolean
     gradient?: boolean
   }
->(({ className, hover = false, gradient = false, ...props }, ref) => {
+>(({ className, hover = false, elevated = false, outlined = false, gradient = false, ...props }, ref) => {
   const baseClasses = cn(
-    "rounded-xl border bg-card text-card-foreground shadow-sm",
-    gradient && "bg-gradient-to-br from-white to-gray-50/50",
+    "card-base",
+    elevated && "card-elevated",
+    outlined && "border-2 border-neutral-700 bg-neutral-900/40",
+    gradient && "bg-gradient-to-br from-primary-900/20 to-neutral-900/40",
     className
   )
 
@@ -21,10 +25,10 @@ const Card = React.forwardRef<
         ref={ref}
         className={baseClasses}
         whileHover={{ 
-          y: -4, 
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" 
+          y: -2, 
+          boxShadow: "0 12px 24px -8px rgba(0, 0, 0, 0.3), 0 8px 16px -4px rgba(0, 0, 0, 0.2)" 
         }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        transition={{ type: "spring", stiffness: 400, damping: 17 }}
         {...(props as any)}
       />
     )

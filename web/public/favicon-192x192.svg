@@ -1,0 +1,44 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+    <linearGradient id="scaleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#4f46e5"/>
+    </linearGradient>
+  </defs>
+  <circle cx="96" cy="96" r="96" fill="url(#bgGradient)"/>
+  
+  <!-- Outer ring for trust -->
+  <circle cx="96" cy="96" r="88" fill="none" stroke="#10b981" stroke-width="1" opacity="0.3"/>
+  
+  <!-- Balance scale frame -->
+  <rect x="36" y="84" width="120" height="6" fill="url(#scaleGradient)" rx="3"/>
+  
+  <!-- Left scale pan -->
+  <rect x="48" y="36" width="12" height="48" fill="url(#scaleGradient)" rx="3"/>
+  <circle cx="54" cy="30" r="6" fill="url(#scaleGradient)"/>
+  
+  <!-- Right scale pan -->
+  <rect x="132" y="36" width="12" height="48" fill="url(#scaleGradient)" rx="3"/>
+  <circle cx="138" cy="30" r="6" fill="url(#scaleGradient)"/>
+  
+  <!-- Currency symbol (dollar sign) -->
+  <text x="96" y="126" font-family="Arial, sans-serif" font-size="48" font-weight="bold" text-anchor="middle" fill="#10b981">$</text>
+  
+  <!-- Trust indicators -->
+  <circle cx="24" cy="96" r="6" fill="#10b981" opacity="0.8"/>
+  <circle cx="168" cy="96" r="6" fill="#10b981" opacity="0.8"/>
+  <circle cx="96" cy="168" r="6" fill="#10b981" opacity="0.8"/>
+  
+  <!-- Subtle grid pattern for regulatory feel -->
+  <g opacity="0.1">
+    <line x1="24" y1="24" x2="168" y2="24" stroke="#6366f1" stroke-width="1"/>
+    <line x1="24" y1="168" x2="168" y2="168" stroke="#6366f1" stroke-width="1"/>
+    <line x1="24" y1="24" x2="24" y2="168" stroke="#6366f1" stroke-width="1"/>
+    <line x1="168" y1="24" x2="168" y2="168" stroke="#6366f1" stroke-width="1"/>
+  </g>
+</svg>

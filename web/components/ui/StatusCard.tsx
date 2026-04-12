@@ -27,7 +27,7 @@ export const StatusCard: React.FC<StatusCardProps> = ({
   return (
     <div 
       className={cn(
-        "premium-glass rounded-3xl p-6 relative group cursor-pointer overflow-hidden",
+        "card-base rounded-3xl p-6 relative group cursor-pointer overflow-hidden hover:shadow-dp6",
         className
       )}
       onClick={onClick}
@@ -40,33 +40,45 @@ export const StatusCard: React.FC<StatusCardProps> = ({
         <div className="flex items-start justify-between">
           <div className="relative">
             <div className="absolute -inset-2 bg-indigo-500/10 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="relative p-3 rounded-2xl bg-white/5 border border-white/10 group-hover:border-white/20 transition-all duration-300">
+            <div className="relative p-4 rounded-xl bg-gradient-to-br from-primary-600/10 to-primary-800/10 border border-primary-500/30 group-hover:border-primary-400/50 transition-all duration-300 shadow-dp2">
               {loading ? (
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-500/20 border-t-indigo-500"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500/30 border-t-primary-400"></div>
               ) : (
-                <span className="text-xl font-black bg-gradient-to-br from-indigo-300 to-indigo-500 bg-clip-text text-transparent tracking-tighter">
+                <span className="text-2xl font-black bg-gradient-to-br from-primary-300 via-primary-400 to-primary-600 bg-clip-text text-transparent tracking-tighter drop-shadow-lg">
                   {icon}
                 </span>
               )}
             </div>
           </div>
-          <div className="flex items-center space-x-2 bg-white/5 px-2 py-1 rounded-full border border-white/5">
-            <span className="status-pulse-emerald">
-              <span className={cn(isHealthy ? 'bg-emerald-400' : isDegraded ? 'bg-amber-400' : isDown ? 'bg-rose-500 ' : 'bg-slate-500')}></span>
-              <span className={cn("relative inline-flex h-2 w-2 rounded-full", isHealthy ? 'bg-emerald-500' : isDegraded ? 'bg-amber-500' : isDown ? 'bg-rose-500' : 'bg-slate-500')}></span>
+          <div className="flex items-center space-x-3 bg-neutral-800/60 px-3 py-1.5 rounded-full border border-neutral-600 shadow-dp2">
+            <span className="status-pulse">
+              <span className={cn(
+                "status-pulse-ping",
+                isHealthy ? 'status-pulse-success' : 
+                isDegraded ? 'status-pulse-warning' : 
+                isDown ? 'status-pulse-error' : 
+                'bg-neutral-500'
+              )}></span>
+              <span className={cn(
+                "relative inline-flex h-3 w-3 rounded-full",
+                isHealthy ? 'bg-success-500' : 
+                isDegraded ? 'bg-warning-500' : 
+                isDown ? 'bg-error-500' : 
+                'bg-neutral-500'
+              )}></span>
             </span>
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 pr-1">
+            <span className="text-xs font-display font-black uppercase tracking-widest text-neutral-300 pr-1">
               {isHealthy ? 'Active' : isDegraded ? 'Warning' : isDown ? 'Down' : 'Unknown'}
             </span>
           </div>
         </div>
 
         <div className="mt-8">
-          <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{title}</h3>
+          <h3 className="text-xs font-display text-neutral-500 uppercase tracking-widest">{title}</h3>
           <div className="flex items-baseline mt-2">
             <span className={cn(
-              "text-3xl font-black tracking-tight transition-colors duration-500",
-              isHealthy ? 'text-white text-glow' : isDegraded ? 'text-amber-400' : isDown ? 'text-rose-400' : 'text-slate-500'
+              "text-3xl font-display font-black tracking-tight transition-colors duration-fast",
+              isHealthy ? 'text-white text-glow' : isDegraded ? 'text-warning-400' : isDown ? 'text-error-400' : 'text-neutral-500'
             )}>
               {loading ? '...' : (isHealthy ? 'Optimal' : status.status)}
             </span>
@@ -75,24 +87,24 @@ export const StatusCard: React.FC<StatusCardProps> = ({
 
         <div className="mt-6 pt-6 border-t border-white/5 space-y-3">
           {status.error ? (
-            <div className="flex items-center space-x-2 text-rose-400">
+            <div className="flex items-center space-x-2 text-error-400">
               <MaterialIcon name="warning" className="w-3 h-3" />
-              <p className="text-[10px] font-bold uppercase truncate">{status.error}</p>
+              <p className="text-xs font-bold uppercase truncate">{status.error}</p>
             </div>
           ) : (
              <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                   <MaterialIcon name="bolt" className="w-3 h-3 text-indigo-400" />
-                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                   <MaterialIcon name="bolt" className="w-3 h-3 text-primary-400" />
+                   <span className="text-xs text-neutral-400 font-bold uppercase tracking-wider">
                      {status.responseTime ? `${status.responseTime}ms` : 'Syncing'}
                    </span>
                 </div>
-                <div className="h-1 w-12 bg-white/5 rounded-full overflow-hidden">
-                   <div className="h-full bg-indigo-500 w-2/3"></div>
+                <div className="h-1 w-12 bg-neutral-700 rounded-full overflow-hidden">
+                   <div className="h-full bg-primary-500 w-2/3"></div>
                 </div>
              </div>
           )}
-          <div className="flex justify-between items-center text-[9px] text-slate-500 font-black tracking-widest uppercase">
+          <div className="flex justify-between items-center text-xs text-neutral-500 font-black tracking-widest uppercase">
             <span>Audit Secured</span>
             <span>{new Date(status.lastCheck).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
