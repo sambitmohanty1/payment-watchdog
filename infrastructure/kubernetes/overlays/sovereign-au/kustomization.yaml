@@ -182,7 +182,7 @@ patches:
       kind: Deployment
       metadata:
         name: payment-watchdog-web
-       spec:
+      spec:
         template:
           spec:
             imagePullSecrets:
