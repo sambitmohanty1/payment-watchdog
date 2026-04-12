@@ -156,8 +156,8 @@ func (s *Server) SetupRoutes() {
 		protected := api.Group("")
 		if s.firebaseApp != nil {
 			protected.Use(middleware.AuthMiddleware(s.firebaseApp, s.logger))
-			// SaaS: Multi-tenant database isolation
-			protected.Use(middleware.TenantIsolationMiddleware(s.logger))
+			// SaaS: Multi-tenant database isolation with automated provisioning
+			protected.Use(middleware.TenantIsolationMiddleware(s.redis, s.logger))
 		}
 		{
 			// Payment failures endpoints
