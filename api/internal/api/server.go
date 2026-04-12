@@ -11,6 +11,7 @@ import (
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"github.com/go-redis/redis/v8"
 
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/eventbus"
@@ -18,16 +19,16 @@ import (
 )
 
 // Server represents the API server
-type Server struct {
 	engine      *gin.Engine
 	logger      *zap.Logger
 	db          *gorm.DB
+	redis       *redis.Client
 	config      *config.Config
 	firebaseApp *firebase.App
 }
 
 // NewServer creates a new API server instance
-func NewServer(logger *zap.Logger, db *gorm.DB, cfg *config.Config) *Server {
+func NewServer(logger *zap.Logger, db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 
@@ -66,6 +67,7 @@ func NewServer(logger *zap.Logger, db *gorm.DB, cfg *config.Config) *Server {
 		engine:      engine,
 		logger:      logger,
 		db:          db,
+		redis:       redisClient,
 		config:      cfg,
 		firebaseApp: fbApp,
 	}
@@ -130,6 +132,7 @@ func (s *Server) SetupRoutes() {
 	// Create handlers with available services
 	handlers := NewHandlers(
 		s.db,
+		s.redis,
 		paymentFailureService,
 		webhookService,
 		alertService,

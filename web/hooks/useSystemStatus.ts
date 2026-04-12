@@ -74,42 +74,42 @@ const retryWithBackoff = async <T>(
 
 // Transform API response to our interface
 const transformApiResponse = (apiResponse: any): SystemStatus => {
-  const timestamp = new Date().toISOString()
+  const timestamp = apiResponse.timestamp || new Date().toISOString()
   
   return {
     api: {
-      status: apiResponse.status === 'healthy' ? 'healthy' : 
-             apiResponse.status === 'degraded' ? 'degraded' : 
-             apiResponse.status === 'unhealthy' ? 'down' : 'unknown',
-      lastCheck: timestamp,
-      responseTime: apiResponse.responseTime,
+      status: apiResponse.api?.status === 'healthy' ? 'healthy' : 
+             apiResponse.api?.status === 'degraded' ? 'degraded' : 
+             apiResponse.api?.status === 'down' ? 'down' : 'unknown',
+      lastCheck: apiResponse.api?.last_check || timestamp,
+      responseTime: apiResponse.api?.response_time,
     },
     database: {
       status: apiResponse.database?.status === 'connected' ? 'healthy' :
              apiResponse.database?.status === 'disconnected' ? 'down' :
              apiResponse.database?.status === 'error' ? 'degraded' : 'unknown',
       lastCheck: timestamp,
-      responseTime: apiResponse.database?.responseTime,
-      error: apiResponse.database?.error,
+      responseTime: apiResponse.database?.latency,
+      error: apiResponse.database?.message,
     },
     workers: {
       status: apiResponse.workers?.status === 'active' ? 'healthy' :
              apiResponse.workers?.status === 'inactive' ? 'down' :
              apiResponse.workers?.status === 'error' ? 'degraded' : 'unknown',
-      lastCheck: timestamp,
-      responseTime: apiResponse.workers?.responseTime,
-      error: apiResponse.workers?.error,
+      lastCheck: apiResponse.workers?.last_run || timestamp,
+      responseTime: undefined,
+      error: undefined,
     },
     redis: {
       status: apiResponse.redis?.status === 'connected' ? 'healthy' :
              apiResponse.redis?.status === 'disconnected' ? 'down' :
              apiResponse.redis?.status === 'error' ? 'degraded' : 'unknown',
       lastCheck: timestamp,
-      responseTime: apiResponse.redis?.responseTime,
-      error: apiResponse.redis?.error,
+      responseTime: undefined,
+      error: undefined,
     },
-    environment: apiResponse.environment || 'unknown',
-    version: apiResponse.version || 'unknown',
+    environment: apiResponse.environment?.name || 'unknown',
+    version: apiResponse.environment?.version || 'unknown',
     timestamp,
   }
 }
@@ -138,7 +138,7 @@ export const useSystemStatus = (options: UseSystemStatusOptions = {}): UseSystem
       setError(null)
       
       const response = await retryWithBackoff(
-        () => apiClient.get('/api/health'),
+        () => apiClient.get('/health'),
         config.retryAttempts!,
         config.retryDelay!
       )

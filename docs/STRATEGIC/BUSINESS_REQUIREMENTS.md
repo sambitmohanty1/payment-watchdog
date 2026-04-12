@@ -9,10 +9,10 @@ This document outlines the comprehensive business requirements for the Payment W
 ## 🎯 Business Objectives
 
 ### **🎯 Primary Goals**
-1. **Market Leadership**: Become the #1 payment recovery solution for Australian micro-merchants
-2. **Revenue Growth**: Achieve $60-120K/month recurring revenue within 3 years
-3. **Customer Success**: Maintain 90%+ customer retention and 85%+ recovery rates
-4. **Australian Compliance**: Full sovereign data compliance and regulatory adherence
+1. **Market Leadership**: Become the #1 payment recovery solution for Australian SMBs and regulated professionals.
+2. **SaaS Scaling**: Establish a multi-tenant platform with automated pod/schema provisioning.
+3. **Regulatory Orchestration**: Automate compliance for "Payday Super" and AML/CTF Tranche 2 reforms.
+4. **Sovereign Trust**: Ensure 100% Australian data residency with OCI-based isolation.
 
 ### **📈 Success Metrics**
 - **Financial Metrics**: MRR, ARR, customer lifetime value, recovery rates
@@ -138,24 +138,23 @@ This document outlines the comprehensive business requirements for the Payment W
 - [ ] Cost optimization saving 20-30% on fees
 - [ ] Support for 5+ local payment providers
 
-#### **FR-004: Cross-Method Reconciliation**
-**Priority**: High  
-**Description**: Automatic reconciliation between different payment methods
+#### **FR-010: Payday Super Compliance Guard**
+**Priority**: High (Mandatory by July 2026)  
+**Description**: Automated monitoring of payroll vs superannuation payment synchronization.
 
 **Requirements**:
-- **FR-004.1**: Xero integration for bank transaction detection
-- **FR-004.2**: Automatic payment matching algorithms
-- **FR-004.3**: Cross-method status synchronization
-- **FR-004.4**: Manual bank transfer recognition
-- **FR-004.5**: Reconciliation reporting and analytics
-- **FR-004.6**: Exception handling and manual review
+- **FR-010.1**: Real-time Xero payroll event monitoring.
+- **FR-010.2**: Cross-referencing super clearing house status.
+- **FR-010.3**: Emergency "Non-Compliance" alerts for Directors.
 
-**Acceptance Criteria**:
-- [ ] Xero integration with 99% accuracy
-- [ ] Automatic matching with 90% success rate
-- [ ] Manual bank transfer detection
-- [ ] Reconciliation reporting with detailed analytics
-- [ ] Exception handling workflow
+#### **FR-011: AML/CTF Tranche 2 Monitoring**
+**Priority**: High (Regulatory Requirement)  
+**Description**: Transaction monitoring for newly regulated "gatekeeper" professions.
+
+**Requirements**:
+- **FR-011.1**: Velocity and pattern-based red flag detection.
+- **FR-011.2**: Immutable compliance audit generation.
+- **FR-011.3**: Automated KYC/KYT transaction reporting.
 
 ### **📊 Analytics and Reporting Features**
 
@@ -200,16 +199,14 @@ This document outlines the comprehensive business requirements for the Payment W
 ### **🏢 User Management Features**
 
 #### **FR-007: Multi-Tenant Architecture**
-**Priority**: Medium  
-**Description**: Multi-tenant support for agencies and large organizations
+**Priority**: Critical  
+**Description**: Enterprise-grade multi-tenant support with hard data isolation.
 
 **Requirements**:
-- **FR-007.1**: Role-based access control (RBAC)
-- **FR-007.2**: Organization management and hierarchy
-- **FR-007.3**: User invitation and onboarding
-- **FR-007.4**: Permission management and delegation
-- **FR-007.5**: Audit logging and compliance
-- **FR-007.6**: Data isolation and security
+- **FR-007.1**: Schema-per-tenant PostgreSQL isolation.
+- **FR-007.2**: Automated "Instant Provisioning" of tenant environments.
+- **FR-007.3**: Firebase Custom Claims based tenant identity extraction.
+- **FR-007.4**: Dogfooded "Internal Billing" engine using recovery-orchestration.
 
 **Acceptance Criteria**:
 - [ ] Support for 1000+ organizations
@@ -409,11 +406,10 @@ This document outlines the comprehensive business requirements for the Payment W
 | Payment Failure Detection | Critical | High | Medium | Low |
 | Intelligent Workflows | Critical | High | High | Medium |
 | AU/NZ Payment Integration | Critical | High | High | High |
-| Cross-Method Reconciliation | High | High | Medium | Medium |
+| Multi-Tenant SaaS Isolation | Critical | Very High | High | Medium |
+| Payday Super Compliance | High | Very High | Medium | Low |
+| AML/CTF Monitoring | High | High | Medium | Medium |
 | Analytics Dashboard | High | High | Medium | Low |
-| Predictive Analytics | Medium | Medium | High | High |
-| Multi-Tenant Architecture | Medium | Medium | High | Medium |
-| Configuration Management | High | High | Low | Low |
 
 ### **✅ Definition of Done**
 

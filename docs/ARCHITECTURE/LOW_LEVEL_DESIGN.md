@@ -75,11 +75,12 @@ worker/
 - **Error Handling**: Retry logic with exponential backoff
 - **Health Checks**: Connection monitoring and status reporting
 
-### **Database Interface**
-- **Implementation**: PostgreSQL with GORM
-- **Connection Pooling**: Configurable pool sizes
-- **Migration Support**: Database schema versioning
-- **Health Monitoring**: Connection status and query performance
+### **Database & Tenant Isolation**
+- **Isolation Model**: Schema-per-tenant (PostgreSQL)
+- **Middleware**: `TenantIsolationMiddleware` intercepts every request to run `SET search_path TO tenant_<id>, public`.
+- **Implementation**: Scoped GORM DB instances injected into context.
+- **Connection Pooling**: Shared pool across schemas to optimize resource usage on OCI.
+- **Health Monitoring**: Connection status and per-tenant query performance.
 
 ### **Business Services**
 - **Analytics Engine**: Pattern detection and ML-based predictions
@@ -89,29 +90,25 @@ worker/
 
 ## 📋 Data Flow
 
-### **Event Flow**
-1. **API Service** detects payment failure
-2. **Publishes** `payment.failure.detected` event to Redis
-3. **Worker Service** subscribes to event topic
-4. **Processes** through analytics → rules → mediators
-5. **Publishes** `payment.failure.processed` event back to Redis
-6. **API Service** can optionally subscribe to processed events
+### **SaaS Event Flow**
+1. **API Service** detects payment failure & extracts `tenant_id` from claims.
+2. **Publishes** `payment.failure.detected` event with `tenant_id` metadata.
+3. **Worker Service** subscribes, identifies the tenant schema.
+4. **Processes** within the isolated tenant schema (Analytics → Rules → Mediators).
+5. **Publishes** `payment.failure.processed` with `tenant_id`.
+6. **API Service** updates the tenant-specific tables.
 
-### **Event Schema**
 ```json
 {
   "id": "event-uuid",
   "event_type": "payment.failure.detected",
+  "tenant_id": "smb-001",
   "company_id": "company-uuid",
   "payment_id": "payment-uuid", 
   "amount": 99.99,
   "currency": "AUD",
   "status": "failed",
-  "timestamp": "2026-03-31T10:30:00Z",
-  "metadata": {
-    "provider": "stripe",
-    "reason": "insufficient_funds"
-  }
+  "timestamp": "2026-03-31T10:30:00Z"
 }
 ```
 

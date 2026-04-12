@@ -14,13 +14,19 @@
 **Phase 1 (Stabilization): COMPLETE** ✅
 - Resolved `CrashLoopBackOff` across API/Worker services.
 - Finalized explicit K8s environment variable injection.
-- Optimized persistent storage for OCI Sydney.
+- Optimized persistent storage for OCI Sydney/Melbourne.
 
 **Phase 2 (Core Logic Activation): COMPLETE** ✅
 - **Intelligence Driven**: Rule-based failure classification active in Webhook pipeline.
 - **Dynamic Dispatch**: Implemented `ProviderRegistry` for zero-downtime failover to intent-recording.
 - **Service Mastery**: Resolved all `nil` dependencies; full business logic is now wired and persistent.
 - **Visibility**: Communication tracking and manual retry orchestration fully operational.
+
+**Phase 3 (SaaS Scale & Multi-Tenancy): IN PROGRESS** 🏗️
+- **Schema Isolation**: Implementing "Schema-per-tenant" model for Australian SMBs.
+- **Multi-Tenant Identity**: Firebase Custom Claims based tenant identification.
+- **Internal Billing**: Built-in "dogfooded" subscription recovery engine.
+- **White-Labelling**: Custom domain support for regulated firms.
 
 ---
 
@@ -43,11 +49,12 @@ cd payment-watchdog
 # Start development environment
 docker-compose up -d
 
-# Access services
-# API: http://localhost:8080
-# Web: http://localhost:4896
-# Database: localhost:5432
-# Redis: localhost:6379
+### **Infrastructure Access (Sovereign AU)**
+- **API (ClusterIP)**: `10.96.158.63` (Internal)
+- **API (LoadBalancer)**: `207.211.158.1` (Public)
+- **Web Interface**: `168.138.21.140` (Public)
+- **Database**: `postgres.sovereign-au.svc.cluster.local` (Port 5432)
+- **Redis**: `redis.sovereign-au.svc.cluster.local` (Port 6379)
 ```
 
 ### **Environment Configuration**
@@ -140,11 +147,12 @@ docker-compose -f docker-compose.staging.yml up -d
 ### 🏗️ Architecture Overview
 
 ### **📐 Technology Stack**
-- **Backend**: Go 1.24, Gin, GORM, PostgreSQL, Redis
+- **Backend**: Go 1.24, Gin, GORM, PostgreSQL (Schema-per-tenant)
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS
-- **Infrastructure**: Docker, Kubernetes, AWS
-- **Payment Rails**: PayTo, NPP, BECS, Stripe, PayPal
-- **Monitoring**: Prometheus, Grafana, ELK Stack
+- **Infrastructure**: OCI (Oracle Cloud Infrastructure - Australian Sovereign Nodes)
+- **Auth**: Firebase Custom Claims (Multi-tenant)
+- **Payment Rails**: PayTo, NPP, BECS, Stripe
+- **Monitoring**: Prometheus, Grafana
 
 ### **🚀 Microservices Architecture**
 ```mermaid
@@ -166,10 +174,10 @@ graph TB
         ANALYTICS[Analytics Service]
     end
     
-    subgraph "Data Layer"
-        POSTGRES[(PostgreSQL)]
-        REDIS[(Redis Cache)]
-        TIMESERIES[(Time Series)]
+    subgraph "Data Layer (Isolated)"
+        POSTGRES[(PostgreSQL - Tenant Schemas)]
+        REDIS[(Redis Cache - Multi-tenant)]
+        AUDIT[(Sovereign Audit Vault)]
     end
     
     subgraph "External Services"
@@ -195,10 +203,10 @@ graph TB
 ```
 
 ### **🔒 Security Architecture**
-- **Authentication**: JWT-based authentication with MFA
-- **Authorization**: Role-based access control (RBAC)
+- **Authentication**: Firebase Identity with Custom Tenant Claims
+- **Authorization**: Tenant-Scoped Isolation (search_path)
 - **Data Protection**: AES-256 encryption, TLS 1.3
-- **Compliance**: Australian data residency, PCI-DSS Level 1
+- **Compliance**: Australian Data Residency (OCI ap-melbourne-1), APRA CPS 234, OAIC Privacy Actin
 - **Monitoring**: Security scanning, vulnerability management
 
 ---
@@ -211,7 +219,7 @@ Payment Watchdog is deployed using Kubernetes with automated CI/CD pipelines.
 #### **📋 Deployment Environments**
 - **Development**: `docker-compose.yml` (localhost)
 - **Staging**: `docker-compose.staging.yml` (staging servers)
-- **Production**: Kubernetes clusters (AWS/Azure)
+- **Production**: Sovereign OCI Cluster (ap-melbourne-1)
 
 #### **🔄 CI/CD Pipeline**
 - **Build**: Automated build and test execution
@@ -391,7 +399,7 @@ go test ./... -cover
 
 ---
 
-## � Development Environment
+## 🛠️ Development Environment
 
 ### **🔧 Development Tools**
 - **IDE**: VS Code, GoLand, WebStorm

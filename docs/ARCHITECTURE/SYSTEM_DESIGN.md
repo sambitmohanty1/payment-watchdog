@@ -12,9 +12,9 @@ Payment Watchdog is a microservices-based payment recovery platform designed for
 - **Microservices Architecture**: Loosely coupled, independently deployable services
 - **Event-Driven Design**: Asynchronous communication via event bus
 - **Domain-Driven Design**: Business logic separated from infrastructure
-- **Sovereign Data Compliance**: Australian data residency requirements
-- **Horizontal Scalability**: Designed for high-volume transaction processing
-- **Fault Tolerance**: Graceful degradation and recovery mechanisms
+- **Sovereign Data Compliance**: Australian data residency (OCI ap-melbourne-1)
+- **Multi-Tenant SaaS Architecture**: Enterprise-grade isolation via schema-per-tenant
+- **Event-Driven Orchestration**: Asynchronous failure recovery via Redis
 
 ### **🔒 Non-Functional Requirements**
 - **Performance**: Sub-100ms API response times, 10k+ transactions/second
@@ -369,11 +369,15 @@ CREATE TABLE recovery_workflow_executions (
 );
 ```
 
+#### **SaaS Multi-Tenancy (Schema-per-tenant)**:
+- **Isolation Model**: Each client (SMB) is assigned a dedicated PostgreSQL schema (`tenant_<id>`).
+- **Dynamic Routing**: API middleware uses `SET search_path` based on `tenant_id` claim to isolate queries.
+- **Global Data**: Common tables (providers, audit logs) reside in the `public` schema.
+
 #### **Data Relationships**:
-- **Companies** → **Payment Failures** (1:N)
-- **Payment Failures** → **Recovery Executions** (1:N)
-- **Workflows** → **Workflow Executions** (1:N)
-- **Companies** → **Workflows** (1:N)
+- **Tenants** → **Company Metadata** (1:1)
+- **Payment Failures** (Tenant-Scoped) → **Recovery Executions** (1:N)
+- **Workflows** (Tenant-Scoped) → **Workflow Executions** (1:N)
 
 ---
 
@@ -388,8 +392,8 @@ CREATE TABLE recovery_workflow_executions (
 - **VPC Isolation** for Australian data residency
 
 #### **2. Application Security**
-- **JWT Authentication** for API access
-- **RBAC Authorization** for permissions
+- **Authentication**: Firebase Identity with Custom `tenant_id` Claims
+- **Authorization**: Tenant-Scoped Isolation (Search Path Enforcement)
 - **Input Validation** and sanitization
 - **SQL Injection Prevention** via GORM
 - **Rate Limiting** and throttling
@@ -652,17 +656,16 @@ spec:
 - **Micro-Transaction Optimization**: Cost-aware routing
 - **Sovereign Data Compliance**: AU-based infrastructure
 
-### **📅 Phase 3: Vertical Intelligence (Q4 2025 - Q2 2026)**
-- **Gig Economy Specialization**: Income pattern analysis
-- **Education Sector Focus**: Term-aware dunning
-- **BNPL Integration**: Alternative payment methods
-- **Healthcare Compliance**: Medicare integration
+### **📅 Phase 3: SaaS Scale & Compliance (Q4 2025 - Q2 2026) - ACTIVE**
+- **Multi-Tenant Engine**: Schema-per-tenant isolation & provisioner logic.
+- **Payday Super Guard**: Synchronized super/payroll monitoring for AU SMBs.
+- **AML/CTF Tranche 2**: Built-in "Gatekeeper" transaction monitoring.
+- **Dogfooded Billing**: Recovery-orchestration based subscription management.
 
-### **📅 Phase 4: Enterprise Platform (Q3-Q4 2026)**
-- **Visual Workflow Builder**: No-code workflow creation
-- **AI-Powered Analytics**: Machine learning predictions
-- **Multi-Tenant Architecture**: Enterprise-scale platform
-- **Advanced Security**: Enterprise security features
+### **📅 Phase 4: Enterprise & AI (Q3-Q4 2026)**
+- **Visual Workflow Builder**: No-code recovery orchestration.
+- **AI-Powered Analytics**: Predictive failure prevention.
+- **Healthcare & Gov**: Specialized sovereign compliance modules.
 
 ---
 

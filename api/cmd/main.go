@@ -18,6 +18,7 @@ import (
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/api"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/database"
+	"github.com/go-redis/redis/v8"
 )
 
 func main() {
@@ -46,6 +47,20 @@ func main() {
 	if err := database.RunMigrations(db); err != nil {
 		logger.Fatal("Failed to run migrations", zap.Error(err))
 	}
+	
+	// Initialize Redis
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", c.Redis.Host, c.Redis.Port),
+		Password: c.Redis.Password,
+		DB:       c.Redis.DB,
+	})
+	
+	// Ping Redis to verify connection
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		logger.Warn("Failed to connect to Redis", zap.Error(err))
+	} else {
+		logger.Info("Connected to Redis", zap.String("host", c.Redis.Host))
+	}
 
 	// 1. OBSERVABILITY: Metrics Server
 	go func() {
@@ -55,7 +70,7 @@ func main() {
 	}()
 
 	// Initialize Server with full routing
-	server := api.NewServer(logger, db, c)
+	server := api.NewServer(logger, db, redisClient, c)
 	server.SetupRoutes()
 
 	srv := &http.Server{

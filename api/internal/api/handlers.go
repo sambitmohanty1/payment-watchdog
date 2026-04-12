@@ -8,16 +8,18 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/models"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"runtime"
 )
 
 // Handlers contains all the API handlers with their dependencies
-type Handlers struct {
 	db                    *gorm.DB
+	redis                 *redis.Client
 	paymentFailureService *services.PaymentFailureService
 	webhookService        *services.WebhookService
 	alertService          *services.AlertService
@@ -34,6 +36,7 @@ type Handlers struct {
 // NewHandlers creates a new Handlers instance
 func NewHandlers(
 	db *gorm.DB,
+	redis *redis.Client,
 	paymentFailureService *services.PaymentFailureService,
 	webhookService *services.WebhookService,
 	alertService *services.AlertService,
@@ -49,6 +52,7 @@ func NewHandlers(
 
 	return &Handlers{
 		db:                    db,
+		redis:                 redis,
 		paymentFailureService: paymentFailureService,
 		webhookService:        webhookService,
 		alertService:          alertService,
@@ -697,6 +701,13 @@ type SystemStatus struct {
 
 // HealthCheck returns comprehensive system health status
 func (h *Handlers) HealthCheck(c *gin.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.logger.Error("Panic in HealthCheck", zap.Any("recover", r))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server panic in health check"})
+		}
+	}()
+
 	// Check API health
 	apiStatus := h.checkAPIHealth()
 
@@ -727,10 +738,9 @@ func (h *Handlers) HealthCheck(c *gin.Context) {
 
 	// Return appropriate HTTP status based on overall health
 	overallStatus := h.getOverallHealth(health)
+	
 	if overallStatus == "down" {
 		c.JSON(http.StatusServiceUnavailable, health)
-	} else if overallStatus == "degraded" {
-		c.JSON(http.StatusOK, health) // But with degraded status
 	} else {
 		c.JSON(http.StatusOK, health)
 	}
@@ -868,8 +878,10 @@ func (h *Handlers) simulateDatabasePing() error {
 }
 
 func (h *Handlers) simulateRedisPing() error {
-	// Simulate Redis ping - in real implementation, this would be actual Redis ping
-	return nil
+	if h.redis == nil {
+		return fmt.Errorf("redis client not initialized")
+	}
+	return h.redis.Ping(context.Background()).Err()
 }
 
 func (h *Handlers) getUptime() string {
@@ -882,8 +894,14 @@ func (h *Handlers) getDatabaseHost() string {
 }
 
 func (h *Handlers) getDatabaseConnections() int {
-	// Simulate connection count - in real implementation, get from DB pool stats
-	return 5
+	if h.db == nil {
+		return 0
+	}
+	db, err := h.db.DB()
+	if err != nil {
+		return 0
+	}
+	return db.Stats().InUse
 }
 
 func (h *Handlers) getLastQueryTime() string {
@@ -900,8 +918,12 @@ func (h *Handlers) getRedisConnections() int {
 }
 
 func (h *Handlers) getRedisMemoryUsage() string {
-	// Simulate memory usage
-	return "45MB"
+	if h.redis == nil {
+		return "unknown"
+	}
+	info := h.redis.Info(context.Background(), "memory").Val()
+	// Simple parsing for used_memory_human
+	return info
 }
 
 func (h *Handlers) getLastRedisCommand() string {
@@ -925,8 +947,9 @@ func (h *Handlers) getCPUUsage() string {
 }
 
 func (h *Handlers) getMemoryUsage() string {
-	// Simulate memory usage
-	return "512MB"
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return fmt.Sprintf("%v MiB", m.Alloc/1024/1024)
 }
 
 func (h *Handlers) getDiskUsage() string {

@@ -195,7 +195,7 @@ patches:
             - name: payment-watchdog-web
               env:
               - name: INTERNAL_API_URL
-                value: "http://10.96.158.63"
+                value: "http://payment-watchdog-api.sovereign-au.svc.cluster.local"
               - name: NEXT_PUBLIC_API_URL
                 value: "http://207.211.158.1"
               - name: NO_PROXY
