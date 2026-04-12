@@ -401,7 +401,7 @@ patches:
                     key: database_password
               - name: REDIS_HOST
                 value: "redis"
-               - name: REDIS_PORT
+              - name: REDIS_PORT
                 value: "6379"
               - name: REDIS_PASSWORD
                 valueFrom:
@@ -488,7 +488,7 @@ patches:
                 value: "postgres"
               - name: DATABASE_PORT
                 value: "5432"
-               - name: REDIS_ADDR
+              - name: REDIS_ADDR
                 value: "redis:6379"
               - name: REDIS_PASSWORD
                 valueFrom:
