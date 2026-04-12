@@ -1,12 +1,14 @@
 package api
 
 import (
-	"context"  // Add this line
+	"context" // Add this line
 	"fmt"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"runtime"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
@@ -15,8 +17,8 @@ import (
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"runtime"
 )
+
 // Handlers contains all the API handlers with their dependencies
 type Handlers struct {
 	db                    *gorm.DB
@@ -236,7 +238,7 @@ func (h *Handlers) GetAlerts(c *gin.Context) {
 	var total int64
 
 	query := h.db.Model(&models.CustomerCommunication{}).Where("company_id = ?", companyID)
-	
+
 	if err := query.Count(&total).Error; err != nil {
 		h.logger.Error("Failed to count alerts", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count alerts"})
@@ -347,22 +349,22 @@ func (h *Handlers) GetDashboardStats(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"payment_failures": gin.H{
-			"total":        total,
-			"total_amount": float64(totalAmountCents) / 100.0,
-			"by_status":    byStatus,
-			"by_reason":    byReason,
-			"by_provider":  byProvider,
+			"total":           total,
+			"total_amount":    float64(totalAmountCents) / 100.0,
+			"by_status":       byStatus,
+			"by_reason":       byReason,
+			"by_provider":     byProvider,
 			"daily_breakdown": []gin.H{},
 		},
 		"alerts": gin.H{
-			"total": alertsTotal,
-			"by_status": []gin.H{},
+			"total":      alertsTotal,
+			"by_status":  []gin.H{},
 			"by_channel": []gin.H{},
 		},
 		"retries": gin.H{
 			"total":        0,
 			"success_rate": 0.0,
-			"by_status": []gin.H{},
+			"by_status":    []gin.H{},
 		},
 		"last_updated": time.Now().UTC().Format(time.RFC3339),
 	})
@@ -739,7 +741,7 @@ func (h *Handlers) HealthCheck(c *gin.Context) {
 
 	// Return appropriate HTTP status based on overall health
 	overallStatus := h.getOverallHealth(health)
-	
+
 	if overallStatus == "down" {
 		c.JSON(http.StatusServiceUnavailable, health)
 	} else {
@@ -750,18 +752,10 @@ func (h *Handlers) HealthCheck(c *gin.Context) {
 // checkAPIHealth checks the API service health
 func (h *Handlers) checkAPIHealth() APIStatus {
 	start := time.Now()
-
-	// Simulate database and Redis checks
-	// In a real implementation, these would be actual health checks
-	dbErr := h.simulateDatabasePing()
-	redisErr := h.simulateRedisPing()
-
 	responseTime := time.Since(start)
 
+	// API is healthy if this function is running
 	status := "healthy"
-	if dbErr != nil || redisErr != nil {
-		status = "degraded"
-	}
 
 	return APIStatus{
 		Status:    status,

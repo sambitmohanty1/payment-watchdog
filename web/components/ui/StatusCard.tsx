@@ -55,7 +55,9 @@ export const StatusCard: React.FC<StatusCardProps> = ({
               <span className={cn(isHealthy ? 'bg-emerald-400' : isDegraded ? 'bg-amber-400' : isDown ? 'bg-rose-500 ' : 'bg-slate-500')}></span>
               <span className={cn("relative inline-flex h-2 w-2 rounded-full", isHealthy ? 'bg-emerald-500' : isDegraded ? 'bg-amber-500' : isDown ? 'bg-rose-500' : 'bg-slate-500')}></span>
             </span>
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 pr-1">Active</span>
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 pr-1">
+              {isHealthy ? 'Active' : isDegraded ? 'Warning' : isDown ? 'Down' : 'Unknown'}
+            </span>
           </div>
         </div>
 
