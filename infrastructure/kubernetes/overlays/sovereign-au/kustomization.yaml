@@ -193,6 +193,9 @@ patches:
               enabled: true
               from: PAYMENT_WATCHDOG
               retryAttempts: 3
+          
+          internal:
+            api_url: "http://payment-watchdog-api.sovereign-au.svc.cluster.local"
 
   # Web deployment environment patch - CRITICAL for fixing pod proxy loops
   - target:
@@ -212,7 +215,9 @@ patches:
               - name: INTERNAL_API_URL
                 value: "http://payment-watchdog-api.sovereign-au.svc.cluster.local"
               - name: NEXT_PUBLIC_API_URL
-                value: "http://207.211.158.1"
+                value: "http://payment-watchdog-api.sovereign-au.svc.cluster.local"
+              - name: NEXT_PUBLIC_API_BASE_URL
+                value: "http://payment-watchdog-api.sovereign-au.svc.cluster.local"
               - name: NO_PROXY
                 value: "localhost,127.0.0.1,::1,payment-watchdog-api.sovereign-au.svc.cluster.local,207.211.158.1"
               - name: no_proxy
