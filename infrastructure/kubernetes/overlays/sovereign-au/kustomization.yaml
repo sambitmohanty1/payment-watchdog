@@ -125,7 +125,7 @@ patches:
               secret:
                 secretName: postgres-ssl-certs
                 items: []  # Explicitly clear items to avoid stale merges
-                defaultMode: 0400
+                defaultMode: 0444
 
   # API service configuration patch - CRITICAL for fixing pod crashes
   - target:
@@ -148,7 +148,7 @@ patches:
             host: postgres
             port: 5432
             name: payment_watchdog
-            sslMode: require
+            ssl_mode: require
             maxIdleConns: 10
             maxOpenConns: 100
             connMaxLifetime: 1h
@@ -433,7 +433,7 @@ patches:
             - name: db-certs
               secret:
                 secretName: db-ca-cert
-                defaultMode: 0400
+                defaultMode: 0444
 
   # Fix worker environment for sovereign deployment
   - target:
@@ -480,7 +480,7 @@ patches:
             - name: db-certs
               secret:
                 secretName: db-ca-cert
-                defaultMode: 0400
+                defaultMode: 0444
 
   # Safely remove probes for background worker using JSON patch to avoid strategic merge null issues
   - target:
