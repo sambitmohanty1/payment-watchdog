@@ -18,6 +18,7 @@ import (
 )
 
 // Handlers contains all the API handlers with their dependencies
+type Handlers struct {
 	db                    *gorm.DB
 	redis                 *redis.Client
 	paymentFailureService *services.PaymentFailureService
