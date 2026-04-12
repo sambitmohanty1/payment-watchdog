@@ -401,8 +401,13 @@ patches:
                     key: database_password
               - name: REDIS_HOST
                 value: "redis"
-              - name: REDIS_PORT
+               - name: REDIS_PORT
                 value: "6379"
+              - name: REDIS_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: redis-secrets
+                    key: redis_password
               # Firebase Auth configuration
               - name: FIREBASE_PROJECT_ID
                 valueFrom:
@@ -483,8 +488,13 @@ patches:
                 value: "postgres"
               - name: DATABASE_PORT
                 value: "5432"
-              - name: REDIS_ADDR
+               - name: REDIS_ADDR
                 value: "redis:6379"
+              - name: REDIS_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: redis-secrets
+                    key: redis_password
               - name: DATABASE_SSL_ROOT_CERT
                 value: "/etc/db-certs/ca.crt"
               volumeMounts:
