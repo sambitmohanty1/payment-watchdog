@@ -124,13 +124,23 @@ patches:
           spec:
             containers:
             - name: postgres
-              args: ["-c", "config_file=/etc/postgresql/postgresql.conf"]
+              args: 
+                - "-c"
+                - "ssl=on"
+                - "-c"
+                - "ssl_cert_file=/etc/postgresql/certs/server.crt"
+                - "-c"
+                - "ssl_key_file=/etc/postgresql/certs/server.key"
+                - "-c"
+                - "ssl_ca_file=/etc/postgresql/certs/ca.crt"
+                - "-c"
+                - "listen_addresses=*"
             volumes:
             - name: postgres-certs
               secret:
                 secretName: postgres-ssl-certs
                 items: []  # Explicitly clear items to avoid stale merges
-                defaultMode: 0400
+                defaultMode: 0600
 
   # API service configuration patch - CRITICAL for fixing pod crashes
   - target:
