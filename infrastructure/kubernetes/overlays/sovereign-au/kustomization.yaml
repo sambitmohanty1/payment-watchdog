@@ -120,12 +120,15 @@ patches:
       spec:
         template:
           spec:
+            containers:
+            - name: postgres
+              args: ["-c", "config_file=/etc/postgresql/postgresql.conf"]
             volumes:
             - name: postgres-certs
               secret:
                 secretName: postgres-ssl-certs
                 items: []  # Explicitly clear items to avoid stale merges
-                defaultMode: 0444
+                defaultMode: 0400
 
   # API service configuration patch - CRITICAL for fixing pod crashes
   - target:
