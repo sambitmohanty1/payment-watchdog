@@ -118,6 +118,8 @@ patches:
       metadata:
         name: postgres
       spec:
+        strategy:
+          type: Recreate
         template:
           spec:
             containers:
