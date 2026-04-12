@@ -51,13 +51,13 @@ images:
 # Patches for sovereign-specific configurations
 patches:
   # Add image pull secrets only to GHCR-based deployments (not postgres/redis which use Docker Hub)
-   - target:
-       kind: ServiceAccount
-     patch: |-
-       - op: add
-         path: /imagePullSecrets
-         value:
-           - name: ghcr-secret
+  - target:
+      kind: ServiceAccount
+    patch: |-
+      - op: add
+        path: /imagePullSecrets
+        value:
+          - name: ghcr-secret
   - target:
       kind: ServiceAccount
       name: recovery-orchestration
