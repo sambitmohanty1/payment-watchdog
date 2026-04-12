@@ -40,15 +40,11 @@ const nextConfig = {
     return [
       {
         source: '/api/backend/:path*',
-        destination: process.env.INTERNAL_API_URL 
-          ? `${process.env.INTERNAL_API_URL}/api/:path*`
-          : 'http://localhost:8080/api/:path*',
+        destination: (process.env.INTERNAL_API_URL || 'http://payment-watchdog-api.sovereign-au.svc.cluster.local') + '/api/:path*',
       },
       {
         source: '/api/system/:path*',
-        destination: process.env.INTERNAL_API_URL 
-          ? `${process.env.INTERNAL_API_URL}/api/:path*`
-          : 'http://localhost:8080/api/:path*',
+        destination: (process.env.INTERNAL_API_URL || 'http://payment-watchdog-api.sovereign-au.svc.cluster.local') + '/api/:path*',
       },
     ];
   },
