@@ -101,6 +101,7 @@ export default function HomePage() {
                 <button
                   onClick={refresh}
                   disabled={isRefreshing}
+                  aria-label="Refresh status"
                   className="w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-600/20 disabled:opacity-50 transition-all active:scale-95 flex items-center justify-center border border-indigo-400/30"
                 >
                   <MaterialIcon name="sync" className={cn("text-xl", isRefreshing && "animate-spin")} />
@@ -237,6 +238,7 @@ export default function HomePage() {
                   </h3>
                   <button 
                     onClick={closeDetail} 
+                    aria-label="Close details modal"
                     className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 text-slate-400 transition-colors"
                   >
                     ×
