@@ -145,7 +145,7 @@ patches:
             shutdownTimeout: 30s
             
           database:
-            host: postgres.sovereign-au.svc.cluster.local
+            host: postgres
             port: 5432
             name: payment_watchdog
             sslMode: require
@@ -154,7 +154,7 @@ patches:
             connMaxLifetime: 1h
             
           redis:
-            addr: redis.sovereign-au.svc.cluster.local:6379
+            addr: redis:6379
             db: 0
             poolSize: 100
             
@@ -195,7 +195,7 @@ patches:
             - name: payment-watchdog-web
               env:
               - name: INTERNAL_API_URL
-                value: "http://payment-watchdog-api"
+                value: "http://10.96.158.63"
               - name: NEXT_PUBLIC_API_URL
                 value: "http://207.211.158.1"
               - name: NO_PROXY
@@ -219,7 +219,7 @@ patches:
             host: 0.0.0.0
             
           database:
-            host: postgres.sovereign-au.svc.cluster.local
+            host: postgres
             port: 5432
             name: payment_watchdog
             user: postgres
@@ -229,7 +229,7 @@ patches:
             conn_max_lifetime: 1h
             
           redis:
-            addr: redis.sovereign-au.svc.cluster.local:6379
+            addr: redis:6379
             password: redis
             db: 0
             pool_size: 100
@@ -372,7 +372,7 @@ patches:
               - name: ENVIRONMENT
                 value: "sovereign-au"
               - name: DATABASE_HOST
-                value: "postgres.sovereign-au.svc.cluster.local"
+                value: "postgres"
               - name: DATABASE_PORT
                 value: "5432"
               - name: DATABASE_NAME
@@ -385,7 +385,7 @@ patches:
                     name: postgres-secrets
                     key: database_password
               - name: REDIS_HOST
-                value: "redis.sovereign-au.svc.cluster.local"
+                value: "redis"
               - name: REDIS_PORT
                 value: "6379"
               # Firebase Auth configuration
@@ -457,19 +457,19 @@ patches:
               - name: NAMESPACE
                 value: "sovereign-au"
               - name: POSTGRES_SERVICE_NAME
-                value: "postgres-sovereign-au"
+                value: "postgres"
               - name: POSTGRES_SERVICE_PORT
                 value: "5432"
               - name: REDIS_SERVICE_NAME
-                value: "redis-sovereign-au"
+                value: "redis"
               - name: REDIS_SERVICE_PORT
                 value: "6379"
               - name: DATABASE_HOST
-                value: "postgres.sovereign-au.svc.cluster.local"
+                value: "postgres"
               - name: DATABASE_PORT
                 value: "5432"
               - name: REDIS_ADDR
-                value: "redis-sovereign-au.sovereign-au.svc.cluster.local:6379"
+                value: "redis:6379"
               - name: DATABASE_SSL_ROOT_CERT
                 value: "/etc/db-certs/ca.crt"
               volumeMounts:
