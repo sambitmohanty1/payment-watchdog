@@ -1,16 +1,15 @@
 # Payment Watchdog
-## 🇦🇺 Australian Payment Recovery Platform
 
-[![Go Version](https://img.shields.io/badge/Go-1.24-blue.svg)](https://golang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflows/payment-watchdog-ci.yml/badge/main)](https://github.com/sambitmohanty1/payment-watchdog/actions)
-[![Coverage](https://img.shields.io/codecov/c/github/sambitmohanty1/payment-watchdog)](https://codecov.io/gh/sambitmohanty1/payment-watchdog)
+A payment recovery platform for Australian businesses that automatically detects and recovers failed payments through intelligent retry logic and multi-provider integration.
 
----
+## Status
 
-### 🛡️ Sovereign AU Status: **ACTIVE & INTELLIGENT**
+**Current State**: Development in progress  
+**Last Updated**: April 2026  
+**Go Version**: 1.25.0  
+**Next.js**: 14.2.3  
 
+<<<<<<< Updated upstream
 **Phase 1 (Stabilization): COMPLETE** ✅
 - Resolved `CrashLoopBackOff` across API/Worker services.
 - Finalized explicit K8s environment variable injection.
@@ -40,9 +39,12 @@
 - Redis 7+
 
 ### **Development Setup**
+=======
+## Quick Start
+>>>>>>> Stashed changes
 
 ```bash
-# Clone repository
+# Clone and setup
 git clone https://github.com/sambitmohanty1/payment-watchdog.git
 cd payment-watchdog
 
@@ -57,16 +59,17 @@ docker-compose up -d
 - **Redis**: `redis.sovereign-au.svc.cluster.local` (Port 6379)
 ```
 
-### **Environment Configuration**
+## What It Does
 
-| Environment | Docker Compose File | Ports | Database |
-|-------------|-------------------|-------|----------|
-| Development | `docker-compose.yml` | API:8080, Web:4896, DB:5432, Redis:6379 | `payment_watchdog` |
-| Staging | `docker-compose.staging.yml` | API:8091, Web:3011, DB:5443, Redis:6390 | `payment_watchdog_staging` |
-| Local | `docker-compose.local.yml` | API:8096, Web:4896, DB:5432, Redis:6379 | `payment_watchdog_local` |
+Payment Watchdog monitors payment failures and automatically attempts recovery through:
 
-### **🏗️ Building Services**
+- **Smart Retry Logic**: Exponential backoff with provider-specific routing
+- **Multi-Provider Support**: Stripe, PayTo, BECS, Xero integration  
+- **Analytics Engine**: Pattern detection and failure prediction
+- **Australian Data Residency**: Sovereign mode for AU compliance
+- **Real-time Dashboard**: Payment metrics and recovery monitoring
 
+<<<<<<< Updated upstream
 ```bash
 # Build API
 cd api && go build -o payment-watchdog-api ./cmd/main.go
@@ -598,6 +601,9 @@ kubectl apply -k api/deployments/kubernetes/overlays/sovereign-au
 ## Architecture Overview
 
 Payment Watchdog follows a microservices architecture with the following components:
+=======
+## Architecture
+>>>>>>> Stashed changes
 
 ```mermaid
 graph TB
@@ -608,6 +614,8 @@ graph TB
     subgraph "Backend Services"
         API[Go API Service]
         WORKER[Background Worker]
+        WEBHOOK[Webhook Service]
+        ANALYTICS[Analytics Service]
     end
     
     subgraph "Data Layer"
@@ -616,7 +624,10 @@ graph TB
     end
     
     subgraph "External Services"
-        MAILHOG[Email Service]
+        STRIPE[Stripe API]
+        PAYTO[PayTo/NPP API]
+        XERO[Xero API]
+        BNPL[BNPL Providers]
     end
     
     WEB --> API
@@ -624,7 +635,9 @@ graph TB
     API --> REDIS
     WORKER --> POSTGRES
     WORKER --> REDIS
-    WORKER --> MAILHOG
+    API --> STRIPE
+    WORKER --> PAYTO
+    WORKER --> XERO
 ```
 
 ### Service Responsibilities
@@ -634,9 +647,6 @@ graph TB
 - Webhook ingestion (Stripe, Xero)
 - Payment failure processing
 - Advanced workflow orchestration
-- VIP customer detection
-- PayTo failover execution
-- Cross-method reconciliation handling
 - Health checks and metrics
 
 #### Worker Service
@@ -644,9 +654,7 @@ graph TB
 - Smart retry logic with cost optimization
 - BECS rail routing for micro-transactions
 - Cross-method reconciliation
-- AI-powered pattern detection
-- Advanced analytics processing
-- Distributed locking coordination
+- Analytics processing
 
 #### Web Interface (Port 4896)
 - Payment metrics dashboard
@@ -661,340 +669,93 @@ graph TB
 - `vip_customers`: Priority customer configurations
 - `reconciliation_records`: Cross-method payment matching
 
----
+## Development
 
-## 📊 Class Diagrams
+### Prerequisites
+- Go 1.25.0+
+- Node.js 18+
+- Docker & Docker Compose
+- PostgreSQL 15+
+- Redis 7+
 
-### Payment Recovery Orchestration Flow
+### Building Services
+```bash
+# API
+cd api && go build -o payment-watchdog-api ./cmd/main.go
 
-```mermaid
-classDiagram
-    class RecoveryOrchestrationService {
-        -db: *gorm.DB
-        -retryService: *RetryService
-        -communicationService: *CommunicationService
-        -analyticsService: *AnalyticsService
-        -stepExecutors: map[string]StepExecutor
-        -tracer: trace.Tracer
-        -logger: *zap.Logger
-        -redisClient: *redis.Client
-        -activeExecutions: map[uuid.UUID]*WorkflowExecution
-        +ExecuteWorkflow(ctx, workflowID, paymentFailureID) error
-        +CancelWorkflow(executionID) error
-        +GetExecutionStatus(executionID) (*WorkflowExecution, error)
-        +ProcessWorkflowStep(execution *WorkflowExecution) error
-    }
+# Worker  
+cd worker && go build -o payment-watchdog-worker ./cmd/main.go
 
-    class WorkflowExecution {
-        +ID: uuid.UUID
-        +WorkflowID: uuid.UUID
-        +PaymentFailureID: uuid.UUID
-        +CompanyID: uuid.UUID
-        +Status: string
-        +CurrentStepIndex: int
-        +Context: map[string]interface{}
-        +StartedAt: time.Time
-        +CancelFunc: context.CancelFunc
-    }
-
-    class StepExecutor {
-        <<interface>>
-        +Execute(ctx, step) error
-        +Validate(step) error
-        +GetEstimatedTime() time.Duration
-    }
-
-    class PayToExecutor {
-        -service: *RecoveryOrchestrationService
-        -tracer: trace.Tracer
-        +GetStepType() string
-        +Execute(ctx, execution, step) (*StepResult, error)
-    }
-
-    class PaymentRetryExecutor {
-        -service: *RecoveryOrchestrationService
-        -tracer: trace.Tracer
-        +GetStepType() string
-        +Execute(ctx, execution, step) (*StepResult, error)
-    }
-
-    class PaymentFailureService {
-        -db: *gorm.DB
-        -logger: *zap.Logger
-        +GetPaymentFailures(ctx, companyID, filters, page, limit) ([]PaymentFailureEvent, int64, error)
-        +CreatePaymentFailure(ctx, failure) error
-        +UpdatePaymentFailure(ctx, id, updates) error
-        +GetFailureByID(ctx, id) (*PaymentFailureEvent, error)
-    }
-
-    RecoveryOrchestrationService --> WorkflowExecution : manages
-    RecoveryOrchestrationService --> StepExecutor : uses
-    RecoveryOrchestrationService --> PaymentFailureService : queries
-    RecoveryOrchestrationService --> PayToExecutor : registers
-    RecoveryOrchestrationService --> PaymentRetryExecutor : registers
-    PayToExecutor --|> StepExecutor : implements
-    PaymentRetryExecutor --|> StepExecutor : implements
+# Web
+cd web && npm run build
 ```
 
-### Webhook Processing Flow
+### Testing
+```bash
+# Run all tests with coverage
+go test ./... -v -race -cover
 
-```mermaid
-classDiagram
-    class WebhookProcessor {
-        -MaxRetries: int
-        -RetryDelay: time.Duration
-        -DeadLetterQueue: chan WebhookEvent
-        -RateLimiter: *rate.Limiter
-        +ProcessWebhook(ctx, event) error
-        +ValidateWebhook(event) error
-        +RetryFailedEvent(event) error
-        +SendToDeadLetterQueue(event) error
-    }
-
-    class WebhookEvent {
-        +CompanyID: string
-        +Event: *stripe.Event
-        +RawBody: []byte
-        +Headers: http.Header
-        +Timestamp: time.Time
-    }
-
-    class WebhookError {
-        +Type: string
-        +Severity: string
-        +Message: string
-        +Retryable: bool
-        +CompanyID: string
-        +EventID: string
-        +Timestamp: time.Time
-        +RetryCount: int
-    }
-
-    class WebhookMetrics {
-        +ProcessedCount: int64
-        +FailedCount: int64
-        +RetryCount: int64
-        +AverageProcessingTime: time.Duration
-        +LastProcessedAt: time.Time
-    }
-
-    WebhookProcessor --> WebhookEvent : processes
-    WebhookProcessor --> WebhookError : generates
-    WebhookProcessor --> WebhookMetrics : tracks
+# Run specific service tests
+cd api && go test ./... -v
+cd worker && go test ./... -v
 ```
 
-### Analytics Engine Flow
+## Deployment
 
-```mermaid
-classDiagram
-    class AnalyticsService {
-        -db: *gorm.DB
-        -analyticsEngine: *AnalyticsEngine
-        -patternDetector: PatternDetector
-        -trendAnalyzer: TrendAnalyzer
-        -failurePredictor: FailurePredictor
-        -logger: *zap.Logger
-        +GenerateFailureReport(ctx, companyID, timeRange) (*FailureReport, error)
-        +DetectPatterns(ctx, companyID) ([]Pattern, error)
-        +PredictFailures(ctx, companyID) (*FailurePrediction, error)
-        +AnalyzeTrends(ctx, companyID, period) (*TrendAnalysis, error)
-    }
+### Environments
+| Environment | Config File | API Port | Web Port | Database |
+|------------|--------------|-----------|-----------|----------|
+| Development | docker-compose.yml | 8080 | 4896 | payment_watchdog |
+| Staging | docker-compose.staging.yml | 8091 | 3011 | payment_watchdog_staging |
 
-    class AnalyticsEngine {
-        -patternDetector: PatternDetector
-        -trendAnalyzer: TrendAnalyzer
-        -failurePredictor: FailurePredictor
-        -logger: *zap.Logger
-        +ProcessAnalytics(ctx, request) (*AnalyticsResult, error)
-        +AggregateMetrics(ctx, metrics) (*AggregatedMetrics, error)
-        +GenerateInsights(ctx, data) ([]Insight, error)
-    }
+### Local Deployment
+```bash
+# Standard development
+docker-compose up -d
 
-    class PatternDetector {
-        <<interface>>
-        +DetectPatterns(ctx, data) ([]Pattern, error)
-        +ValidatePattern(pattern) error
-        +GetPatternConfidence(pattern) float64
-    }
+# Staging environment  
+docker-compose -f docker-compose.staging.yml up -d
 
-    class TrendAnalyzer {
-        <<interface>>
-        +AnalyzeTrend(ctx, data, period) (*Trend, error)
-        +PredictNextPeriod(ctx, trend) (*Prediction, error)
-        +CalculateTrendStrength(trend) float64
-    }
-
-    class FailurePredictor {
-        <<interface>>
-        +PredictFailure(ctx, customer, history) (*FailureRisk, error)
-        +GetRiskFactors(ctx, customer) ([]RiskFactor, error)
-        +UpdateModel(ctx, trainingData) error
-    }
-
-    AnalyticsService --> AnalyticsEngine : uses
-    AnalyticsEngine --> PatternDetector : delegates
-    AnalyticsEngine --> TrendAnalyzer : delegates
-    AnalyticsEngine --> FailurePredictor : delegates
+# Production (requires Kubernetes setup)
+kubectl apply -f infrastructure/kubernetes/
 ```
 
-### Distributed Locking Flow
+## Key Features
 
-```mermaid
-classDiagram
-    class DistributedLockService {
-        -redisClient: *redis.Client
-        -logger: *zap.Logger
-        -prefix: string
-        -defaultTTL: time.Duration
-        -retryDelay: time.Duration
-        -maxRetries: int
-        +AcquireLock(ctx, resourceKey) (*Lock, error)
-        +ReleaseLock(lock) error
-        +ExtendLock(ctx, lock, duration) error
-        +IsLocked(ctx, resourceKey) (bool, error)
-    }
+### Payment Recovery
+- **Automatic Detection**: Webhook integration for real-time failure capture
+- **Intelligent Routing**: Cost-aware provider selection (BECS vs international)
+- **Cross-Method Reconciliation**: Xero integration for manual payment matching
+- **Retry Orchestration**: Multi-step workflow with distributed locking
 
-    class Lock {
-        -key: string
-        -value: string
-        -acquiredAt: time.Time
-        -ttl: time.Duration
-        -service: *DistributedLockService
-        +Extend(ctx, duration) error
-        +Release() error
-        +IsValid() bool
-        +GetRemainingTTL() time.Duration
-    }
+### Analytics & Intelligence  
+- **Pattern Detection**: ML-based failure pattern identification
+- **Trend Analysis**: Historical failure rate analysis
+- **Risk Prediction**: Customer-level failure probability scoring
+- **Cost Optimization**: Micro-transaction routing to low-cost providers
 
-    class LockManager {
-        -lockService: *DistributedLockService
-        -activeLocks: map[string]*Lock
-        -mu: sync.RWMutex
-        +AcquireResourceLock(ctx, resource) (*Lock, error)
-        +ReleaseResourceLock(resource) error
-        +GetActiveLocks() map[string]*Lock
-        +CleanupExpiredLocks() error
-    }
+### Compliance & Security
+- **Australian Data Residency**: Sovereign mode with AU-only infrastructure
+- **PCI-DSS Compliance**: Secure payment data handling
+- **JWT Authentication**: Role-based access control
+- **Audit Logging**: Complete transaction traceability
 
-    DistributedLockService --> Lock : creates
-    DistributedLockService --> Lock : manages
-    LockManager --> DistributedLockService : uses
-    LockManager --> Lock : tracks
-```
+## API Documentation
 
-### Xero Mediator Flow
+### Core Endpoints
+- `GET /health` - Service health check
+- `POST /api/v1/auth/login` - Authentication
+- `GET /api/v1/payment-failures` - Payment failure data
+- `POST /api/v1/recovery/start` - Manual recovery trigger
+- `GET /api/v1/analytics/*` - Analytics and reporting
 
-```mermaid
-classDiagram
-    class XeroMediator {
-        -oauthClient: *http.Client
-        -apiClient: *XeroAPIClient
-        -oauthConfig: *OAuthConfig
-        +Authenticate(ctx) (*OAuthTokens, error)
-        +GetInvoice(ctx, invoiceID) (*XeroInvoice, error)
-        +CreatePayment(ctx, payment) (*XeroPayment, error)
-        +GetBankTransactions(ctx, since) ([]XeroBankTransaction, error)
-        +ReconcilePayment(ctx, invoiceID, paymentID) error
-    }
+### Documentation
+- **Interactive Docs**: Available at `http://localhost:8080/docs` (development)
+- **OpenAPI Spec**: `/api/v1/openapi.json`
 
-    class XeroAPIClient {
-        -httpClient: *http.Client
-        -baseURL: string
-        -logger: *zap.Logger
-        +Get(ctx, endpoint) (*http.Response, error)
-        +Post(ctx, endpoint, body) (*http.Response, error)
-        +Put(ctx, endpoint, body) (*http.Response, error)
-        +RefreshToken(ctx) error
-    }
+## Workflow Diagrams
 
-    class OAuthTokens {
-        +AccessToken: string
-        +RefreshToken: string
-        +TokenType: string
-        +ExpiresIn: int64
-        +Scope: string
-        +ExpiresAt: time.Time
-        +IsExpired() bool
-        +RefreshIfNeeded(ctx) error
-    }
-
-    class XeroInvoice {
-        +ID: string
-        +InvoiceNumber: string
-        +Contact: XeroContact
-        +LineItems: []XeroLineItem
-        +Status: string
-        +AmountDue: float64
-        +Date: time.Time
-    }
-
-    class XeroBankTransaction {
-        +ID: string
-        +Type: string
-        +Contact: XeroContact
-        +LineItems: []XeroLineItem
-        +Amount: float64
-        +Date: time.Time
-        +Reference: string
-    }
-
-    XeroMediator --> XeroAPIClient : uses
-    XeroMediator --> OAuthTokens : manages
-    XeroAPIClient --> OAuthTokens : authenticates
-    XeroMediator --> XeroInvoice : retrieves
-    XeroMediator --> XeroBankTransaction : retrieves
-```
-
-### Service Integration Flow
-
-```mermaid
-classDiagram
-    class APIGateway {
-        -recoveryService: *RecoveryOrchestrationService
-        -failureService: *PaymentFailureService
-        -analyticsService: *AnalyticsService
-        -webhookProcessor: *WebhookProcessor
-        +HandleWebhook(ctx, request) error
-        +GetRecoveryStatus(ctx, id) (*RecoveryStatus, error)
-        +GetAnalytics(ctx, companyID) (*AnalyticsData, error)
-    }
-
-    class WorkerService {
-        -orchestrationService: *RecoveryOrchestrationService
-        -lockService: *DistributedLockService
-        -analyticsService: *AnalyticsService
-        -mediator: PaymentProvider
-        +ProcessRecoveryWorkflow(ctx, workflow) error
-        +ExecuteRetryLogic(ctx, payment) error
-        +UpdateAnalytics(ctx, event) error
-    }
-
-    class DatabaseLayer {
-        -postgres: *gorm.DB
-        -redis: *redis.Client
-        +SavePaymentFailure(ctx, failure) error
-        +GetRecoveryAttempts(ctx, paymentID) ([]RecoveryAttempt, error)
-        +CacheAnalytics(ctx, data) error
-        +GetCachedData(ctx, key) (interface{}, error)
-    }
-
-    APIGateway --> RecoveryOrchestrationService : delegates
-    APIGateway --> PaymentFailureService : queries
-    APIGateway --> AnalyticsService : requests
-    APIGateway --> WebhookProcessor : processes
-    WorkerService --> RecoveryOrchestrationService : executes
-    WorkerService --> DistributedLockService : coordinates
-    WorkerService --> AnalyticsService : updates
-    RecoveryOrchestrationService --> DatabaseLayer : persists
-    AnalyticsService --> DatabaseLayer : queries
-    DistributedLockService --> DatabaseLayer : locks
-```
-
----
-
-## 🔄 Sequence Diagrams
-
-### Payment Failure Recovery Workflow
+### Payment Recovery Flow
 
 ```mermaid
 sequenceDiagram
@@ -1003,43 +764,30 @@ sequenceDiagram
     participant WP as WebhookProcessor
     participant PFS as PaymentFailureService
     participant ROS as RecoveryOrchestrationService
-    participant DLS as DistributedLockService
     participant Worker as WorkerService
     participant Xero as XeroMediator
     participant DB as Database
-    participant Analytics as AnalyticsService
 
     Stripe->>API: POST /webhook/stripe
     API->>WP: ProcessWebhook(event)
-    WP->>WP: ValidateWebhook()
     WP->>PFS: CreatePaymentFailure(failure)
     PFS->>DB: INSERT payment_failures
-    PFS-->>WP: PaymentFailure created
     WP->>ROS: ExecuteWorkflow(workflowID, failureID)
-    ROS->>DLS: AcquireLock("recovery_" + failureID)
-    DLS->>DB: SET redis lock
-    DLS-->>ROS: Lock acquired
     ROS->>Worker: ProcessRecoveryWorkflow(workflow)
     
     Worker->>Xero: GetBankTransactions()
-    Xero->>Xero: Authenticate()
     Xero-->>Worker: BankTransactions
     Worker->>Worker: ReconcilePayment()
     
     alt Payment Found
         Worker->>PFS: UpdatePaymentFailure(status: "recovered")
         PFS->>DB: UPDATE payment_failures
-        Worker->>Analytics: UpdateAnalytics(recovery)
-        Analytics->>DB: INSERT analytics
     else No Payment Found
         Worker->>ROS: ExecuteRetryLogic()
         ROS->>ROS: ScheduleRetry()
     end
     
-    Worker-->>ROS: Workflow completed
-    ROS->>DLS: ReleaseLock()
-    DLS->>DB: DELETE redis lock
-    ROS-->>API: Recovery status
+    Worker-->>API: Recovery status
     API-->>Stripe: 200 OK
 ```
 
@@ -1076,271 +824,73 @@ sequenceDiagram
         FP-->>AE: Risk predictions
     end
     
-    AE-->>AS: Aggregated insights
-    AS->>DB: Cache analytics results
-    AS-->>API: FailureReport
+    AS-->>API: Aggregated insights
     API-->>UI: JSON response
 ```
 
-### Distributed Locking Coordination
+## Configuration
 
-```mermaid
-sequenceDiagram
-    participant W1 as Worker 1
-    participant W2 as Worker 2
-    participant DLS as DistributedLockService
-    participant Redis as Redis
-    participant DB as PostgreSQL
+### Environment Variables
+Key configuration required for operation:
 
-    W1->>DLS: AcquireLock("payment_123")
-    DLS->>Redis: SETNX lock_key_123
-    Redis-->>DLS: 1 (success)
-    DLS->>Redis: EXPIRE lock_key_123 30
-    DLS-->>W1: Lock acquired
-    
-    Note over W1,W2: Concurrent processing attempt
-    W2->>DLS: AcquireLock("payment_123")
-    DLS->>Redis: SETNX lock_key_123
-    Redis-->>DLS: 0 (already locked)
-    DLS->>W2: Lock denied
-    
-    W1->>DB: BEGIN TRANSACTION
-    W1->>DB: UPDATE payment_failures
-    W1->>DB: COMMIT
-    W1->>DLS: ReleaseLock(lock)
-    DLS->>Redis: DELETE lock_key_123
-    DLS-->>W1: Lock released
-    
-    W2->>DLS: AcquireLock("payment_123")
-    DLS->>Redis: SETNX lock_key_123
-    Redis-->>DLS: 1 (success)
-    DLS-->>W2: Lock acquired
-    W2->>DB: Process payment
+```bash
+# Database
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=payment_watchdog
+DATABASE_USER=postgres
+DATABASE_PASSWORD=password
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# API
+SERVER_PORT=8080
+ENVIRONMENT=development
+
+# Sovereign Mode (optional)
+SOVEREIGN_MODE=true  # Enforces AU data residency
 ```
 
-### Xero Integration Flow
+## Monitoring
 
-```mermaid
-sequenceDiagram
-    participant Worker as WorkerService
-    participant XM as XeroMediator
-    participant XAC as XeroAPIClient
-    participant OAuth as OAuthTokens
-    participant Xero as Xero API
-    participant DB as Database
+### Health Checks
+- **Basic**: `/health` - Service status
+- **Detailed**: `/health/detailed` - Component-level status
+- **Metrics**: `/metrics` - Prometheus metrics
 
-    Worker->>XM: ReconcilePayment(invoiceID, paymentID)
-    XM->>OAuth: IsExpired()
-    alt Token Expired
-        XM->>XAC: RefreshToken()
-        XAC->>Xero: POST /oauth2/token
-        Xero-->>XAC: New tokens
-        XAC-->>OAuth: Updated tokens
-    end
-    
-    XM->>XAC: GetInvoice(invoiceID)
-    XAC->>OAuth: GetAccessToken()
-    OAuth-->>XAC: Bearer token
-    XAC->>Xero: GET /invoices/{id}
-    Xero-->>XAC: Invoice data
-    XAC-->>XM: XeroInvoice
-    
-    XM->>XAC: GetBankTransactions(since)
-    XAC->>Xero: GET /banktransactions
-    Xero-->>XAC: Transactions
-    XAC-->>XM: BankTransactions
-    
-    XM->>XM: MatchPaymentToInvoice()
-    alt Match Found
-        XM->>XAC: CreatePayment(payment)
-        XAC->>Xero: POST /payments
-        Xero-->>XAC: Payment created
-        XM->>DB: Update reconciliation_records
-    else No Match
-        XM->>DB: Log reconciliation failure
-    end
-    
-    XM-->>Worker: Reconciliation result
-```
-
-### Webhook Processing with Retry Logic
-
-```mermaid
-sequenceDiagram
-    participant Stripe as Stripe
-    participant API as API Gateway
-    participant WP as WebhookProcessor
-    participant DLQ as DeadLetterQueue
-    participant RateLimit as RateLimiter
-    participant DB as Database
-
-    Stripe->>API: POST /webhook/stripe
-    API->>RateLimit: AllowRequest()
-    RateLimit-->>API: Allowed
-    API->>WP: ProcessWebhook(event)
-    
-    WP->>WP: ValidateSignature()
-    alt Invalid Signature
-        WP->>API: 401 Unauthorized
-    else Valid Signature
-        WP->>WP: ParseEvent()
-        
-        alt Processing Fails
-            WP->>WP: ShouldRetry()?
-            alt Retryable and MaxRetries not reached
-                WP->>WP: IncrementRetryCount()
-                WP->>WP: ScheduleRetry()
-                Note over WP: Exponential backoff
-                WP->>WP: ProcessWebhook(event)
-            else MaxRetries reached
-                WP->>DLQ: SendToDeadLetterQueue(event)
-                DLQ->>DB: INSERT dead_letter_events
-                WP->>API: 500 Server Error
-            end
-        else Processing Succeeds
-            WP->>DB: SaveProcessedEvent()
-            WP->>API: 200 OK
-        end
-    end
-    
-    Note over Stripe,API: Async retry processing
-    loop Retry scheduled events
-        WP->>WP: ProcessRetryEvent()
-        WP->>WP: ProcessWebhook(retry_event)
-    end
-```
-
-### PayTo Failover Sequence (PW-101)
-
-```mermaid
-sequenceDiagram
-    participant Stripe as Stripe Webhook
-    participant API as API Gateway
-    participant ROS as RecoveryOrchestrationService
-    participant PayTo as PayToExecutor
-    participant Retry as RetryService
-    participant DB as Database
-
-    Stripe->>API: POST /webhook/stripe (insufficient_funds)
-    API->>ROS: ExecuteWorkflow(workflowID, failureID)
-    ROS->>ROS: CreateWorkflowExecution()
-    ROS->>PayTo: Execute("payto_agreement")
-    
-    PayTo->>PayTo: ValidateFailureReason()
-    alt failure_reason is insufficient_funds or card_declined
-        PayTo->>PayTo: CreateRecoveryAction(type: "payto_agreement_requested")
-        PayTo->>DB: INSERT recovery_actions
-        PayTo->>Retry: SubmitJob("payto_agreement_request", jobData)
-        Retry-->>PayTo: Job ID
-        PayTo-->>ROS: StepResult(Success: true, ExternalID: jobID)
-    else other failure reason
-        PayTo-->>ROS: StepResult(Success: true, Skipped: true)
-    end
-    
-    ROS->>DB: UPDATE workflow_executions
-    ROS-->>API: Workflow status
-```
-
-### Micro-Transaction Cost Optimization (PW-103)
-
-```mermaid
-sequenceDiagram
-    participant Worker as WorkerService
-    participant Retry as PaymentRetryExecutor
-    participant DB as Database
-
-    Worker->>Retry: Execute(paymentFailure, retryConfig)
-    
-    Retry->>Retry: CheckAmountAndProvider()
-    alt amount_cents < 10000 AND provider in ["stripe", "international_card"]
-        Retry->>Retry: ApplyCostLogic()
-        Note over Retry: Override config.Provider = "becs"
-        Retry->>DB: Log cost optimization event
-        Retry->>Retry: ExecuteWithBECS()
-    else amount >= 10000 OR provider is low-cost
-        Retry->>Retry: ExecuteStandardRetry()
-    end
-    
-    Retry-->>Worker: StepResult with provider used
-```
-
-### Multi-Service Recovery Orchestration
-
-```mermaid
-sequenceDiagram
-    participant Web as Web Interface
-    participant API as API Gateway
-    participant ROS as RecoveryOrchestrationService
-    participant Lock as DistributedLockService
-    participant Worker1 as Worker Service 1
-    participant Worker2 as Worker Service 2
-    participant Analytics as AnalyticsService
-    participant Alert as AlertService
-    participant Xero as XeroMediator
-    participant DB as Database
-
-    Web->>API: POST /api/v1/recovery/start
-    API->>ROS: ExecuteWorkflow(workflowID, paymentID)
-    ROS->>Lock: AcquireLock("workflow_" + workflowID)
-    Lock-->>ROS: Lock acquired
-    
-    ROS->>ROS: CreateWorkflowExecution()
-    ROS->>DB: INSERT workflow_executions
-    
-    par Step 1: Payment Analysis
-        ROS->>Worker1: ExecuteStep("analyze_payment")
-        Worker1->>DB: Query payment history
-        Worker1-->>ROS: Analysis result
-    and Step 2: Cross-Method Reconciliation
-        ROS->>Worker2: ExecuteStep("reconcile_payment")
-        Worker2->>Xero: GetBankTransactions()
-        Xero-->>Worker2: Transaction data
-        Worker2-->>ROS: Reconciliation result
-    end
-    
-    ROS->>Analytics: UpdateWorkflowMetrics()
-    Analytics->>DB: UPDATE analytics
-    
-    alt Recovery Successful
-        ROS->>Alert: SendSuccessNotification()
-        Alert-->>ROS: Notification sent
-        ROS->>DB: UPDATE workflow_executions (completed)
-    else Recovery Failed
-        ROS->>Alert: SendFailureAlert()
-        Alert-->>ROS: Alert sent
-        ROS->>ROS: ScheduleNextRetry()
-    end
-    
-    ROS->>Lock: ReleaseLock()
-    ROS-->>API: Workflow status
-    API-->>Web: JSON response
-```
-
----
+### Logging
+- **Structured JSON**: Consistent log format across services
+- **Correlation IDs**: Request tracing across microservices
+- **Error Tracking**: Comprehensive error categorization
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature-name`)
+3. Make changes with tests
+4. Follow Go best practices (`gofmt`, `go vet`)
+5. Submit pull request with description
 
-### Development Guidelines
-- Follow Go best practices
-- Use conventional commits
-- Write comprehensive tests
-- Update documentation
+### Code Standards
+- **Go**: Standard formatting, comprehensive tests
+- **TypeScript**: Strict mode, type safety
+- **Testing**: Maintain 80%+ coverage
+- **Documentation**: Update relevant sections
 
----
+## Troubleshooting
+
+### Common Issues
+- **Port Conflicts**: Check if ports 8080/4896/5432/6379 are available
+- **Database Connection**: Verify PostgreSQL is running and accessible
+- **Build Failures**: Ensure Go 1.25.0+ and Node.js 18+
+- **Permission Errors**: Check Docker daemon permissions
+
+### Getting Help
+- **Issues**: [GitHub Issues](https://github.com/sambitmohanty1/payment-watchdog/issues)
+- **Documentation**: See `/docs` directory for detailed guides
+- **Discussions**: [GitHub Discussions](https://github.com/sambitmohanty1/payment-watchdog/discussions)
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## Support
-
-For support, please open an issue on GitHub.
-# Trigger worker build
+This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.

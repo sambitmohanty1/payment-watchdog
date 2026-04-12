@@ -1,8 +1,8 @@
 package main
 
 import (
-	"crypto/tls"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"os"
@@ -15,10 +15,10 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/api"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/database"
-	"github.com/go-redis/redis/v8"
 )
 
 func main() {
@@ -47,14 +47,14 @@ func main() {
 	if err := database.RunMigrations(db); err != nil {
 		logger.Fatal("Failed to run migrations", zap.Error(err))
 	}
-	
+
 	// Initialize Redis
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", c.Redis.Host, c.Redis.Port),
+		Addr:     fmt.Sprintf("%s:%d", c.Redis.Host, c.Redis.Port),
 		Password: c.Redis.Password,
 		DB:       c.Redis.DB,
 	})
-	
+
 	// Ping Redis to verify connection
 	if err := redisClient.Ping(context.Background()).Err(); err != nil {
 		logger.Warn("Failed to connect to Redis", zap.Error(err))
@@ -84,11 +84,11 @@ func main() {
 				zap.String("port", c.Server.Port),
 				zap.String("cert", c.Server.CertFile),
 				zap.String("key", c.Server.KeyFile))
-			
+
 			srv.TLSConfig = &tls.Config{
 				MinVersion: tls.VersionTLS12,
 			}
-			
+
 			if err := srv.ListenAndServeTLS(c.Server.CertFile, c.Server.KeyFile); err != nil && err != http.ErrServerClosed {
 				logger.Fatal("listen (https): %s\n", zap.Error(err))
 			}
