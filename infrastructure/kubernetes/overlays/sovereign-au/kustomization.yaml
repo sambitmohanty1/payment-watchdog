@@ -15,6 +15,7 @@ resources:
   - ../../base/services/api
   - ../../base/services/worker
   - ../../base/services/web
+  - serviceaccount-web.yaml
   - cloudflare-tunnel.yaml
 
 # Environment-specific namespace
@@ -53,6 +54,23 @@ patches:
   # Add image pull secrets only to GHCR-based deployments (not postgres/redis which use Docker Hub)
   - target:
       kind: ServiceAccount
+      name: payment-watchdog-api
+    patch: |-
+      - op: add
+        path: /imagePullSecrets
+        value:
+          - name: ghcr-secret
+  - target:
+      kind: ServiceAccount
+      name: payment-watchdog-web
+    patch: |-
+      - op: add
+        path: /imagePullSecrets
+        value:
+          - name: ghcr-secret
+  - target:
+      kind: ServiceAccount
+      name: recovery-orchestration
     patch: |-
       - op: add
         path: /imagePullSecrets
@@ -185,6 +203,7 @@ patches:
       spec:
         template:
           spec:
+            serviceAccountName: payment-watchdog-web
             imagePullSecrets:
               - name: ghcr-secret
             containers:
