@@ -39,7 +39,7 @@ func TestSchemaExists(t *testing.T) {
 
 	gormDB, _ := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = ?)")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = $1")).
 		WithArgs("tenant_test").
 		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
 
