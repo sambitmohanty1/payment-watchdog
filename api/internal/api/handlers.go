@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"  // Add this line
 	"fmt"
 	"net/http"
 	"os"
@@ -16,7 +17,6 @@ import (
 	"gorm.io/gorm"
 	"runtime"
 )
-
 // Handlers contains all the API handlers with their dependencies
 type Handlers struct {
 	db                    *gorm.DB

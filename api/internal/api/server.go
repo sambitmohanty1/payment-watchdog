@@ -19,6 +19,7 @@ import (
 )
 
 // Server represents the API server
+type Server struct {
 	engine      *gin.Engine
 	logger      *zap.Logger
 	db          *gorm.DB
@@ -26,7 +27,6 @@ import (
 	config      *config.Config
 	firebaseApp *firebase.App
 }
-
 // NewServer creates a new API server instance
 func NewServer(logger *zap.Logger, db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *Server {
 	gin.SetMode(gin.ReleaseMode)
