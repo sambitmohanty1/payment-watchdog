@@ -11,27 +11,21 @@ This document provides comprehensive API specifications for the Payment Watchdog
 ### **📐 API Design Principles**
 - **RESTful Design**: Proper HTTP methods and status codes
 - **JSON Format**: Standardized request/response format
-- **Versioning**: API versioning in URL path (`/api/v1/`)
-- **Authentication**: JWT-based authentication
-- **Rate Limiting**: Request throttling and rate limiting
-- **Error Handling**: Consistent error response format
-- **Documentation**: OpenAPI/Swagger specification
-
 ### **🔐 Authentication & Authorization**
-- **JWT Tokens**: Bearer token authentication
-- **API Keys**: Service-to-service authentication
-- **RBAC**: Role-based access control
-- **CORS**: Cross-origin resource sharing configuration
+- **Sovereign Identity**: Firebase ID Token (Bearer Authentication)
+- **Token Claims**: Must include `tenant_id` for multi-tenant data access.
+- **Tenant Isolation**: Backend automatically enforces `search_path` based on token claims.
+- **CORS**: Cross-origin resource sharing configured for Sovereign AU Dashboard (Port 3011).
 
 ---
 
 ## 📚 API Endpoints
 
-### **🏠 Base URL**
+### **🏠 Base URL (Unified Namespace)**
 ```
-Production: https://api.payment-watchdog.com.au/api/v1
-Staging: https://staging-api.payment-watchdog.com.au/api/v1
-Development: http://localhost:8091/api/v1
+Production: https://api-sovereign-au.payment-watchdog.com.au/api
+Staging: http://localhost:8085/api
+Development: http://localhost:8085/api
 ```
 
 ### **🔍 Health Check Endpoints**
@@ -87,7 +81,35 @@ Comprehensive health check with service status.
 
 ---
 
-## 💳 Payment Failure Management
+## 🏢 Multi-Tenant Onboarding & Provisioning
+
+### **📋 Onboarding Engine**
+
+#### **POST /onboarding/provision**
+Initializes a new Australian SMB company by creating an isolated PostgreSQL schema and updating identity claims.
+
+**Authentication:** Firebase ID Token (Required)
+
+**Request Body:**
+```json
+{
+  "company_name": "Acme AU Pty Ltd"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "provisioned",
+  "tenant_id": "tenant_12345",
+  "schema": "tenant_12345",
+  "message": "Isolated environment created in Australia East"
+}
+```
+
+---
+
+## 💳 Payment Failure Management (Tenant Isolated)
 
 ### **📋 Payment Failures**
 
@@ -729,14 +751,10 @@ Paginated responses include pagination metadata:
 ### **🔧 Authentication Example**
 
 ```bash
-# Get JWT token
-curl -X POST https://api.payment-watchdog.com.au/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "password": "password"}'
-
-# Use token for authenticated requests
-curl -X GET https://api.payment-watchdog.com.au/api/v1/payment-failures \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+# Get Firebase ID token (via Frontend SDK)
+# Use token for authenticated, tenant-isolated requests
+curl -X GET https://localhost:8085/api/payment-failures \
+  -H "Authorization: Bearer <FIREBASE_ID_TOKEN>"
 ```
 
 ### **📊 API Usage Examples**
@@ -792,7 +810,8 @@ Raw OpenAPI specification available at:
 
 | Version | Release Date | Changes |
 |---------|-------------|---------|
-| 2.0.0 | 2025-03-24 | Current version with enhanced analytics and workflow management |
+| 3.0.0 | 2026-04-13 | Sovereign-AU Rollout: Unified API, Firebase ID, and Multi-Tenant Isolation |
+| 2.0.0 | 2025-03-24 | Previous version with enhanced analytics and workflow management |
 | 1.2.0 | 2025-02-15 | Added webhook management and improved error handling |
 | 1.1.0 | 2025-01-30 | Added recovery workflows and analytics endpoints |
 | 1.0.0 | 2024-12-01 | Initial API release |

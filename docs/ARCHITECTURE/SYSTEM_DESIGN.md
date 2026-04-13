@@ -31,141 +31,37 @@ Payment Watchdog is a microservices-based payment recovery platform designed for
 
 ```mermaid
 graph TB
-    subgraph "Client Layer"
+    subgraph "Client Layer (Premium Dashboard)"
         WEB[Next.js Dashboard]
-        MOBILE[Mobile App]
-        API_CLIENTS[API Clients]
     end
     
-    subgraph "API Gateway"
-        GATEWAY[API Gateway]
-        LB[Load Balancer]
-        AUTH[Authentication Service]
+    subgraph "Sovereign Gateway (Unified)"
+        FIREBASE[Firebase Auth Bridge]
+        API[Unified Go API Service]
+        ONBOARD[Onboarding & Provisioning]
     end
     
-    subgraph "Application Services"
-        API[Payment API Service]
+    subgraph "Asynchronous Engine"
         WORKER[Background Worker Service]
-        WEBHOOK[Webhook Processing Service]
-        ANALYTICS[Analytics Service]
-        NOTIFICATIONS[Notification Service]
-        SHARED[Shared Interfaces & Events]
-        EXTERNAL[External Integrations]
-    end
-    
-    subgraph "Event Processing"
         EVENTBUS[Redis Event Bus]
-        QUEUES[Message Queues]
-        PROCESSORS[Event Processors]
     end
     
-    subgraph "Data Layer"
-        POSTGRES[(PostgreSQL Database)]
-        REDIS[(Redis Cache)]
-        TIMESERIES[(Time Series Data)]
+    subgraph "SaaS Data Fabric (AU Residency)"
+        POSTGRES[(PostgreSQL Isolated Schemas)]
+        REDIS[(Redis Cache / Session Store)]
     end
     
-    subgraph "External Services"
-        STRIPE[Stripe API]
-        XERO[Xero API]
-        PAYTO[PayTo/NPP API]
-        BNPL[BNPL Providers]
-        EMAIL[Email Service]
-    end
-    
-    subgraph "Infrastructure"
-        K8S[Kubernetes Cluster]
-        MONITORING[Monitoring Stack]
-        LOGGING[Centralized Logging]
-        SECURITY[Security Tools]
-    end
-    
----
-
-## 🚀 Implementation Status
-
-### **✅ COMPLETED COMPONENTS**
-
-#### **Shared Package** 
-- ✅ **Event Types**: Complete payment event definitions with constructors
-- ✅ **Business Interfaces**: AnalyticsEngine, RuleEngine, MediatorService
-- ✅ **Configuration Interfaces**: Database, Redis, Logging configs
-- ✅ **Data Structures**: Complete type definitions for all business operations
-
-#### **Worker Service**
-- ✅ **Event-Driven Architecture**: Redis-based event bus implementation
-- ✅ **Business Services**: Analytics, Rules, Mediators services
-- ✅ **Database Integration**: PostgreSQL with shared interfaces
-- ✅ **Independent Deployment**: No API internal dependencies
-- ✅ **Configuration Management**: Worker-specific config with shared interfaces
-
-### **🔄 IN PROGRESS**
-
-#### **API Service Updates Needed**
-- 🔄 **Event Publishing**: API needs to publish payment failure events to Redis
-- 🔄 **Shared Interface Adoption**: API should use shared business interfaces
-- 🔄 **Configuration Updates**: API config updates for event-driven communication
-
-### **📋 NEXT STEPS**
-
-1. **API Integration**: Update API service to publish events to Redis event bus
-2. **Shared Interface Usage**: Refactor API to use shared business interfaces
-3. **End-to-End Testing**: Implement integration tests for event flow
-4. **Documentation**: Complete API and Worker integration guides
-
----
-
-## 📊 Current Architecture Compliance
-
-### **✅ MICROSERVICES PRINCIPLES**
-- **Loose Coupling**: ✅ Services communicate via events only
-- **Independent Deployment**: ✅ Worker builds and deploys independently
-- **Event-Driven Design**: ✅ Asynchronous communication via Redis
-- **Domain Separation**: ✅ Business logic separated from infrastructure
-
-### **✅ AUSTRALIAN COMPLIANCE**
-- **Data Residency**: ✅ Configurable sovereign mode for Australian data
-- **Local Dependencies**: ✅ No external API dependencies for core operations
-- **Compliance Ready**: ✅ Architecture supports Australian regulations
-
-### **✅ SCALABILITY & PERFORMANCE**
-- **Horizontal Scaling**: ✅ Event-driven architecture supports scaling
-- **Load Balancing**: ✅ Redis-based event distribution
-- **Fault Tolerance**: ✅ Error handling and recovery mechanisms
-
----
-
-**Last Updated**: March 31, 2026
-**Status**: ✅ **Worker Implementation Complete**
-    
-    WEB --> GATEWAY
-    MOBILE --> GATEWAY
-    API_CLIENTS --> GATEWAY
-    GATEWAY --> AUTH
-    AUTH --> API
-    GATEWAY --> WEBHOOK
-    
-    API --> POSTGRES
-    API --> REDIS
+    WEB --> FIREBASE
+    FIREBASE -- "tenant_id claim" --> API
+    API -- "search_path isolation" --> POSTGRES
     API --> EVENTBUS
-    WORKER --> POSTGRES
-    WORKER --> REDIS
+    ONBOARD --> POSTGRES
     WORKER --> EVENTBUS
-    
-    WEBHOOK --> EVENTBUS
-    EVENTBUS --> PROCESSORS
-    PROCESSORS --> POSTGRES
+    EVENTBUS --> POSTGRES
     
     API --> STRIPE
     API --> XERO
     WORKER --> PAYTO
-    WORKER --> BNPL
-    ANALYTICS --> POSTGRES
-    
-    POSTGRES --> TIMESERIES
-    REDIS --> MONITORING
-    API --> LOGGING
-    WORKER --> LOGGING
 ```
 
 ---
@@ -269,20 +165,29 @@ type WorkerService struct {
 
 ```mermaid
 sequenceDiagram
-    participant Stripe as Stripe Webhook
-    participant API as Payment API
-    participant EventBus as Redis Event Bus
-    participant Worker as Background Worker
-    participant Database as PostgreSQL
+    participant Admin as Customer Admin (UI)
+    participant Auth as Firebase Auth
+    participant API as Unified Go API
+    participant Provisioner as Sovereign Provisioner
+    participant DB as Isolated PostgreSQL Schema
     
-    Stripe->>API: POST /webhook/stripe
-    API->>API: Validate webhook signature
-    API->>EventBus: Publish payment.failure.detected
-    EventBus->>Worker: Subscribe to payment.failure.detected
-    Worker->>Database: Process payment failure
-    Worker->>EventBus: Publish payment.failure.processed
-    Worker->>Database: Update payment status
-    API->>Stripe: Return webhook response
+    Admin->>Auth: Login (Google/Email)
+    Auth->>Admin: ID Token (Bear Token)
+    Admin->>API: GET /api/failures (Bearer Token)
+    API->>API: Verify Token & Extract tenant_id
+    
+    alt Is New User (No tenant_id claim)
+        API->>Admin: Redirect to /onboarding
+        Admin->>API: POST /api/onboarding/provision
+        API->>Provisioner: Create tenant_<id> schema
+        Provisioner->>DB: Execute Migrations
+        API->>Auth: Update Custom Claims (tenant_id)
+        API->>Admin: Success (Re-login required)
+    else Is Provisioned User
+        API->>DB: SET search_path TO tenant_<id>
+        API->>DB: Query Isolated Data
+        DB->>Admin: Secure Data Payload
+    end
 ```
 
 ### **🔄 Event Types**

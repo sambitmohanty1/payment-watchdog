@@ -122,13 +122,41 @@ class ApiClient {
     }
   }
 
-  // Health check with proxy awareness
-  async healthCheck(): Promise<ApiResponse<{ status: string; service: string; timestamp: string }>> {
+  // Generic Request Helpers
+  async get<T>(url: string, params?: any): Promise<ApiResponse<T>> {
     return this.request({
       method: 'GET',
-      url: '/health',
-      timeout: 20000, // Longer timeout for health checks
+      url,
+      params,
     });
+  }
+
+  async post<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+    return this.request({
+      method: 'POST',
+      url,
+      data,
+    });
+  }
+
+  async put<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+    return this.request({
+      method: 'PUT',
+      url,
+      data,
+    });
+  }
+
+  async delete<T>(url: string): Promise<ApiResponse<T>> {
+    return this.request({
+      method: 'DELETE',
+      url,
+    });
+  }
+
+  // Health check with proxy awareness
+  async healthCheck(): Promise<ApiResponse<{ status: string; service: string; timestamp: string }>> {
+    return this.get('/health');
   }
 
   // Payment Failures

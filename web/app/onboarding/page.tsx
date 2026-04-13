@@ -26,9 +26,13 @@ export default function OnboardingPage() {
 
     try {
       // Identity-to-Schema API Call
-      await api.post('/onboarding/provision', {
+      const response = await api.post('/onboarding/provision', {
         company_name: companyName
       })
+
+      if (!response.success) {
+        throw new Error(response.error || 'Provisioning failed')
+      }
 
       toast.success('Sovereign environment provisioned!')
       toast('Please log out and log back in to activate your schema.', {

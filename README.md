@@ -4,10 +4,11 @@ A payment recovery platform for Australian businesses that automatically detects
 
 ## Status
 
-**Current State**: Development in progress  
-**Last Updated**: April 2026  
+**Current State**: Multi-Tenant SaaS (Sovereign-AU)  
+**Last Updated**: April 2026 (Auth & Onboarding Rollout)  
 **Go Version**: 1.25.0  
-**Next.js**: 14.2.3  
+**Next.js**: 14.2.35  
+**Core Stack**: Go (API), Next.js (UI), Firebase (Auth), PostgreSQL (Isolated Schemas)
 
 ## Quick Start
 
@@ -20,18 +21,17 @@ cd payment-watchdog
 docker-compose up -d
 
 # Access services
-# API: http://localhost:8080
-# Web: http://localhost:4896
-# Database: localhost:5432
-# Redis: localhost:6379
+# API (Local/Staging): http://localhost:8085
+# Web Dashboard: http://localhost:3011
+# Database (Schema-Isolated): localhost:5432
+# Redis Cache: localhost:6379
 ```
 
-### **Infrastructure Access (Sovereign AU)**
-- **API (ClusterIP)**: `10.96.158.63` (Internal)
-- **API (LoadBalancer)**: `207.211.158.1` (Public)
-- **Web Interface**: `168.138.21.140` (Public)
-- **Database**: `postgres.sovereign-au.svc.cluster.local` (Port 5432)
-- **Redis**: `redis.sovereign-au.svc.cluster.local` (Port 6379)
+### **Infrastructure Access (Sovereign AU Cluster)**
+- **API Entrypoint**: `api-sovereign-au.payment-watchdog.com.au`
+- **Dashboard Portal**: `portal.payment-watchdog.com.au`
+- **Data Residency**: Australia East (Sydney/Melbourne)
+- **Isolation Model**: Physical schema-per-tenant with Bearer Token validation.
 ```
 
 ## What It Does
@@ -130,37 +130,29 @@ kubectl apply -f infrastructure/kubernetes/
 ## Architecture
 
 ```mermaid
-graph TB
-    subgraph "Frontend"
+    subgraph "Sovereign Portal"
         WEB[Next.js Dashboard]
+        AUTH[Firebase Identity]
     end
     
-    subgraph "Backend Services"
+    subgraph "Unified API Subsystem"
         API[Go API Service]
+        ONBOARD[Onboarding Engine]
         WORKER[Background Worker]
-        WEBHOOK[Webhook Service]
-        ANALYTICS[Analytics Service]
     end
     
-    subgraph "Data Layer"
-        POSTGRES[(PostgreSQL)]
+    subgraph "High-Integrity Data Layer"
+        POSTGRES[(PostgreSQL Isolated Schemas)]
         REDIS[(Redis Cache)]
     end
     
-    subgraph "External Services"
-        STRIPE[Stripe API]
-        PAYTO[PayTo/NPP API]
-        XERO[Xero API]
-        BNPL[BNPL Providers]
-    end
-    
-    WEB --> API
+    WEB --> AUTH
+    AUTH --> API
     API --> POSTGRES
     API --> REDIS
+    ONBOARD --> POSTGRES
     WORKER --> POSTGRES
-    WORKER --> REDIS
     API --> STRIPE
-    WORKER --> PAYTO
     WORKER --> XERO
 ```
 
@@ -197,12 +189,12 @@ graph TB
 
 ## API Documentation
 
-### Core Endpoints
-- `GET /health` - Service health check
-- `POST /api/v1/auth/login` - Authentication
-- `GET /api/v1/payment-failures` - Payment failure data
-- `POST /api/v1/recovery/start` - Manual recovery trigger
-- `GET /api/v1/analytics/*` - Analytics and reporting
+### Core Endpoints (Unified Namespace)
+- `GET /health` - Overall system stability check
+- `POST /api/onboarding/provision` - New AU Company initialization
+- `GET /api/reconciliation/status` - Cross-method reconciliation metrics
+- `POST /api/recovery/start` - Manual recovery trigger (Bearer Auth required)
+- `GET /api/payment-failures` - Tenant-isolated failure data
 
 ### Documentation
 - **Interactive Docs**: Available at `http://localhost:8080/docs` (development)
@@ -219,9 +211,10 @@ graph TB
 5. Submit pull request with description
 
 ### Code Standards
-- **Go**: Standard formatting, comprehensive tests
-- **TypeScript**: Strict mode, type safety
-- **Testing**: Maintain 80%+ coverage
+- **Go**: Standard formatting, schema-aware test isolation.
+- **TypeScript/React**: Next.js 14 standards, strict type safety.
+- **Testing (Web)**: **Vitest** for all new UI code; maintain 96%+ coverage on auth/onboarding hooks.
+- **Testing (API)**: Go unit tests with coverage above 80%.
 - **Documentation**: Update relevant sections
 
 ---

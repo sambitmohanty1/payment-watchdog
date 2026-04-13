@@ -61,9 +61,8 @@ Payment Watchdog implements a comprehensive security scanning and monitoring pip
 
 ### Supported Versions
 
-| Version | Security Support | EOL Status |
-|---------|------------------|------------|
-| 1.0.x   | ✅ Active        | Current    |
+| 3.0.x   | ✅ Active        | Sovereign-AU |
+| 1.0.x   | ✅ Legacy        | Current    |
 | < 1.0   | ❌ End of Life   | Unsupported |
 
 ### Reporting a Vulnerability
@@ -93,11 +92,12 @@ Payment Watchdog implements a comprehensive security scanning and monitoring pip
 - Secrets management through environment variables
 - Network segmentation between services
 
-#### Code Security
-- Input validation and sanitization
-- SQL injection prevention via GORM
-- Authentication and authorization controls
-- Secure dependency management
+#### SaaS Multi-Tenant Isolation (Sovereign-AU)
+- **Identity Engine**: Firebase Auth with Custom `tenant_id` Claims.
+- **Physical Isolation**: Dedicated PostgreSQL schema-per-tenant (`tenant_<id>`).
+- **Middleware Enforcement**: Backend automatically runs `SET search_path` based on verified identity claims.
+- **Data Residency**: All tenant-scoped data is physically grounded in Australia East (Sydney/Melbourne).
+- **Onboarding Security**: Automated provisioning engine ensures every new tenant receives a clean, isolated schema via GORM migrations.
 
 #### Operational Security
 - Regular security scanning pipeline
