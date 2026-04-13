@@ -2,7 +2,7 @@
 # Multi-stage build following Docker best practices
 
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Set working directory
 WORKDIR /build
@@ -20,7 +20,7 @@ COPY . .
 RUN npm run build
 
 # Runtime stage
-FROM node:18-alpine AS runtime
+FROM node:20-alpine AS runtime
 
 # Install runtime dependencies
 RUN apk add --no-cache dumb-init

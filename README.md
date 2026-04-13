@@ -130,6 +130,7 @@ kubectl apply -f infrastructure/kubernetes/
 ## Architecture
 
 ```mermaid
+graph TD
     subgraph "Sovereign Portal"
         WEB[Next.js Dashboard]
         AUTH[Firebase Identity]
