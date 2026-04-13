@@ -125,16 +125,31 @@ export function ActiveJobsOverview() {
                   
                   <div className="flex items-center space-x-2">
                     {job.status === 'running' && (
-                      <Button variant="ghost" size="sm">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Pause ${job.type} job for ${job.customer}`}
+                        title={`Pause ${job.type} job for ${job.customer}`}
+                      >
                         <MaterialIcon name="pause" className="h-4 w-4" />
                       </Button>
                     )}
                     {job.status === 'paused' && (
-                      <Button variant="ghost" size="sm">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Resume ${job.type} job for ${job.customer}`}
+                        title={`Resume ${job.type} job for ${job.customer}`}
+                      >
                         <MaterialIcon name="play_arrow" className="h-4 w-4" />
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`View schedule for ${job.type} job of ${job.customer}`}
+                      title={`View schedule for ${job.type} job of ${job.customer}`}
+                    >
                       <MaterialIcon name="schedule" className="h-4 w-4" />
                     </Button>
                   </div>
