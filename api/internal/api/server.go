@@ -6,16 +6,16 @@ import (
 
 	firebase "firebase.google.com/go/v4"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/config"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/middleware"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/services"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"github.com/go-redis/redis/v8"
 
-	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/eventbus"
 	"github.com/sambitmohanty1/payment-watchdog/api/internal/mediators"
+	"github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
 )
 
 // Server represents the API server
@@ -27,6 +27,7 @@ type Server struct {
 	config      *config.Config
 	firebaseApp *firebase.App
 }
+
 // NewServer creates a new API server instance
 func NewServer(logger *zap.Logger, db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *Server {
 	gin.SetMode(gin.ReleaseMode)
@@ -94,7 +95,7 @@ func (s *Server) SetupRoutes() {
 	// This auto-detects Stripe/Xero/PayTo from environment variables
 	providerRegistry := services.NewProviderRegistry(s.logger)
 	retryService.SetProviderRegistry(providerRegistry)
-	
+
 	communicationService := services.NewCommunicationService(s.db, nil, nil)
 	recoveryService := services.NewRecoveryOrchestrationService(s.db, retryService, communicationService, analyticsService, s.logger)
 
@@ -142,6 +143,7 @@ func (s *Server) SetupRoutes() {
 		recoveryService,
 		communicationService,
 		xeroHandlers,
+		s.firebaseApp,
 		s.logger,
 	)
 
@@ -184,31 +186,39 @@ func (s *Server) SetupRoutes() {
 
 			// Export endpoints
 			protected.GET("/export", handlers.ExportData)
+
+			// Onboarding endpoints (for first-time Google/Email users)
+			protected.POST("/onboarding/provision", handlers.ProvisionTenant)
 		}
-	}
 
-	// Recovery endpoints
-	recovery := s.engine.Group("/recovery")
-	{
-		recovery.GET("/workflows", handlers.recoveryHandlers.GetWorkflows)
-		recovery.POST("/workflows", handlers.recoveryHandlers.CreateWorkflow)
-		recovery.GET("/workflows/:id", handlers.recoveryHandlers.GetWorkflow)
-		recovery.PUT("/workflows/:id", handlers.recoveryHandlers.UpdateWorkflow)
-		recovery.DELETE("/workflows/:id", handlers.recoveryHandlers.DeleteWorkflow)
-		recovery.POST("/workflows/:id/execute", handlers.recoveryHandlers.ExecuteWorkflow)
-		recovery.GET("/workflows/:id/status", handlers.recoveryHandlers.GetWorkflowStatus)
-		recovery.GET("/workflows/:id/logs", handlers.recoveryHandlers.GetWorkflowLogs)
-	}
+		// Recovery endpoints (moved inside /api for proxy compatibility)
+		recovery := api.Group("/recovery")
+		{
+			recovery.GET("/workflows", handlers.recoveryHandlers.GetWorkflows)
+			recovery.POST("/workflows", handlers.recoveryHandlers.CreateWorkflow)
+			recovery.GET("/workflows/:id", handlers.recoveryHandlers.GetWorkflow)
+			recovery.PUT("/workflows/:id", handlers.recoveryHandlers.UpdateWorkflow)
+			recovery.DELETE("/workflows/:id", handlers.recoveryHandlers.DeleteWorkflow)
+			recovery.POST("/workflows/:id/execute", handlers.recoveryHandlers.ExecuteWorkflow)
+			recovery.GET("/workflows/:id/status", handlers.recoveryHandlers.GetWorkflowStatus)
+			recovery.GET("/workflows/:id/logs", handlers.recoveryHandlers.GetWorkflowLogs)
+		}
 
-	// Xero endpoints
-	xero := s.engine.Group("/xero")
-	{
-		xero.GET("/oauth/url", handlers.xeroHandlers.GetOAuthURL)
-		xero.GET("/oauth/callback", handlers.xeroHandlers.OAuthCallback)
-		xero.GET("/contacts", handlers.xeroHandlers.GetContacts)
-		xero.POST("/contacts", handlers.xeroHandlers.CreateContact)
-		xero.GET("/invoices", handlers.xeroHandlers.GetInvoices)
-		xero.POST("/invoices", handlers.xeroHandlers.CreateInvoice)
+		// Xero endpoints (moved inside /api for proxy compatibility)
+		xero := api.Group("/xero")
+		{
+			xero.GET("/oauth/url", handlers.xeroHandlers.GetOAuthURL)
+			xero.GET("/oauth/callback", handlers.xeroHandlers.OAuthCallback)
+			xero.GET("/contacts", handlers.xeroHandlers.GetContacts)
+			xero.POST("/contacts", handlers.xeroHandlers.CreateContact)
+			xero.GET("/invoices", handlers.xeroHandlers.GetInvoices)
+			xero.POST("/invoices", handlers.xeroHandlers.CreateInvoice)
+		}
+
+		// Stripe Webhook (Hybrid Support)
+		// Supports both generic /webhooks/stripe and tenant-specific /webhooks/stripe/:tenant_id
+		api.POST("/webhooks/stripe", handlers.HandleStripeWebhook)
+		api.POST("/webhooks/stripe/:tenant_id", handlers.HandleStripeWebhook)
 	}
 }
 

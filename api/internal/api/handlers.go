@@ -33,6 +33,7 @@ type Handlers struct {
 	communicationService  *services.CommunicationService
 	recoveryHandlers      *RecoveryHandlers
 	xeroHandlers          *XeroHandlers
+	firebaseApp           *firebase.App
 	logger                *zap.Logger
 }
 
@@ -49,6 +50,7 @@ func NewHandlers(
 	recoveryService *services.RecoveryOrchestrationService,
 	communicationService *services.CommunicationService,
 	xeroHandlers *XeroHandlers,
+	firebaseApp *firebase.App,
 	logger *zap.Logger,
 ) *Handlers {
 	recoveryHandlers := NewRecoveryHandlers(recoveryService, communicationService)
@@ -66,8 +68,63 @@ func NewHandlers(
 		communicationService:  communicationService,
 		recoveryHandlers:      recoveryHandlers,
 		xeroHandlers:          xeroHandlers,
+		firebaseApp:           firebaseApp,
 		logger:                logger,
 	}
+}
+
+// ProvisionTenant handles the initial setup for a new company/admin user
+func (h *Handlers) ProvisionTenant(c *gin.Context) {
+	var req struct {
+		CompanyName string `json:"company_name" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "company_name is required"})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	if userID == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+
+	// 1. Generate unique tenant ID (SaaS naming convention)
+	tenantID := uuid.New().String()
+
+	// 2. Provision Isolated Australian Schema
+	if err := database.ProvisionTenantSchema(h.db, tenantID); err != nil {
+		h.logger.Error("Provisioning failure", zap.String("user", userID.(string)), zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to provision environment"})
+		return
+	}
+
+	// 3. Update Firebase Custom Claims (The "Identity Glue")
+	if h.firebaseApp != nil {
+		client, err := h.firebaseApp.Auth(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "auth service unavailable"})
+			return
+		}
+
+		claims := map[string]interface{}{
+			"tenant_id": tenantID,
+			"role":      "admin",
+		}
+
+		if err := client.SetCustomUserClaims(c.Request.Context(), userID.(string), claims); err != nil {
+			h.logger.Error("Failed to set claims", zap.String("id", userID.(string)), zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to link identity to tenant"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":    "provisioned",
+		"tenant_id": tenantID,
+		"message":   "Your sovereign AU environment is ready. Please re-login to activate changes.",
+	})
 }
 
 // HandleStripeWebhook handles incoming webhooks from Stripe

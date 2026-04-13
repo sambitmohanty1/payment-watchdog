@@ -433,13 +433,46 @@ patches:
                     key: XERO_CLIENT_SECRET
               - name: XERO_REDIRECT_URI
                 value: "http://168.138.21.140/xero/oauth/callback"
-              # Stripe payment credentials (add to api-secrets when ready)
               - name: STRIPE_SECRET_KEY
-                value: ""  # TODO: move to secretKeyRef once added to api-secrets
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: STRIPE_SECRET_KEY
               - name: STRIPE_WEBHOOK_SECRET
-                value: ""  # TODO: move to secretKeyRef once added to api-secrets
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: STRIPE_WEBHOOK_SECRET
               - name: DATABASE_SSL_ROOT_CERT
                 value: "/etc/db-certs/ca.crt"
+              # SMTP Alert Configuration
+              - name: SMTP_HOST
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: SMTP_HOST
+              - name: SMTP_PORT
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: SMTP_PORT
+              - name: SMTP_USERNAME
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: SMTP_USERNAME
+              - name: SMTP_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: SMTP_PASSWORD
+              - name: SMTP_FROM_EMAIL
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: SMTP_FROM_EMAIL
+              - name: SMTP_FROM_NAME
+                value: "Payment Watchdog AU"
               volumeMounts:
               - name: firebase-credentials
                 mountPath: /app/secrets/firebase
@@ -503,6 +536,45 @@ patches:
                     key: redis_password
               - name: DATABASE_SSL_ROOT_CERT
                 value: "/etc/db-certs/ca.crt"
+              # Xero Integration for Worker
+              - name: XERO_CLIENT_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: XERO_CLIENT_ID
+              - name: XERO_CLIENT_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: XERO_CLIENT_SECRET
+              - name: XERO_REDIRECT_URI
+                value: "http://DOMAIN_PLACEHOLDER/api/xero/oauth/callback"
+              # SMTP Alert Configuration for Worker
+              - name: SMTP_HOST
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: SMTP_HOST
+              - name: SMTP_PORT
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: SMTP_PORT
+              - name: SMTP_USERNAME
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: SMTP_USERNAME
+              - name: SMTP_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: SMTP_PASSWORD
+              - name: SMTP_FROM_EMAIL
+                valueFrom:
+                  secretKeyRef:
+                    name: api-secrets
+                    key: SMTP_FROM_EMAIL
               volumeMounts:
               - name: db-certs
                 mountPath: /etc/db-certs
@@ -522,6 +594,23 @@ patches:
         path: /spec/template/spec/containers/0/livenessProbe
       - op: remove
         path: /spec/template/spec/containers/0/readinessProbe
+
+# Secret generator for integration credentials
+secretGenerator:
+  - name: api-secrets
+    namespace: sovereign-au
+    type: Opaque
+    literals:
+      - FIREBASE_PROJECT_ID=placeholder
+      - XERO_CLIENT_ID=placeholder
+      - XERO_CLIENT_SECRET=placeholder
+      - STRIPE_SECRET_KEY=placeholder
+      - STRIPE_WEBHOOK_SECRET=placeholder
+      - SMTP_HOST=smtp.mailtrap.io
+      - SMTP_PORT=2525
+      - SMTP_USERNAME=placeholder
+      - SMTP_PASSWORD=placeholder
+      - SMTP_FROM_EMAIL=alerts@paymentwatchdog.au
 
 # Replicas for sovereign environment
 replicas:

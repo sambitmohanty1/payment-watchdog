@@ -16,6 +16,7 @@ import (
 
     "github.com/sambitmohanty1/payment-watchdog/api/internal/models"
     "github.com/sambitmohanty1/payment-watchdog/api/internal/rules"
+    "github.com/sambitmohanty1/payment-watchdog/api/internal/database"
 )
 
 type WebhookService struct {
@@ -58,25 +59,51 @@ func (s *WebhookService) HandleStripeWebhook(c *gin.Context) {
             return
         }
 
-        // 3. Reliability: Idempotency Check (Redis)
-        // Check if we have processed this specific Stripe Event ID before
-        ctx := c.Request.Context()
-        dedupKey := fmt.Sprintf("processed_event:%s", event.ID)
-        wasSet, _ := s.redisClient.SetNX(ctx, dedupKey, "processing", 24*time.Hour).Result()
-        if !wasSet {
-            s.redisClient.Expire(ctx, dedupKey, 1*time.Second)
+        // 2. Hybrid Tenant Identification
+        // Priority 1: URL Parameter (:tenant_id)
+        // Priority 2: Stripe Metadata (company_id)
+        tenantID := c.Param("tenant_id")
+        if tenantID == "" {
+            // Safe extraction from event data
+            if pi, ok := event.Data.Object["metadata"].(map[string]interface{}); ok {
+                if cid, ok := pi["company_id"].(string); ok {
+                    tenantID = cid
+                }
+            }
         }
 
-        // 4. Reliability: Distributed Rate Limiting (Redis)
-        // Limit to 100 req/sec globally across all pods
-        limitKey := "global_webhook_rate_limit"
+        if tenantID == "" {
+            fmt.Printf("Warning: Dropping webhook %s - No tenant_id or company_id found in URL or Metadata\n", event.ID)
+            c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "no_tenant_context"})
+            return
+        }
+
+        // 3. Automated Sovereign Provisioning
+        // Ensure the private schema exists for this client before processing
+        if err := database.ProvisionTenantSchema(s.db, tenantID); err != nil {
+            fmt.Printf("Provisioning failure for tenant %s: %v\n", tenantID, err)
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "provisioning_failed"})
+            return
+        }
+
+        // 4. Reliability: Idempotency Check (Redis)
+        ctx := c.Request.Context()
+        dedupKey := fmt.Sprintf("processed_event:%s:%s", tenantID, event.ID)
+        wasSet, _ := s.redisClient.SetNX(ctx, dedupKey, "processing", 24*time.Hour).Result()
+        if !wasSet {
+            c.JSON(http.StatusOK, gin.H{"status": "already_processed"})
+            return
+        }
+
+        // 5. Reliability: Distributed Rate Limiting (Redis)
+        limitKey := fmt.Sprintf("rate_limit:webhook:%s", tenantID)
         count, _ := s.redisClient.Incr(ctx, limitKey).Result()
         if count == 1 {
             s.redisClient.Expire(ctx, limitKey, 1*time.Second)
         }
 
-        // 5. Process with DLQ Fallback
-        if err := s.processEvent(ctx, &event, body); err != nil {
+        // 6. Process with Metadata Context
+        if err := s.processEvent(ctx, &event, body, tenantID); err != nil {
             s.logToDLQ(event.ID, body, err)
             c.JSON(http.StatusOK, gin.H{"status": "queued_for_review", "error": err.Error()})
             return
@@ -90,16 +117,23 @@ func (s *WebhookService) HandleStripeWebhook(c *gin.Context) {
     }
 }
 
-func (s *WebhookService) processEvent(ctx context.Context, event *stripe.Event, rawBody []byte) error {
+func (s *WebhookService) processEvent(ctx context.Context, event *stripe.Event, rawBody []byte, tenantID string) error {
     if event.Type == "payment_intent.payment_failed" {
         var pi stripe.PaymentIntent
         if err := json.Unmarshal(event.Data.Raw, &pi); err != nil {
             return err
         }
 
+        // Isolation: Ensure transaction is scoped to the tenant's private schema
+        schemaName := fmt.Sprintf("tenant_%s", tenantID)
         return s.db.Transaction(func(tx *gorm.DB) error {
+            if err := tx.Exec(fmt.Sprintf("SET search_path TO %s, public", schemaName)).Error; err != nil {
+                return fmt.Errorf("isolation failure: %w", err)
+            }
+
             failure := models.PaymentFailureEvent{
                 EventID:           event.ID,
+                CompanyID:         tenantID,
                 ProviderID:        "stripe",
                 EventType:         event.Type,
                 AmountCents:       pi.Amount, // FINANCIAL INTEGRITY: Uses int64

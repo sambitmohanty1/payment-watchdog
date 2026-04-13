@@ -202,6 +202,14 @@ func bindEnvironment() error {
 	viper.BindEnv("firebase.project_id", "FIREBASE_PROJECT_ID")
 	viper.BindEnv("firebase.service_account_path", "FIREBASE_SERVICE_ACCOUNT_PATH")
 
+	// Bind SMTP credentials for alerts
+	viper.BindEnv("email.host", "SMTP_HOST")
+	viper.BindEnv("email.port", "SMTP_PORT")
+	viper.BindEnv("email.username", "SMTP_USERNAME")
+	viper.BindEnv("email.password", "SMTP_PASSWORD")
+	viper.BindEnv("email.from_email", "SMTP_FROM_EMAIL")
+	viper.BindEnv("email.from_name", "SMTP_FROM_NAME")
+
 
 	// Check for potential environment variable conflicts
 	if err := checkEnvironmentConflicts(); err != nil {

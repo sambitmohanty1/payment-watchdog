@@ -17,6 +17,7 @@ import {
 class ApiClient {
   private client: AxiosInstance;
   private companyId: string | null = null;
+  private token: string | null = null;
 
   constructor() {
     // Configure base URL with proxy bypass considerations
@@ -43,6 +44,11 @@ class ApiClient {
         // Always add company_id to query parameters for API calls
         const separator = config.url.includes('?') ? '&' : '?';
         config.url = `${config.url}${separator}company_id=${this.companyId}`;
+      }
+      
+      // Inject Firebase ID Token if available
+      if (this.token && config.headers) {
+        config.headers['Authorization'] = `Bearer ${this.token}`;
       }
       
       // Add proxy bypass headers (excluding unsafe headers that browsers block)
@@ -83,6 +89,10 @@ class ApiClient {
 
   setCompanyId(companyId: string) {
     this.companyId = companyId;
+  }
+
+  setToken(token: string | null) {
+    this.token = token;
   }
 
   private async request<T>(config: any): Promise<ApiResponse<T>> {

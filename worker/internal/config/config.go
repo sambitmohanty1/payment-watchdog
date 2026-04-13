@@ -190,6 +190,38 @@ func Load() (*Config, error) {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind STRIPE_WEBHOOK_SECRET: %v\n", err)
 		return nil, fmt.Errorf("failed to bind STRIPE_WEBHOOK_SECRET: %w", err)
 	}
+	if err := viper.BindEnv("xero.client_id", "XERO_CLIENT_ID"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind XERO_CLIENT_ID: %v\n", err)
+		return nil, fmt.Errorf("failed to bind XERO_CLIENT_ID: %w", err)
+	}
+	if err := viper.BindEnv("xero.client_secret", "XERO_CLIENT_SECRET"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind XERO_CLIENT_SECRET: %v\n", err)
+		return nil, fmt.Errorf("failed to bind XERO_CLIENT_SECRET: %w", err)
+	}
+	if err := viper.BindEnv("xero.redirect_uri", "XERO_REDIRECT_URI"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind XERO_REDIRECT_URI: %v\n", err)
+		return nil, fmt.Errorf("failed to bind XERO_REDIRECT_URI: %w", err)
+	}
+	if err := viper.BindEnv("email.host", "SMTP_HOST"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SMTP_HOST: %v\n", err)
+		return nil, fmt.Errorf("failed to bind SMTP_HOST: %w", err)
+	}
+	if err := viper.BindEnv("email.port", "SMTP_PORT"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SMTP_PORT: %v\n", err)
+		return nil, fmt.Errorf("failed to bind SMTP_PORT: %w", err)
+	}
+	if err := viper.BindEnv("email.username", "SMTP_USERNAME"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SMTP_USERNAME: %v\n", err)
+		return nil, fmt.Errorf("failed to bind SMTP_USERNAME: %w", err)
+	}
+	if err := viper.BindEnv("email.password", "SMTP_PASSWORD"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SMTP_PASSWORD: %v\n", err)
+		return nil, fmt.Errorf("failed to bind SMTP_PASSWORD: %w", err)
+	}
+	if err := viper.BindEnv("email.from_email", "SMTP_FROM_EMAIL"); err != nil {
+		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind SMTP_FROM_EMAIL: %v\n", err)
+		return nil, fmt.Errorf("failed to bind SMTP_FROM_EMAIL: %w", err)
+	}
 	if err := viper.BindEnv("log.level", "LOG_LEVEL"); err != nil {
 		fmt.Printf("🔍 CONFIG DEBUG: Failed to bind LOG_LEVEL: %v\n", err)
 		return nil, fmt.Errorf("failed to bind LOG_LEVEL: %v", err)
