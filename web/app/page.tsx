@@ -8,6 +8,9 @@ import { ReconciliationHub } from '../components/reconciliation/ReconciliationHu
 import { motion, AnimatePresence } from 'framer-motion'
 import { MaterialIcon } from '@/components/ui'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
 interface DetailModal {
   title: string
@@ -15,8 +18,17 @@ interface DetailModal {
 }
 
 export default function HomePage() {
+  const { user, loading: authLoading, tenantId } = useAuth()
+  const router = useRouter()
   const [detailModal, setDetailModal] = useState<DetailModal | null>(null)
-  
+
+  // Authentication & Onboarding Guard
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login')
+    }
+  }, [user, authLoading, router])
+
   const { 
     status, 
     loading, 
@@ -27,6 +39,13 @@ export default function HomePage() {
     toggleAutoRefresh, 
     autoRefreshEnabled 
   } = useSystemStatus()
+
+  // Don't render anything while checking auth to avoid flickering
+  if (authLoading || !user) return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  )
 
   const handleStatusClick = (title: string, statusData: any) => {
     setDetailModal({ title, status: statusData })
