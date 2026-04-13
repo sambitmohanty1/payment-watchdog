@@ -217,7 +217,6 @@ func (s *Server) SetupRoutes() {
 
 		// Stripe Webhook (Hybrid Support)
 		// Supports both generic /webhooks/stripe and tenant-specific /webhooks/stripe/:tenant_id
-		api.POST("/webhooks/stripe", handlers.HandleStripeWebhook)
 		api.POST("/webhooks/stripe/:tenant_id", handlers.HandleStripeWebhook)
 	}
 }
