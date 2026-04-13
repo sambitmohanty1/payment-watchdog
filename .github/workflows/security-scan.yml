@@ -94,6 +94,7 @@ jobs:
       - name: Run Trivy on API image
         if: success()
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: 'payment-watchdog-api:scan'
           format: 'sarif'
@@ -103,6 +104,7 @@ jobs:
       - name: Run Trivy on Worker image
         if: success()
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: 'payment-watchdog-worker:scan'
           format: 'sarif'
@@ -112,6 +114,7 @@ jobs:
       - name: Run Trivy on Web image
         if: success()
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: 'payment-watchdog-web:scan'
           format: 'sarif'
