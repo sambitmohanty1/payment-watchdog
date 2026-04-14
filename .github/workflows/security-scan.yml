@@ -92,7 +92,7 @@ jobs:
           echo "Docker builds completed"
           
       - name: Run Trivy on API image
-        if: success()
+        if: always()
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'payment-watchdog-api:scan'
@@ -101,7 +101,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           
       - name: Run Trivy on Worker image
-        if: success()
+        if: always()
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'payment-watchdog-worker:scan'
@@ -110,7 +110,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           
       - name: Run Trivy on Web image
-        if: success()
+        if: always()
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'payment-watchdog-web:scan'
