@@ -4,3 +4,6 @@
 ## 2024-04-14 - CI Fix for Trivy Action
 **Learning:** Found that the GitHub Action `aquasecurity/trivy-action@master` was failing because the `worker` Docker build step was failing when trying to pull `golang:1.25-alpine`. Docker Hub was returning a 429 Too Many Requests error for `golang:1.25-alpine` which has not been released yet. Changed the base image in `api/Dockerfile` and `worker/Dockerfile` to `golang:1.24-alpine` to fix the build step.
 **Action:** Always verify that base images specified in `Dockerfile`s exist and are available to avoid unnecessary CI build failures.
+## 2024-04-14 - CI Fix for Trivy Action Web Scanner
+**Learning:** The GitHub Action Trivy scanner for the `web` container was failing due to a Docker build error. The original `Dockerfile` used `node:20-alpine`, which the builder had difficulty mounting an overlay for or pulling. Updating the image to `node:22-alpine` unblocked the Docker build step and allowed the Trivy scan to succeed.
+**Action:** Always maintain up-to-date base images in Dockerfiles.
