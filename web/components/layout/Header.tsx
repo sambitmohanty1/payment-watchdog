@@ -61,12 +61,13 @@ export function Header({ className }: HeaderProps) {
           size="sm"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           className="text-slate-400 hover:text-slate-100"
+          aria-label={theme === 'dark' ? "Switch to light theme" : "Switch to dark theme"}
         >
           <MaterialIcon name={theme === 'dark' ? 'light_mode' : 'dark_mode'} className="text-lg" />
         </Button>
 
         {/* Notifications */}
-        <Button variant="ghost" size="sm" className="relative text-slate-400 hover:text-slate-100">
+        <Button variant="ghost" size="sm" className="relative text-slate-400 hover:text-slate-100" aria-label="View notifications">
           <MaterialIcon name="notifications" className="text-lg" />
           <span className="absolute top-1 right-1 h-2 w-2 bg-blue-500 rounded-full"></span>
         </Button>
