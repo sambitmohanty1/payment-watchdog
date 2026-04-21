@@ -58,6 +58,7 @@ export function Sidebar({ className }: SidebarProps) {
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
           className="ml-auto"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <MaterialIcon name={collapsed ? "chevron_right" : "chevron_left"} className="h-4 w-4" />
         </Button>
