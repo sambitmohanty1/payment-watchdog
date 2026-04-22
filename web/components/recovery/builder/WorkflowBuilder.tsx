@@ -187,12 +187,13 @@ export function WorkflowBuilder({
                     </div>
 
                     <div className="ml-4 flex gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" aria-label="Configure step" className="h-8 w-8">
                         <MaterialIcon name="settings" className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
+                        aria-label="Remove step"
                         className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => removeStep(step.id)}
                       >
