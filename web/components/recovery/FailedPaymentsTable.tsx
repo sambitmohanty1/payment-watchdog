@@ -202,12 +202,12 @@ export function FailedPaymentsTable() {
                 </TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-400">
+                    <Button variant="ghost" size="icon" aria-label="Send communication" className="h-8 w-8 text-slate-400 hover:text-blue-400">
                       <MaterialIcon name="send" className="text-lg" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-100">
+                        <Button variant="ghost" size="icon" aria-label="More actions" className="h-8 w-8 text-slate-400 hover:text-slate-100">
                           <MaterialIcon name="more_vert" className="text-lg" />
                         </Button>
                       </DropdownMenuTrigger>

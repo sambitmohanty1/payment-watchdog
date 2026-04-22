@@ -64,7 +64,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Run Trivy vulnerability scanner in fs mode
-        uses: aquasecurity/trivy-action@0.25.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -93,7 +93,7 @@ jobs:
           
       - name: Run Trivy on API image
         if: success()
-        uses: aquasecurity/trivy-action@0.25.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'payment-watchdog-api:scan'
           format: 'sarif'
@@ -102,7 +102,7 @@ jobs:
           
       - name: Run Trivy on Worker image
         if: success()
-        uses: aquasecurity/trivy-action@0.25.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'payment-watchdog-worker:scan'
           format: 'sarif'
@@ -111,7 +111,7 @@ jobs:
           
       - name: Run Trivy on Web image
         if: success()
-        uses: aquasecurity/trivy-action@0.25.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'payment-watchdog-web:scan'
           format: 'sarif'
