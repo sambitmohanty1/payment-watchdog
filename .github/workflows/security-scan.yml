@@ -93,9 +93,9 @@ jobs:
       - name: Build Docker images for scanning
         run: |
           echo "Building Docker images for security scanning..."
-          docker build -t payment-watchdog-api:scan ./api || echo "API Docker build failed"
-          docker build -t payment-watchdog-worker:scan ./worker || echo "Worker Docker build failed"
-          docker build -t payment-watchdog-web:scan ./web || echo "Web Docker build failed"
+          docker build --pull -t payment-watchdog-api:scan ./api || echo "API Docker build failed"
+          docker build --pull -t payment-watchdog-worker:scan ./worker || echo "Worker Docker build failed"
+          docker build --pull -t payment-watchdog-web:scan ./web || echo "Web Docker build failed"
           echo "Docker builds completed"
         env:
           DOCKER_BUILDKIT: 1
