@@ -1,0 +1,3 @@
+## 2024-05-18 - Missing ARIA Labels on Icon-only Buttons
+**Learning:** The application codebase has a recurring pattern of using `Button` components with `size="icon"` containing only `MaterialIcon` children, without providing an `aria-label`. This makes these buttons inaccessible to screen reader users, who will not be able to determine the button's purpose. Examples were found in `WorkflowBuilder.tsx`, `FailedPaymentsTable.tsx`, and `AuditTrailSheet.tsx`.
+**Action:** When working on or reviewing components with icon-only buttons (especially those using `size="icon"`), proactively add descriptive `aria-label` attributes to ensure they are fully accessible.
