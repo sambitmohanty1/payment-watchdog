@@ -105,7 +105,7 @@ export function AuditTrailSheet({ isOpen, onClose, paymentId, customerName }: Au
                   ID: {paymentId} • {customerName}
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-400 hover:text-white">
+              <Button variant="ghost" size="icon" onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Close">
                 <MaterialIcon name="close" />
               </Button>
             </div>

@@ -187,7 +187,7 @@ export function WorkflowBuilder({
                     </div>
 
                     <div className="ml-4 flex gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Settings">
                         <MaterialIcon name="settings" className="h-4 w-4" />
                       </Button>
                       <Button
@@ -195,6 +195,7 @@ export function WorkflowBuilder({
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => removeStep(step.id)}
+                        aria-label="Delete step"
                       >
                         <MaterialIcon name="delete" className="h-4 w-4" />
                       </Button>
